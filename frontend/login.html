@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie - SpeedtestLog</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="login-page">
+    
+    <div class="login-controls">
+        <div class="lang-dropdown-wrapper">
+            <button id="langBtn" class="lang-btn">
+                <img src="https://flagcdn.com/w40/pl.png" alt="PL" id="currentLangFlag">
+                <span id="currentLangText">PL</span>
+            </button>
+            <ul id="langMenu" class="lang-menu">
+                <li data-lang="pl"><img src="https://flagcdn.com/w40/pl.png" alt="PL"> Polski</li>
+                <li data-lang="en"><img src="https://flagcdn.com/w40/gb.png" alt="EN"> English</li>
+            </ul>
+        </div>
+
+        <button id="themeToggle" title="Zmień motyw" class="theme-btn">🌙</button>
+    </div>
+
+    <div class="login-container">
+        <div class="login-card">
+            <img src="logo.png" alt="Logo" class="login-logo">
+            <h2 id="loginTitle">Zaloguj się</h2>
+            <form id="loginForm">
+                <div class="control-group">
+                    <label for="username" id="labelUser">Użytkownik</label>
+                    <input type="text" id="username" name="username" required autofocus>
+                </div>
+                <div class="control-group">
+                    <label for="password" id="labelPass">Hasło</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" id="loginBtn" style="width: 100%; margin-top: 1rem;">Zaloguj</button>
+            </form>
+            <p id="loginError" class="error-msg" style="display: none; color: var(--danger-text); margin-top: 1rem;">Błędne dane logowania.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- TŁUMACZENIA ---
+        const i18n = {
+            'pl': {
+                'loginTitle': 'Zaloguj się',
+                'labelUser': 'Użytkownik',
+                'labelPass': 'Hasło',
+                'loginBtn': 'Zaloguj',
+                'loginError': 'Błędne dane logowania.',
+                'loggingIn': 'Logowanie...'
+            },
+            'en': {
+                'loginTitle': 'Log In',
+                'labelUser': 'Username',
+                'labelPass': 'Password',
+                'loginBtn': 'Log In',
+                'loginError': 'Invalid credentials.',
+                'loggingIn': 'Logging in...'
+            }
+        };
+
+        // --- LOGIKA MOTYWU ---
+        const themeToggle = document.getElementById('themeToggle');
+        function setNightMode(isNight) {
+            document.body.classList.toggle('dark-mode', isNight);
+            themeToggle.textContent = isNight ? '☀️' : '🌙';
+            localStorage.setItem('theme', isNight ? 'dark' : 'light');
+        }
+        // Inicjalizacja motywu
+        const savedTheme = localStorage.getItem('theme');
+        setNightMode(savedTheme === 'dark');
+        
+        themeToggle.addEventListener('click', () => {
+            setNightMode(!document.body.classList.contains('dark-mode'));
+        });
+
+        // --- LOGIKA JĘZYKA ---
+        let currentLang = localStorage.getItem('language') || 'pl';
+        if(!i18n[currentLang]) currentLang = 'pl';
+
+        const langBtn = document.getElementById('langBtn');
+        const langMenu = document.getElementById('langMenu');
+        const currentLangFlag = document.getElementById('currentLangFlag');
+        const currentLangText = document.getElementById('currentLangText');
+        const langOptions = document.querySelectorAll('.lang-menu li');
+
+        // Elementy do tłumaczenia
+        const els = {
+            title: document.getElementById('loginTitle'),
+            user: document.getElementById('labelUser'),
+            pass: document.getElementById('labelPass'),
+            btn: document.getElementById('loginBtn'),
+            err: document.getElementById('loginError')
+        };
+
+        function updateUI(lang) {
+            // Aktualizacja przycisku
+            if (lang === 'pl') {
+                currentLangFlag.src = 'https://flagcdn.com/w40/pl.png';
+                currentLangText.textContent = 'PL';
+            } else {
+                currentLangFlag.src = 'https://flagcdn.com/w40/gb.png';
+                currentLangText.textContent = 'EN';
+            }
+            // Aktualizacja tekstów
+            const t = i18n[lang];
+            els.title.textContent = t.loginTitle;
+            els.user.textContent = t.labelUser;
+            els.pass.textContent = t.labelPass;
+            els.btn.textContent = t.loginBtn;
+            els.err.textContent = t.loginError;
+            
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+        }
+
+        // Obsługa Dropdownu
+        if (langBtn) {
+            langBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                langMenu.classList.toggle('show');
+            });
+        }
+        langOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                updateUI(option.dataset.lang);
+                langMenu.classList.remove('show');
+            });
+        });
+        window.addEventListener('click', () => {
+            if (langMenu && langMenu.classList.contains('show')) {
+                langMenu.classList.remove('show');
+            }
+        });
+
+        // Inicjalizacja języka
+        updateUI(currentLang);
+
+
+        // --- LOGIKA LOGOWANIA ---
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('loginError');
+            const formData = new FormData(e.target);
+            
+            btn.disabled = true;
+            btn.textContent = i18n[currentLang].loggingIn;
+            errorMsg.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(Object.fromEntries(formData))
+                });
+
+                if (response.ok) {
+                    window.location.reload(); 
+                } else {
+                    throw new Error('Login failed');
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = i18n[currentLang].loginBtn;
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

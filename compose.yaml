@@ -1,0 +1,67 @@
+services:
+  backend:
+    build:
+      context: . # ZMIANA: Buduj z głównego folderu
+      dockerfile: ./backend/Dockerfile # ZMIANA: Wskaż ścieżkę do Dockerfile
+    container_name: speedtest-backend
+    ports:
+      - 8000:8000
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - OOKLA_EULA_GDPR=true
+      - TZ=Europe/Amsterdam
+    volumes:
+      - ./backend/data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  db:
+    # (reszta pliku 'db' bez zmian)
+    image: mariadb:10.11
+    container_name: speedtest-mariadb
+    environment:
+      - MARIADB_DATABASE=${DB_DATABASE}
+      - MARIADB_USER=${DB_USERNAME}
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+    volumes:
+      - speedtest-db-data:/var/lib/mysql
+      - ./backend/data/logs:/var/log/mysql
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u
+        - ${DB_USERNAME}
+        - -p${DB_PASSWORD}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    entrypoint: |
+      sh -c "
+        # Tworzymy plik logu i przekazujemy uprawnienia
+        echo 'Przygotowywanie pliku logu...'
+        touch /var/log/mysql/slow-query.log
+        chown mysql:mysql /var/log/mysql/slow-query.log
+        
+        # Uruchamiamy oryginalny skrypt startowy MariaDB
+        # Ten skrypt sam obniży uprawnienia i uruchomi bazę
+        exec /usr/local/bin/docker-entrypoint.sh mariadbd
+      "
+    # 2. Te argumenty zostaną przekazane do 'mariadbd' przez skrypt powyżej
+    command:
+      - --slow_query_log=1
+      - --slow_query_log_file=/var/log/mysql/slow-query.log
+      - --long_query_time=2
+volumes:
+  speedtest-db-data: null
+networks: {}
