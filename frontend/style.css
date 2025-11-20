@@ -331,7 +331,6 @@ button#triggerTestBtn:disabled { cursor: not-allowed; opacity: 0.8; }
 .chart-block { width: 100%; }
 .chart-block h3 { margin: 0 0 0.5rem 0; font-size: 1rem; color: var(--text-color-secondary); font-weight: 600; }
 
-/* --- WYSOKOŚĆ WYKRESÓW --- */
 .chart-block canvas { 
     max-height: 300px; 
     width: 100%; 
@@ -414,6 +413,16 @@ body.dark-mode th { background-color: #333333; }
 .logout-btn { width: 100%; background: transparent; border: 1px solid var(--danger-color); color: var(--danger-color); margin-top: 10px; padding: 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
 .logout-btn:hover { background-color: var(--danger-color); color: white; }
 
+/* --- MEDIA QUERY DLA DESKTOPU (ZMNIEJSZONA SZEROKOŚĆ TREŚCI) --- */
+@media (min-width: 993px) {
+    .content-scroll > section, .content-scroll > footer {
+        margin-left: auto;
+        margin-right: auto;
+        width: 75%; /* Zmniejsz szerokość o 1/4 (czyli do 75%) */
+    }
+}
+
+/* --- MEDIA QUERY DLA MOBILE --- */
 @media (max-width: 992px) {
     :root { --sidebar-width: 280px; }
     .sidebar { transform: translateX(-100%); box-shadow: none; }
@@ -430,6 +439,6 @@ body.dark-mode th { background-color: #333333; }
     .stats-container { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
     .stat-card { padding: 0.75rem; } .stat-card .value { font-size: 1.5rem; }
     
-    /* --- UKRYCIE PRZYCISKU PNG NA MOBILE --- */
+    /* Ukrycie przycisku PNG na mobile */
     #pngBtn { display: none !important; }
 }

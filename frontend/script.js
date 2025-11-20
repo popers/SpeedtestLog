@@ -927,9 +927,8 @@ function attachCheckboxListeners() {
     });
 }
 
-// --- FUNKCJA EKSPORTU PNG (WYŁĄCZNIE DESKTOP - SCALE 3) ---
+// --- FUNKCJA EKSPORTU PNG (Z FORSOWANIEM PEŁNEJ TABELI I "ODKRĘCANIEM" 75% WIDTH) ---
 async function exportToPNG() {
-    // Sprawdź czy biblioteki są załadowane
     if (!window.html2canvas) {
         alert("Błąd: Biblioteka html2canvas nie załadowana.");
         return;
@@ -940,51 +939,51 @@ async function exportToPNG() {
     pngBtn.querySelector('span').textContent = lang.generatingPNG;
     pngBtn.disabled = true;
 
-    // Element do przechwycenia
     const elementToCapture = document.querySelector('#contentToCapture');
     
     try {
         const canvas = await html2canvas(elementToCapture, {
-            scale: 3, // ZAWSZE WYSOKA JAKOŚĆ
+            scale: 3, // Wysoka jakość
             useCORS: true,
-            windowWidth: 1400, // Wymuszenie desktopowego layoutu
+            windowWidth: 1400, // Wymuś renderowanie w trybie desktop
             scrollY: -window.scrollY, 
             onclone: (clonedDoc) => {
-                // Pobieramy sklonowany element
                 const clone = clonedDoc.querySelector('#contentToCapture');
 
-                // 1. WYMUSZENIE STYLÓW NA KLONIE
+                // 1. Reset stylów kontenera
                 clone.style.width = '1400px'; 
                 clone.style.height = 'auto'; 
                 clone.style.overflow = 'visible'; 
                 clone.style.position = 'static'; 
                 clone.style.maxHeight = 'none'; 
 
-                // 2. WYMUSZENIE WYSOKOŚCI WYKRESÓW
+                // 2. ODKRĘCENIE 75% SZEROKOŚCI (DLA PNG CHCEMY 100%)
+                const sections = clonedDoc.querySelectorAll('.content-scroll > section, .content-scroll > footer');
+                sections.forEach(section => {
+                    section.style.width = '100%'; // Wymuś pełną szerokość w PNG
+                    section.style.maxWidth = 'none';
+                });
+
+                // 3. Wymuszenie wysokości wykresów dla PNG
                 const charts = clonedDoc.querySelectorAll('.chart-block canvas');
                 charts.forEach(canvas => {
                     canvas.style.width = '100%';
-                    // Ustawienie wysokości na 400px dla PNG, aby wykresy były czytelne
-                    canvas.style.height = '400px'; 
+                    canvas.style.height = '400px'; // Większa wysokość dla czytelności
                 });
 
-                // 3. UKRYWANIE NIECHCIANYCH ELEMENTÓW
+                // 4. Ukrywanie zbędnych elementów
                 const controls = clonedDoc.querySelector('.controls-dashboard');
                 if(controls) controls.style.display = 'none';
-                
                 const stats = clonedDoc.querySelector('.stats-container');
                 if(stats) stats.style.display = 'none';
-                
                 const actions = clonedDoc.querySelector('.table-actions');
                 if(actions) actions.style.display = 'none';
-                
                 const footerControls = clonedDoc.querySelector('.table-footer-controls');
                 if(footerControls) footerControls.style.display = 'none';
-                
                 const footer = clonedDoc.querySelector('footer');
                 if(footer) footer.style.display = 'none';
                 
-                // 4. NAGŁÓWEK RAPORTU
+                // 5. Nagłówek raportu
                 const headerDiv = clonedDoc.createElement('div');
                 headerDiv.style.display = 'flex';
                 headerDiv.style.alignItems = 'center';
@@ -1008,7 +1007,7 @@ async function exportToPNG() {
                 
                 clone.insertBefore(headerDiv, clone.firstChild);
                 
-                // 5. TŁO
+                // 6. Tło
                 clone.style.backgroundColor = '#ffffff';
                 if (document.body.classList.contains('dark-mode')) {
                     clone.style.backgroundColor = '#1e1e1e';
@@ -1018,7 +1017,6 @@ async function exportToPNG() {
             }
         });
 
-        // Pobieranie
         const imgData = canvas.toDataURL('image/png');
         
         const now = new Date();
