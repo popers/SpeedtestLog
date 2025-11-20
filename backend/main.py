@@ -11,12 +11,14 @@ import sys
 import csv
 import io
 import secrets
+import shutil
 from logging.handlers import RotatingFileHandler
-from fastapi import FastAPI, HTTPException, Request, Depends, Response, status
+from fastapi import FastAPI, HTTPException, Request, Depends, Response, status, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any
+from datetime import datetime
 
 # --- Importy SQLAlchemy i MariaDB ---
 from sqlalchemy import create_engine, Column, Integer, String, Float
@@ -24,12 +26,10 @@ from sqlalchemy.dialects.mysql import DATETIME
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError
-from datetime import datetime
 
 import pymysql
 
 # --- Konfiguracja Logowania ---
-# Używamy absolutnej ścieżki wewnątrz kontenera
 LOG_DIR = '/app/data/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'app.log')
@@ -43,7 +43,6 @@ stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(log_formatter)
 stream_handler.setLevel(logging.INFO)
 
-# Resetujemy handlery, aby uniknąć duplikatów przy reloadzie
 root_logger = logging.getLogger()
 if root_logger.hasHandlers():
     root_logger.handlers.clear()
@@ -51,8 +50,6 @@ if root_logger.hasHandlers():
 logging.basicConfig(level=logging.INFO, handlers=[file_handler, stream_handler], force=True)
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logging.getLogger("schedule").setLevel(logging.WARNING)
-
-logging.info("Backend starting... Logs should appear in app.log")
 
 # --- Konfiguracja ENV i DB ---
 DB_USER = os.getenv("DB_USERNAME")
@@ -62,8 +59,6 @@ DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_DATABASE")
 
 # --- KONFIGURACJA LOGOWANIA ---
-# Czytamy zmienną AUTH_ENABLED (domyślnie true)
-# Zwracamy True tylko jeśli zmienna to "true", "1" lub "yes"
 auth_env = os.getenv("AUTH_ENABLED", "true").lower()
 AUTH_ENABLED = auth_env in ["true", "1", "yes"]
 
@@ -231,22 +226,15 @@ app = FastAPI(lifespan=lifespan)
 
 # --- Auth Dependency ---
 async def verify_session(request: Request):
-    # Jeśli autoryzacja wyłączona w .env, przepuść wszystkich
-    if not AUTH_ENABLED:
-        return True
-        
+    if not AUTH_ENABLED: return True
     cookie = request.cookies.get(SESSION_COOKIE_NAME)
-    if cookie != SESSION_SECRET:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    if cookie != SESSION_SECRET: raise HTTPException(status_code=401, detail="Unauthorized")
     return True
 
 # --- Endpoints ---
-
 @app.post("/api/login")
 async def login(creds: LoginModel, response: Response):
-    if not AUTH_ENABLED:
-        return {"message": "Auth disabled"}
-        
+    if not AUTH_ENABLED: return {"message": "Auth disabled"}
     if creds.username == APP_USERNAME and creds.password == APP_PASSWORD:
         response.set_cookie(key=SESSION_COOKIE_NAME, value=SESSION_SECRET, httponly=True, samesite='strict')
         return {"message": "Logged in"}
@@ -258,11 +246,8 @@ async def logout(response: Response):
     return {"message": "Logged out"}
 
 @app.get("/api/auth-status")
-async def auth_status():
-    """Helper dla frontendu, żeby wiedział czy pokazać przycisk wylogowania"""
-    return {"enabled": AUTH_ENABLED}
+async def auth_status(): return {"enabled": AUTH_ENABLED}
 
-# --- Zabezpieczone endpointy ---
 @app.get("/api/results", dependencies=[Depends(verify_session)])
 async def get_results(db_session=Depends(get_db)):
     results = db_session.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).limit(1000).all()
@@ -324,34 +309,107 @@ async def export_csv(db=Depends(get_db)):
     response.headers["Content-Disposition"] = "attachment; filename=speedtest_history.csv"
     return response
 
-# 4. Serwowanie plików statycznych z logiką przekierowania
+# --- NOWE ENDPOINTY BACKUP I RESTORE ---
+
+@app.get("/api/backup", dependencies=[Depends(verify_session)])
+async def backup_db():
+    """Tworzy zrzut bazy danych za pomocą mysqldump i zwraca go jako plik."""
+    try:
+        # Ustawiamy zmienną środowiskową dla hasła, aby uniknąć ostrzeżeń w logach
+        env = os.environ.copy()
+        env["MYSQL_PWD"] = DB_PASSWORD
+        
+        # --no-tablespaces jest potrzebne w niektórych wersjach MariaDB w Dockerze
+        cmd = [
+            "mysqldump",
+            "-h", DB_HOST,
+            "-P", str(DB_PORT),
+            "-u", DB_USER,
+            "--no-tablespaces",
+            DB_NAME
+        ]
+        
+        # Uruchamiamy proces i przechwytujemy wyjście
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        stdout, stderr = proc.communicate()
+        
+        if proc.returncode != 0:
+            logging.error(f"Backup failed: {stderr.decode()}")
+            raise HTTPException(status_code=500, detail="Backup failed")
+            
+        # Zwracamy wynik jako plik SQL
+        filename = f"speedtest_backup_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.sql"
+        return Response(content=stdout, media_type="application/sql", headers={"Content-Disposition": f"attachment; filename={filename}"})
+        
+    except Exception as e:
+        logging.error(f"Backup exception: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/restore", dependencies=[Depends(verify_session)])
+async def restore_db(file: UploadFile = File(...)):
+    """Przywraca bazę danych z przesłanego pliku SQL."""
+    if not file.filename.endswith('.sql'):
+        raise HTTPException(status_code=400, detail="Invalid file type. Only .sql files allowed.")
+        
+    try:
+        # Zapisz plik tymczasowo
+        temp_file_path = f"/tmp/{uuid.uuid4()}.sql"
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # Przygotuj komendę restore
+        env = os.environ.copy()
+        env["MYSQL_PWD"] = DB_PASSWORD
+        
+        cmd = [
+            "mysql",
+            "-h", DB_HOST,
+            "-P", str(DB_PORT),
+            "-u", DB_USER,
+            DB_NAME
+        ]
+        
+        # Otwórz plik do czytania i przekaż do stdin procesu mysql
+        with open(temp_file_path, "r") as f:
+            proc = subprocess.Popen(cmd, stdin=f, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+            stdout, stderr = proc.communicate()
+            
+        # Usuń plik tymczasowy
+        os.remove(temp_file_path)
+        
+        if proc.returncode != 0:
+            logging.error(f"Restore failed: {stderr.decode()}")
+            raise HTTPException(status_code=500, detail=f"Restore failed: {stderr.decode()}")
+            
+        return {"message": "Database restored successfully"}
+        
+    except Exception as e:
+        logging.error(f"Restore exception: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 4. Serwowanie plików statycznych
 @app.get("/")
 async def read_root(request: Request):
-    # Jeśli auth wyłączone LUB mamy dobre ciasteczko -> index.html
-    if not AUTH_ENABLED:
-        return FileResponse('index.html')
-        
+    if not AUTH_ENABLED: return FileResponse('index.html')
     cookie = request.cookies.get(SESSION_COOKIE_NAME)
-    if cookie == SESSION_SECRET:
-        return FileResponse('index.html')
+    if cookie == SESSION_SECRET: return FileResponse('index.html')
     return FileResponse('login.html')
 
 @app.get("/{filename}")
 async def read_file(filename: str, request: Request):
     file_path = os.path.join("/app", filename)
+    # Dodano backup.html do dozwolonych
     allowed_public = ["login.html", "style.css", "logo.png", "speedtest.png", "favicon.ico", "manifest.json"]
     
-    if filename not in allowed_public and filename != "index.html" and filename != "script.js":
+    if filename not in allowed_public and filename not in ["index.html", "script.js", "backup.html"]:
          raise HTTPException(status_code=404)
 
-    # Zabezpieczenie plików aplikacji jeśli auth włączone
-    if AUTH_ENABLED and filename in ["index.html", "script.js"]:
+    if AUTH_ENABLED and filename in ["index.html", "script.js", "backup.html"]:
         cookie = request.cookies.get(SESSION_COOKIE_NAME)
-        if cookie != SESSION_SECRET:
-             return FileResponse('login.html')
+        if cookie != SESSION_SECRET: return FileResponse('login.html')
 
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
+    if os.path.exists(file_path): return FileResponse(file_path)
     raise HTTPException(status_code=404)
 
 if __name__ == "__main__":

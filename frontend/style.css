@@ -413,6 +413,21 @@ body.dark-mode th { background-color: #333333; }
 .logout-btn { width: 100%; background: transparent; border: 1px solid var(--danger-color); color: var(--danger-color); margin-top: 10px; padding: 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
 .logout-btn:hover { background-color: var(--danger-color); color: white; }
 
+/* --- STYLISTYKA KARTY BACKUP --- */
+.backup-card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 2rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+.backup-icon { font-size: 3rem; }
+.backup-content h3 { margin-top: 0; margin-bottom: 0.5rem; color: var(--text-color); }
+.backup-content p { color: var(--text-color-secondary); margin-bottom: 1rem; }
+.file-input-wrapper input { width: 100%; box-sizing: border-box; }
+
 /* --- MEDIA QUERY DLA DESKTOPU (ZMNIEJSZONA SZEROKOŚĆ TREŚCI) --- */
 @media (min-width: 993px) {
     .content-scroll > section, .content-scroll > footer {
@@ -441,4 +456,6 @@ body.dark-mode th { background-color: #333333; }
     
     /* Ukrycie przycisku PNG na mobile */
     #pngBtn { display: none !important; }
+    
+    .backup-card { flex-direction: column; align-items: center; text-align: center; }
 }

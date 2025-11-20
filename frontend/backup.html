@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pl" data-i18n-lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
+    <title>Kopia Zapasowa - SpeedtestLog</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">    
+</head>
+<body>
+    <div class="app-wrapper">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="SpeedtestLog Logo" class="logo-img">
+                <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="index.html#dashboard" class="nav-link"><span class="icon">📊</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
+                    <li><a href="index.html#charts" class="nav-link"><span class="icon">📈</span> <span data-i18n-key="historyCharts">Wykresy Historii</span></a></li>
+                    <li><a href="index.html#history" class="nav-link"><span class="icon">📝</span> <span data-i18n-key="historyTable">Historia Pomiarów</span></a></li>
+                    <li class="nav-spacer"></li>
+                    <li><a href="backup.html" class="nav-link active"><span class="icon">💾</span> <span data-i18n-key="navBackup">Kopia Zapasowa</span></a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="logout-btn">🚪 <span data-i18n-key="logout">Wyloguj</span></button>
+                <div style="margin-top: 10px;"><small>SpeedtestLog v1.7</small></div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="hamburgerBtn" class="hamburger-btn">☰</button>
+                <div class="top-bar-actions">
+                    <div class="lang-dropdown-wrapper">
+                        <button id="langBtn" class="lang-btn"><img src="https://flagcdn.com/w40/pl.png" alt="PL" id="currentLangFlag"><span id="currentLangText">PL</span></button>
+                        <ul id="langMenu" class="lang-menu">
+                            <li data-lang="pl"><img src="https://flagcdn.com/w40/pl.png" alt="PL"> Polski</li>
+                            <li data-lang="en"><img src="https://flagcdn.com/w40/gb.png" alt="EN"> English</li>
+                        </ul>
+                    </div>
+                    <button id="themeToggle" title="Zmień motyw" class="theme-btn">🌙</button>
+                </div>
+            </header>
+
+            <div class="content-scroll">
+                <section class="section-block" style="max-width: 800px; margin: 0 auto;">
+                    <h2 data-i18n-key="backupTitle">Zarządzanie Kopią Zapasową</h2>
+                    <p style="color: var(--text-color-secondary); margin-bottom: 2rem;" data-i18n-key="backupDesc">Możesz pobrać pełną kopię bazy danych lub przywrócić dane z wcześniej zapisanego pliku SQL.</p>
+                    
+                    <div class="backup-card">
+                        <div class="backup-icon">⬇️</div>
+                        <div class="backup-content">
+                            <h3 data-i18n-key="backupDownloadTitle">Pobierz Kopię (Backup)</h3>
+                            <p data-i18n-key="backupDownloadText">Pobierz plik SQL zawierający całą historię pomiarów oraz ustawienia.</p>
+                            <button id="downloadBackupBtn" class="action-btn" style="background-color: var(--primary-color); border-color: var(--primary-color);">
+                                <span data-i18n-key="backupDownloadBtn">Pobierz .SQL</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="backup-card" style="margin-top: 2rem; border-color: var(--danger-color);">
+                        <div class="backup-icon">⬆️</div>
+                        <div class="backup-content">
+                            <h3 data-i18n-key="backupRestoreTitle">Przywróć Kopię (Restore)</h3>
+                            <p data-i18n-key="backupRestoreText" style="color: var(--danger-text); font-weight: bold;">UWAGA: Przywrócenie kopii nadpisze wszystkie obecne dane!</p>
+                            
+                            <form id="restoreForm" style="margin-top: 1rem;">
+                                <div class="file-input-wrapper">
+                                    <input type="file" id="backupFile" name="file" accept=".sql" required>
+                                </div>
+                                <button type="submit" id="restoreBackupBtn" class="action-btn" style="background-color: var(--danger-color); border-color: var(--danger-color); margin-top: 10px;">
+                                    <span data-i18n-key="backupRestoreBtn">Przywróć z pliku</span>
+                                </button>
+                            </form>
+                            <p id="restoreStatus" style="margin-top: 10px; font-weight: 600;"></p>
+                        </div>
+                    </div>
+
+                </section>
+                <footer style="text-align: center; padding: 20px; color: var(--text-color-secondary); font-size: 0.8rem;">&copy; 2025 SpeedtestLog</footer>
+            </div>
+        </main>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    </div>
+    
+    <div id="toastNotification" class="toast"></div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

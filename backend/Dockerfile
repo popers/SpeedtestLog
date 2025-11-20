@@ -4,9 +4,9 @@ FROM python:3.11-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# --- NOWE KROKI: Instalacja speedtest-cli ---
+# --- NOWE KROKI: Instalacja speedtest-cli ORAZ klienta bazy danych ---
 RUN apt-get update && apt-get install -y \
-    curl gnupg lsb-release && \
+    curl gnupg lsb-release mariadb-client && \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl -s https://packagecloud.io/install/repositories/ookla/speedtest-cli/script.deb.sh | bash
@@ -20,9 +20,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Kopiuj pliki aplikacji
 COPY backend/main.py .
 
-# Kopiowanie plików frontendu (ZAKTUALIZOWANE)
+# Kopiowanie plików frontendu
 COPY frontend/index.html .
 COPY frontend/login.html .
+COPY frontend/backup.html . 
 COPY frontend/manifest.json .
 COPY frontend/style.css .
 COPY frontend/script.js .

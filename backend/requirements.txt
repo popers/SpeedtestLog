@@ -3,3 +3,4 @@ uvicorn[standard]
 schedule
 SQLAlchemy
 pymysql
+python-multipart

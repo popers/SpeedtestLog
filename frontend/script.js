@@ -6,6 +6,7 @@ const translations = {
         'navCharts': 'Wykresy',
         'navHistory': 'Historia',
         'navSettings': 'Ustawienia',
+        'navBackup': 'Kopia Zapasowa',
         'manualTest': 'Test ręczny',
         'runTest': 'Uruchom Test',
         'selectServer': 'Serwer:',
@@ -98,7 +99,23 @@ const translations = {
         'logout': 'Wyloguj',
         'exportCSV': 'Eksport CSV',
         'exportPNG': 'Zapisz PNG', 
-        'generatingPNG': 'Generowanie PNG...', 
+        'generatingPNG': 'Generowanie PNG...',
+        // BACKUP TRANSLATIONS
+        'backupTitle': 'Zarządzanie Kopią Zapasową',
+        'backupDesc': 'Możesz pobrać pełną kopię bazy danych lub przywrócić dane z wcześniej zapisanego pliku SQL.',
+        'backupDownloadTitle': 'Pobierz Kopię (Backup)',
+        'backupDownloadText': 'Pobierz plik SQL zawierający całą historię pomiarów oraz ustawienia.',
+        'backupDownloadBtn': 'Pobierz .SQL',
+        'backupRestoreTitle': 'Przywróć Kopię (Restore)',
+        'backupRestoreText': 'UWAGA: Przywrócenie kopii nadpisze wszystkie obecne dane!',
+        'backupRestoreBtn': 'Przywróć z pliku',
+        'restoreSuccess': 'Baza danych została pomyślnie przywrócona!',
+        'restoreError': 'Błąd podczas przywracania bazy.',
+        'restoring': 'Przywracanie...',
+        // NOWE TŁUMACZENIA POWIADOMIEŃ BACKUPU
+        'backupGenerating': 'Generowanie kopii zapasowej...',
+        'backupCreatedSuccess': 'Kopia zapasowa została utworzona i pobrana.',
+        'backupCreatedError': 'Wystąpił błąd podczas tworzenia kopii.'
     },
     'en': {
         'title': 'SpeedtestLog Logo',
@@ -106,6 +123,7 @@ const translations = {
         'navCharts': 'Charts',
         'navHistory': 'History',
         'navSettings': 'Settings',
+        'navBackup': 'Backup & Restore',
         'manualTest': 'Manual Test',
         'runTest': 'Run Test',
         'selectServer': 'Server:',
@@ -199,6 +217,22 @@ const translations = {
         'exportCSV': 'Export CSV',
         'exportPNG': 'Save as PNG', 
         'generatingPNG': 'Generating PNG...', 
+        // BACKUP
+        'backupTitle': 'Backup Management',
+        'backupDesc': 'Download a full database backup or restore data from a saved SQL file.',
+        'backupDownloadTitle': 'Download Backup',
+        'backupDownloadText': 'Download a SQL file containing the entire measurement history and settings.',
+        'backupDownloadBtn': 'Download .SQL',
+        'backupRestoreTitle': 'Restore Backup',
+        'backupRestoreText': 'WARNING: Restoring a backup will overwrite all current data!',
+        'backupRestoreBtn': 'Restore from file',
+        'restoreSuccess': 'Database restored successfully!',
+        'restoreError': 'Error restoring database.',
+        'restoring': 'Restoring...',
+        // NEW NOTIFICATIONS
+        'backupGenerating': 'Generating backup...',
+        'backupCreatedSuccess': 'Backup created and downloaded successfully.',
+        'backupCreatedError': 'Error creating backup.'
     }
 };
 
@@ -224,6 +258,11 @@ const limitSelect = document.getElementById('limitSelect');
 const logoutBtn = document.getElementById('logoutBtn');
 const exportBtn = document.getElementById('exportBtn');
 const pngBtn = document.getElementById('pngBtn'); 
+// BACKUP ELEMENTS
+const downloadBackupBtn = document.getElementById('downloadBackupBtn');
+const restoreForm = document.getElementById('restoreForm');
+const restoreStatus = document.getElementById('restoreStatus');
+const restoreBackupBtn = document.getElementById('restoreBackupBtn'); // Poprawka: dodano referencję
 
 const latestDownloadValue = document.getElementById('latestDownloadValue');
 const latestDownloadCompare = document.getElementById('latestDownloadCompare');
@@ -238,10 +277,10 @@ const latestJitterValue = document.getElementById('latestJitterValue');
 const latestJitterCompare = document.getElementById('latestJitterCompare');
 const latestJitterUnit = document.getElementById('latestJitterUnit');
 
-const downloadCtx = document.getElementById('downloadChart').getContext('2d');
-const uploadCtx = document.getElementById('uploadChart').getContext('2d');
-const pingCtx = document.getElementById('pingChart').getContext('2d');
-const jitterCtx = document.getElementById('jitterChart').getContext('2d');
+const downloadCtx = document.getElementById('downloadChart') ? document.getElementById('downloadChart').getContext('2d') : null;
+const uploadCtx = document.getElementById('uploadChart') ? document.getElementById('uploadChart').getContext('2d') : null;
+const pingCtx = document.getElementById('pingChart') ? document.getElementById('pingChart').getContext('2d') : null;
+const jitterCtx = document.getElementById('jitterChart') ? document.getElementById('jitterChart').getContext('2d') : null;
 
 let downloadChart, uploadChart, pingChart, jitterChart;
 let allResults = [];
@@ -364,7 +403,9 @@ function setNightMode(isNight) {
         showToast('toastThemeLight', 'info');
     }
     
-    renderData();
+    if (typeof renderData === "function" && (window.location.pathname.endsWith('index.html') || window.location.pathname === '/')) {
+         renderData();
+    }
 }
 themeToggle.addEventListener('click', () => {
     setNightMode(!document.body.classList.contains('dark-mode'));
@@ -400,9 +441,9 @@ function setLanguage(lang) {
         }
     });
     
-    updateNextRunTimeDisplay();
-    updateStatsCards(allResults);
-    renderData();
+    if (document.getElementById('nextRunTime')) updateNextRunTimeDisplay();
+    if (allResults.length > 0 && document.getElementById('latestDownloadValue')) updateStatsCards(allResults);
+    if (typeof renderData === "function" && (window.location.pathname.endsWith('index.html') || window.location.pathname === '/')) renderData();
 }
 
 
@@ -927,8 +968,9 @@ function attachCheckboxListeners() {
     });
 }
 
-// --- FUNKCJA EKSPORTU PNG (Z FORSOWANIEM PEŁNEJ TABELI I "ODKRĘCANIEM" 75% WIDTH) ---
+// --- NOWA FUNKCJA EKSPORTU PNG (Z FORSOWANIEM DESKTOPU I PEŁNEJ TABELI) ---
 async function exportToPNG() {
+    // Sprawdź czy biblioteki są załadowane
     if (!window.html2canvas) {
         alert("Błąd: Biblioteka html2canvas nie załadowana.");
         return;
@@ -939,6 +981,7 @@ async function exportToPNG() {
     pngBtn.querySelector('span').textContent = lang.generatingPNG;
     pngBtn.disabled = true;
 
+    // Element do przechwycenia
     const elementToCapture = document.querySelector('#contentToCapture');
     
     try {
@@ -1072,60 +1115,136 @@ if (pngBtn) {
     pngBtn.addEventListener('click', exportToPNG);
 }
 
+// BACKUP DOWNLOAD
+if (downloadBackupBtn) {
+    downloadBackupBtn.addEventListener('click', async () => {
+        try {
+            showToast('backupGenerating', 'info');
+            const response = await fetch('/api/backup');
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const header = response.headers.get('Content-Disposition');
+                const parts = header ? header.split('filename=') : [];
+                const filename = parts.length > 1 ? parts[1].replace(/"/g, '') : 'backup.sql';
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                showToast('backupCreatedSuccess', 'success');
+            } else {
+                throw new Error('Backup failed');
+            }
+        } catch (e) {
+            showToast('backupCreatedError', 'error');
+        }
+    });
+}
+
+// BACKUP RESTORE
+if (restoreForm) {
+    restoreForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(restoreForm);
+        const statusEl = document.getElementById('restoreStatus');
+        const btn = document.getElementById('restoreBackupBtn');
+        const lang = translations[currentLang];
+        
+        btn.disabled = true;
+        btn.textContent = lang.restoring;
+        statusEl.textContent = '';
+        statusEl.style.color = 'var(--text-color)';
+        
+        try {
+            const response = await fetch('/api/restore', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                statusEl.textContent = lang.restoreSuccess;
+                statusEl.style.color = 'var(--success-text)';
+                showToast('restoreSuccess', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                throw new Error('Restore failed');
+            }
+        } catch (error) {
+            statusEl.textContent = lang.restoreError;
+            statusEl.style.color = 'var(--danger-text)';
+            showToast('restoreError', 'error');
+            btn.disabled = false;
+            btn.textContent = lang.backupRestoreBtn;
+        }
+    });
+}
+
 // Główne Listenery
-triggerTestBtn.addEventListener('click', triggerManualTest);
-serverSelect.addEventListener('change', saveSettings);
-scheduleSelect.addEventListener('change', saveSettings);
-filterSelect.addEventListener('change', () => { renderData(); });
+if (triggerTestBtn) triggerTestBtn.addEventListener('click', triggerManualTest);
+if (serverSelect) serverSelect.addEventListener('change', saveSettings);
+if (scheduleSelect) scheduleSelect.addEventListener('change', saveSettings);
+if (filterSelect) filterSelect.addEventListener('change', () => { renderData(); });
 
 if (unitSelect) {
     unitSelect.addEventListener('change', () => { renderData(); });
 }
 
-limitSelect.addEventListener('change', () => {
-    const newLimit = limitSelect.value;
-    if (newLimit === currentLimit) return; 
-    currentLimit = newLimit;
-    localStorage.setItem('tableLimit', newLimit);
-    renderTable(); 
-    const selectedOptionText = limitSelect.options[limitSelect.selectedIndex].textContent;
-    showToast('toastLimitChanged', 'info', ` ${selectedOptionText}`);
-});
-
-selectAllCheckbox.addEventListener('change', () => {
-    const isChecked = selectAllCheckbox.checked;
-    document.querySelectorAll('.row-checkbox').forEach(checkbox => {
-        checkbox.checked = isChecked;
-    });
-    handleCheckboxChange();
-});
-
-deleteSelectedBtn.addEventListener('click', () => {
-    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
-    const idsToDelete = Array.from(checkedBoxes).map(box => box.dataset.id);
-    if (idsToDelete.length > 0) deleteResults(idsToDelete);
-});
-
-document.querySelectorAll('#resultsTable th[data-sort]').forEach(header => {
-    header.classList.add('sortable');
-    header.addEventListener('click', () => {
-        const sortColumn = header.dataset.sort;
-        document.querySelectorAll('#resultsTable th[data-sort]').forEach(th => {
-            if (th !== header) th.classList.remove('sort-asc', 'sort-desc');
-        });
-        if (currentSort.column === sortColumn) {
-            if (currentSort.direction === 'desc') {
-                currentSort.direction = 'asc'; header.classList.remove('sort-desc'); header.classList.add('sort-asc');
-            } else {
-                currentSort.direction = 'desc'; header.classList.remove('sort-asc'); header.classList.add('sort-desc');
-            }
-        } else {
-            currentSort.column = sortColumn; currentSort.direction = 'desc';
-            header.classList.remove('sort-asc'); header.classList.add('sort-desc');
-        }
+if (limitSelect) {
+    limitSelect.addEventListener('change', () => {
+        const newLimit = limitSelect.value;
+        if (newLimit === currentLimit) return; 
+        currentLimit = newLimit;
+        localStorage.setItem('tableLimit', newLimit);
         renderTable(); 
+        const selectedOptionText = limitSelect.options[limitSelect.selectedIndex].textContent;
+        showToast('toastLimitChanged', 'info', ` ${selectedOptionText}`);
     });
-});
+}
+
+if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', () => {
+        const isChecked = selectAllCheckbox.checked;
+        document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+        handleCheckboxChange();
+    });
+}
+
+if (deleteSelectedBtn) {
+    deleteSelectedBtn.addEventListener('click', () => {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const idsToDelete = Array.from(checkedBoxes).map(box => box.dataset.id);
+        if (idsToDelete.length > 0) deleteResults(idsToDelete);
+    });
+}
+
+if (document.querySelector('#resultsTable th[data-sort]')) {
+    document.querySelectorAll('#resultsTable th[data-sort]').forEach(header => {
+        header.classList.add('sortable');
+        header.addEventListener('click', () => {
+            const sortColumn = header.dataset.sort;
+            document.querySelectorAll('#resultsTable th[data-sort]').forEach(th => {
+                if (th !== header) th.classList.remove('sort-asc', 'sort-desc');
+            });
+            if (currentSort.column === sortColumn) {
+                if (currentSort.direction === 'desc') {
+                    currentSort.direction = 'asc'; header.classList.remove('sort-desc'); header.classList.add('sort-asc');
+                } else {
+                    currentSort.direction = 'desc'; header.classList.remove('sort-asc'); header.classList.add('sort-desc');
+                }
+            } else {
+                currentSort.column = sortColumn; currentSort.direction = 'desc';
+                header.classList.remove('sort-asc'); header.classList.add('sort-desc');
+            }
+            renderTable(); 
+        });
+    });
+}
 
 
 // --- INICJALIZACJA APLIKACJI ---
@@ -1144,10 +1263,10 @@ async function initializeApp() {
     }
     
     // 3. Filtry
-    filterSelect.value = currentFilter;
+    if(filterSelect) filterSelect.value = currentFilter;
     const savedLimit = localStorage.getItem('tableLimit') || '25';
     currentLimit = savedLimit;
-    limitSelect.value = currentLimit; 
+    if(limitSelect) limitSelect.value = currentLimit; 
     
     setLanguage(currentLang); 
     
@@ -1192,10 +1311,12 @@ async function initializeApp() {
     });
     updateLangButtonUI(currentLang);
 
-    // 5. Pobranie danych
-    await fetchServers();
-    await fetchSettings(); 
-    await fetchResults(); 
+    // 5. Pobranie danych (tylko na stronie głównej)
+    if (document.getElementById('downloadChart')) {
+        await fetchServers();
+        await fetchSettings(); 
+        await fetchResults(); 
+    }
 
     // 6. Obsługa Sidebara
     const hamburgerBtn = document.getElementById('hamburgerBtn');
@@ -1220,8 +1341,8 @@ async function initializeApp() {
     navLinks.forEach(link => {
         link.addEventListener('click', () => {
             if (window.innerWidth <= 992) closeSidebar();
-            navLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
+            // Usuwamy klasę active ze wszystkich linków, ale to jest trochę tricky przy nawigacji między plikami
+            // Zostawiamy to przeglądarce, bo przeładowanie strony i tak zresetuje stan JS
         });
     });
 }

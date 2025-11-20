@@ -3,17 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <meta name="theme-color" content="#ffffff">
     <meta name="description" content="Monitoruj prędkość łącza internetowego">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="logo.png">
-    
     <title>SpeedtestLog</title>
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">    
 </head>
@@ -24,63 +20,35 @@
                 <img src="logo.png" alt="SpeedtestLog Logo" class="logo-img" data-i18n-key="title" data-i18n-attr="alt">
                 <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             </div>
-
             <nav class="sidebar-nav">
                 <ul>
-                    <li>
-                        <a href="#dashboard" class="nav-link active">
-                            <span class="icon">📊</span> <span data-i18n-key="navDashboard">Panel Główny</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#charts" class="nav-link">
-                            <span class="icon">📈</span> <span data-i18n-key="historyCharts">Wykresy Historii</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#history" class="nav-link">
-                            <span class="icon">📝</span> <span data-i18n-key="historyTable">Historia Pomiarów</span>
-                        </a>
-                    </li>
+                    <li><a href="index.html#dashboard" class="nav-link active"><span class="icon">📊</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
+                    <li><a href="index.html#charts" class="nav-link"><span class="icon">📈</span> <span data-i18n-key="historyCharts">Wykresy Historii</span></a></li>
+                    <li><a href="index.html#history" class="nav-link"><span class="icon">📝</span> <span data-i18n-key="historyTable">Historia Pomiarów</span></a></li>
+                    <li class="nav-spacer"></li>
+                    <li><a href="backup.html" class="nav-link"><span class="icon">💾</span> <span data-i18n-key="navBackup">Kopia Zapasowa</span></a></li>
                 </ul>
             </nav>
-
             <div class="sidebar-footer">
-                <button id="logoutBtn" class="logout-btn">
-                    🚪 <span data-i18n-key="logout">Wyloguj</span>
-                </button>
-                <div style="margin-top: 10px;">
-                    <small>SpeedtestLog v1.7</small>
-                </div>
+                <button id="logoutBtn" class="logout-btn">🚪 <span data-i18n-key="logout">Wyloguj</span></button>
+                <div style="margin-top: 10px;"><small>SpeedtestLog v1.7</small></div>
             </div>
         </aside>
-
         <main class="main-content">
             <header class="top-bar">
                 <button id="hamburgerBtn" class="hamburger-btn">☰</button>
-                
                 <div class="top-bar-actions">
                     <div class="lang-dropdown-wrapper">
-                        <button id="langBtn" class="lang-btn">
-                            <img src="https://flagcdn.com/w40/pl.png" alt="PL" id="currentLangFlag">
-                            <span id="currentLangText">PL</span>
-                        </button>
+                        <button id="langBtn" class="lang-btn"><img src="https://flagcdn.com/w40/pl.png" alt="PL" id="currentLangFlag"><span id="currentLangText">PL</span></button>
                         <ul id="langMenu" class="lang-menu">
-                            <li data-lang="pl">
-                                <img src="https://flagcdn.com/w40/pl.png" alt="PL"> Polski
-                            </li>
-                            <li data-lang="en">
-                                <img src="https://flagcdn.com/w40/gb.png" alt="EN"> English
-                            </li>
+                            <li data-lang="pl"><img src="https://flagcdn.com/w40/pl.png" alt="PL"> Polski</li>
+                            <li data-lang="en"><img src="https://flagcdn.com/w40/gb.png" alt="EN"> English</li>
                         </ul>
                     </div>
-
                     <button id="themeToggle" title="Zmień motyw" class="theme-btn">🌙</button>
                 </div>
             </header>
-
             <div class="content-scroll" id="contentToCapture">
-                
                 <section id="dashboard" class="section-block">
                     <div class="controls-dashboard">
                         <div class="control-group manual-test-group">
@@ -88,192 +56,74 @@
                             <button id="triggerTestBtn">
                                 <img src="speedtest.png" alt="Test Icon" /> 
                                 <span class="btn-text" data-i18n-key="runTest">Uruchom Test</span>
-                                <span class="btn-dot-loader">
-                                    <span class="dot" style="--dot-index:0; --dot-color:var(--color-download);"></span>
-                                    <span class="dot" style="--dot-index:1; --dot-color:var(--color-upload);"></span>
-                                    <span class="dot" style="--dot-index:2; --dot-color:var(--color-ping);"></span>
-                                    <span class="dot" style="--dot-index:3; --dot-color:var(--color-jitter);"></span>
-                                </span>
+                                <span class="btn-dot-loader"><span class="dot" style="--dot-index:0; --dot-color:var(--color-download);"></span><span class="dot" style="--dot-index:1; --dot-color:var(--color-upload);"></span><span class="dot" style="--dot-index:2; --dot-color:var(--color-ping);"></span><span class="dot" style="--dot-index:3; --dot-color:var(--color-jitter);"></span></span>
                             </button>
                         </div>
                         <div class="control-group">
                             <label for="serverSelect" data-i18n-key="selectServer">Serwer:</label>
-                            <select id="serverSelect">
-                                <option value="null" data-i18n-key="autoSelect">Wybór automatyczny</option>
-                            </select>
+                            <select id="serverSelect"><option value="null" data-i18n-key="autoSelect">Wybór automatyczny</option></select>
                         </div>
                         <div class="control-group">
                             <label for="scheduleSelect" data-i18n-key="runEvery">Interwał:</label>
-                            <select id="scheduleSelect">
-                                <option value="1" data-i18n-key="hour1">1 godzina</option>
-                                <option value="3" data-i18n-key="hour3">3 godziny</option>
-                                <option value="6" data-i18n-key="hour6">6 godzin</option>
-                                <option value="12" data-i18n-key="hour12">12 godzin</option>
-                                <option value="24" data-i18n-key="hour24">24 godziny</option>
-                            </select>
+                            <select id="scheduleSelect"><option value="1" data-i18n-key="hour1">1 godzina</option><option value="3" data-i18n-key="hour3">3 godziny</option><option value="6" data-i18n-key="hour6">6 godzin</option><option value="12" data-i18n-key="hour12">12 godzin</option><option value="24" data-i18n-key="hour24">24 godziny</option></select>
                         </div>
                         <div class="control-group info-group">
                             <label data-i18n-key="nextTest">Następny test:</label>
                             <span id="nextRunTime" class="next-run-indicator" data-i18n-key="calculating">Obliczanie...</span>
                         </div>
                     </div>
-
                     <div class="stats-container">
-                        <div class="stat-card">
-                            <h3>
-                                <span data-i18n-key="latestDownload">Pobieranie</span>
-                            </h3>
-                            <div class="value-container">
-                                <span class="value" id="latestDownloadValue">...</span>
-                                <span class="unit" id="latestDownloadUnit">Mbps</span>
-                            </div>
-                            <div class="comparison" id="latestDownloadCompare">...</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>
-                                <span data-i18n-key="latestUpload">Wysyłanie</span>
-                            </h3>
-                            <div class="value-container">
-                                <span class="value" id="latestUploadValue">...</span>
-                                <span class="unit" id="latestUploadUnit">Mbps</span>
-                            </div>
-                            <div class="comparison" id="latestUploadCompare">...</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>
-                                <span data-i18n-key="latestPing">Ping</span>
-                            </h3>
-                            <div class="value-container">
-                                <span class="value" id="latestPingValue">...</span>
-                                <span class="unit" id="latestPingUnit">ms</span>
-                            </div>
-                            <div class="comparison" id="latestPingCompare">...</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>
-                                <span data-i18n-key="latestJitter">Jitter</span>
-                            </h3>
-                            <div class="value-container">
-                                <span class="value" id="latestJitterValue">...</span>
-                                <span class="unit" id="latestJitterUnit">ms</span>
-                            </div>
-                            <div class="comparison" id="latestJitterCompare">...</div>
-                        </div>
+                        <div class="stat-card"><h3><span data-i18n-key="latestDownload">Pobieranie</span></h3><div class="value-container"><span class="value" id="latestDownloadValue">...</span><span class="unit" id="latestDownloadUnit">Mbps</span></div><div class="comparison" id="latestDownloadCompare">...</div></div>
+                        <div class="stat-card"><h3><span data-i18n-key="latestUpload">Wysyłanie</span></h3><div class="value-container"><span class="value" id="latestUploadValue">...</span><span class="unit" id="latestUploadUnit">Mbps</span></div><div class="comparison" id="latestUploadCompare">...</div></div>
+                        <div class="stat-card"><h3><span data-i18n-key="latestPing">Ping</span></h3><div class="value-container"><span class="value" id="latestPingValue">...</span><span class="unit" id="latestPingUnit">ms</span></div><div class="comparison" id="latestPingCompare">...</div></div>
+                        <div class="stat-card"><h3><span data-i18n-key="latestJitter">Jitter</span></h3><div class="value-container"><span class="value" id="latestJitterValue">...</span><span class="unit" id="latestJitterUnit">ms</span></div><div class="comparison" id="latestJitterCompare">...</div></div>
                     </div>
                 </section>
-
                 <section id="charts" class="section-block">
                     <div class="section-header-inline">
                         <h2 data-i18n-key="historyCharts">Wykresy Historii</h2>
                         <div class="chart-controls">
-                             <select id="filterSelect" class="filter-btn">
-                                <option value="24h" data-i18n-key="filter24h">Ostatnie 24h</option>
-                                <option value="7d" data-i18n-key="filter7d">Ostatnie 7 dni</option>
-                                <option value="30d" data-i18n-key="filter30d">Ostatnie 30 dni</option>
-                                <option value="all" data-i18n-key="filterAll">Wszystko</option>
-                            </select>
-                            <select id="unitSelect" class="filter-btn">
-                                <option value="Mbps">Mbps</option>
-                                <option value="MBps">MB/s</option>
-                            </select>
+                             <select id="filterSelect" class="filter-btn"><option value="24h" data-i18n-key="filter24h">Ostatnie 24h</option><option value="7d" data-i18n-key="filter7d">Ostatnie 7 dni</option><option value="30d" data-i18n-key="filter30d">Ostatnie 30 dni</option><option value="all" data-i18n-key="filterAll">Wszystko</option></select>
+                             <select id="unitSelect" class="filter-btn"><option value="Mbps">Mbps</option><option value="MBps">MB/s</option></select>
                         </div>
                     </div>
                     <div class="charts-container">
-                        <div class="chart-block">
-                            <h3 data-i18n-key="downloadChartTitle">Download (Mbps)</h3>
-                            <canvas id="downloadChart"></canvas>
-                        </div>
-                        <div class="chart-block">
-                            <h3 data-i18n-key="uploadChartTitle">Upload (Mbps)</h3>
-                            <canvas id="uploadChart"></canvas>
-                        </div>
-                        <div class="chart-block">
-                            <h3 data-i18n-key="pingChartTitle">Ping (ms)</h3>
-                            <canvas id="pingChart"></canvas>
-                        </div>
-                        <div class="chart-block">
-                            <h3 data-i18n-key="jitterChartTitle">Jitter (ms)</h3>
-                            <canvas id="jitterChart"></canvas>
-                        </div>
+                        <div class="chart-block"><h3 data-i18n-key="downloadChartTitle">Download</h3><canvas id="downloadChart"></canvas></div>
+                        <div class="chart-block"><h3 data-i18n-key="uploadChartTitle">Upload</h3><canvas id="uploadChart"></canvas></div>
+                        <div class="chart-block"><h3 data-i18n-key="pingChartTitle">Ping</h3><canvas id="pingChart"></canvas></div>
+                        <div class="chart-block"><h3 data-i18n-key="jitterChartTitle">Jitter</h3><canvas id="jitterChart"></canvas></div>
                     </div>
                 </section>
-                
                 <section id="history" class="section-block">
                     <div class="table-header">
                         <h2 data-i18n-key="historyTable">Historia Pomiarów</h2>
                         <div class="table-actions">
-                            <button id="pngBtn" class="action-btn" style="background-color: var(--danger-color); border-color: var(--danger-color);">
-                                📸 <span data-i18n-key="exportPNG">Zapisz PNG</span>
-                            </button>
-                            <button id="exportBtn" class="action-btn" style="background-color: var(--info-color); border-color: var(--info-color);">
-                                📥 <span data-i18n-key="exportCSV">CSV</span>
-                            </button>
-                            <button id="deleteSelectedBtn" class="action-btn" style="display: none;">
-                                🗑️<span data-i18n-key="deleteSelected">Usuń zaznaczone</span>
-                            </button>
+                            <button id="pngBtn" class="action-btn" style="background-color: var(--danger-color); border-color: var(--danger-color);">📸 <span data-i18n-key="exportPNG">Zapisz PNG</span></button>
+                            <button id="exportBtn" class="action-btn" style="background-color: var(--info-color); border-color: var(--info-color);">📥 <span data-i18n-key="exportCSV">CSV</span></button>
+                            <button id="deleteSelectedBtn" class="action-btn" style="display: none;">🗑️<span data-i18n-key="deleteSelected">Usuń zaznaczone</span></button>
                         </div>
                     </div>
                     <div class="table-wrapper">
                         <table id="resultsTable">
-                            <thead>
-                                <tr>
-                                    <th><input type="checkbox" id="selectAllCheckbox"></th>
-                                    <th data-i18n-key="tableTime">Data</th>
-                                    <th data-i18n-key="tablePing" data-sort="ping">Ping</th>
-                                    <th data-i18n-key="tableJitter" data-sort="jitter">Jitter</th>
-                                    <th data-i18n-key="tableDownload" data-sort="download">Download</th>
-                                    <th data-i18n-key="tableUpload" data-sort="upload">Upload</th>
-                                    <th data-i18n-key="tableServer">Serwer</th>
-                                    <th data-i18n-key="tableResultLink">Link</th> 
-                                </tr>
-                            </thead>
+                            <thead><tr><th><input type="checkbox" id="selectAllCheckbox"></th><th data-i18n-key="tableTime">Data</th><th data-i18n-key="tablePing" data-sort="ping">Ping</th><th data-i18n-key="tableJitter" data-sort="jitter">Jitter</th><th data-i18n-key="tableDownload" data-sort="download">Download</th><th data-i18n-key="tableUpload" data-sort="upload">Upload</th><th data-i18n-key="tableServer">Serwer</th><th data-i18n-key="tableResultLink">Link</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
                     <div class="table-footer-controls">
                         <div class="control-group">
                             <label for="limitSelect" data-i18n-key="tableShow">Pokaż:</label>
-                            <select id="limitSelect">
-                                <option value="5">5</option>
-                                <option value="10">10</option>
-                                <option value="25" selected>25</option>
-                                <option value="50">50</option>
-                                <option value="all" data-i18n-key="filterAll">Wszystko</option>
-                            </select>
+                            <select id="limitSelect"><option value="5">5</option><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option><option value="all" data-i18n-key="filterAll">Wszystko</option></select>
                         </div>
                     </div>
                 </section>
-
-                <footer style="text-align: center; padding: 20px; color: var(--text-color-secondary); font-size: 0.8rem;">
-                    &copy; 2025 SpeedtestLog
-                </footer>
+                <footer style="text-align: center; padding: 20px; color: var(--text-color-secondary); font-size: 0.8rem;">&copy; 2025 SpeedtestLog</footer>
             </div>
         </main>
-
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
     </div>
-    
     <div id="toastNotification" class="toast"></div>
-
-    <div id="confirmModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3 data-i18n-key="confirmDeleteTitle">Potwierdź</h3>
-            <p id="confirmModalText" data-i18n-key="confirmDeleteText">Czy usunąć?</p>
-            <div class="modal-buttons">
-                <button id="modalCancelBtn" data-i18n-key="modalCancel">Anuluj</button>
-                <button id="modalConfirmBtn" data-i18n-key="modalConfirm">Usuń</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="detailsModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <button id="modalCloseBtn" class="modal-close-x">&times;</button>
-            <h3 data-i18n-key="detailsTitle">Szczegóły</h3>
-            <div id="detailsContent" style="text-align: left;"></div>
-        </div>
-    </div>
-    
+    <div id="confirmModal" class="modal-overlay" style="display: none;"><div class="modal-content"><h3 data-i18n-key="confirmDeleteTitle">Potwierdź</h3><p id="confirmModalText" data-i18n-key="confirmDeleteText">Czy usunąć?</p><div class="modal-buttons"><button id="modalCancelBtn" data-i18n-key="modalCancel">Anuluj</button><button id="modalConfirmBtn" data-i18n-key="modalConfirm">Usuń</button></div></div></div>
+    <div id="detailsModal" class="modal-overlay" style="display: none;"><div class="modal-content"><button id="modalCloseBtn" class="modal-close-x">&times;</button><h3 data-i18n-key="detailsTitle">Szczegóły</h3><div id="detailsContent" style="text-align: left;"></div></div></div>
     <script src="script.js"></script>
 </body>
 </html>
