@@ -1,0 +1,60 @@
+:root {
+    --bg-color: #f4f7f6;
+    --card-bg-color: #ffffff;
+    --text-color: #333333;
+    --text-color-secondary: #555555;
+    --border-color: #dddddd;
+    --primary-color: #007bff;
+    --primary-color-hover: #0056b3;
+    --danger-color: #D9534F;
+    --success-color: #20c997;
+    --danger-text: #e4606d;
+    --success-text: #28a745;
+    --info-color: #17a2b8;
+    --chart-grid-color: rgba(0, 0, 0, 0.1);
+    --chart-label-color: #666;
+    --color-download: #17a2b8;
+    --color-download-bg: rgba(23, 162, 184, 0.2);
+    --color-upload: #dc3545;
+    --color-upload-bg: rgba(220, 53, 69, 0.2);
+    --color-ping: #ffc107;
+    --color-ping-bg: rgba(255, 193, 7, 0.2);
+    --color-jitter: #20c997;
+    --color-jitter-bg: rgba(32, 201, 151, 0.2);
+
+    --sidebar-width: 260px;
+    --header-height: 60px;
+    --sidebar-bg: #ffffff;
+    --sidebar-border: #e0e0e0;
+    --active-link-bg: rgba(0, 123, 255, 0.1);
+    --active-link-color: var(--primary-color);
+}
+
+body.dark-mode {
+    --bg-color: #121212;
+    --card-bg-color: #1e1e1e;
+    --text-color: #eeeeee;
+    --text-color-secondary: #bbbbbb;
+    --border-color: #444444;
+    --primary-color: #0d6efd;
+    --primary-color-hover: #0b5ed7;
+    --danger-color: #C82333;
+    --success-color: #28a745;
+    --danger-text: #e4606d;
+    --success-text: #20c997;
+    --info-color: #0dcaf0;
+    --chart-grid-color: rgba(255, 255, 255, 0.1);
+    --chart-label-color: #999;
+    --color-download: #0dcaf0;
+    --color-download-bg: rgba(13, 202, 240, 0.2);
+    --color-upload: #e4606d;
+    --color-upload-bg: rgba(228, 96, 109, 0.2);
+    --color-ping: #ffca2c;
+    --color-ping-bg: rgba(255, 202, 44, 0.2);
+    --color-jitter: #28a745;
+    --color-jitter-bg: rgba(40, 167, 69, 0.2);
+    
+    --sidebar-bg: #1e1e1e;
+    --sidebar-border: #333;
+    --active-link-bg: rgba(13, 110, 253, 0.15);
+}

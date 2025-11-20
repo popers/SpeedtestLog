@@ -4,29 +4,32 @@ FROM python:3.11-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# --- NOWE KROKI: Instalacja speedtest-cli ORAZ klienta bazy danych ---
+# Zapobiega buforowaniu logów Pythona (kluczowe dla widoczności w terminalu)
+ENV PYTHONUNBUFFERED=1
+
+# --- Instalacja narzędzi systemowych i klienta DB ---
 RUN apt-get update && apt-get install -y \
     curl gnupg lsb-release mariadb-client && \
     rm -rf /var/lib/apt/lists/*
 
+# --- Instalacja speedtest-cli ---
 RUN curl -s https://packagecloud.io/install/repositories/ookla/speedtest-cli/script.deb.sh | bash
 RUN apt-get update && apt-get install -y speedtest
-# --- Koniec nowych kroków ---
 
 # Kopiuj i zainstaluj zależności Pythona
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopiuj pliki aplikacji
+# Kopiuj pliki aplikacji backendowej
 COPY backend/main.py .
 
-# Kopiowanie plików frontendu
+# --- Kopiowanie plików frontendu (Nowa struktura) ---
+COPY frontend/css ./css
+COPY frontend/js ./js
 COPY frontend/index.html .
 COPY frontend/login.html .
-COPY frontend/backup.html . 
+COPY frontend/backup.html .
 COPY frontend/manifest.json .
-COPY frontend/style.css .
-COPY frontend/script.js .
 COPY frontend/logo.png .
 COPY frontend/speedtest.png .
 COPY frontend/favicon.ico .

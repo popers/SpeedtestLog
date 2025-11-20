@@ -10,7 +10,8 @@
     <title>SpeedtestLog</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="css/main.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">    
 </head>
 <body>
@@ -109,13 +110,7 @@
                             <tbody></tbody>
                         </table>
                     </div>
-                    <div class="table-footer-controls">
-                        <div class="control-group">
-                            <label for="limitSelect" data-i18n-key="tableShow">Pokaż:</label>
-                            <select id="limitSelect"><option value="5">5</option><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option><option value="all" data-i18n-key="filterAll">Wszystko</option></select>
-                        </div>
-                    </div>
-                </section>
+                    </section>
                 <footer style="text-align: center; padding: 20px; color: var(--text-color-secondary); font-size: 0.8rem;">&copy; 2025 SpeedtestLog</footer>
             </div>
         </main>
@@ -124,6 +119,7 @@
     <div id="toastNotification" class="toast"></div>
     <div id="confirmModal" class="modal-overlay" style="display: none;"><div class="modal-content"><h3 data-i18n-key="confirmDeleteTitle">Potwierdź</h3><p id="confirmModalText" data-i18n-key="confirmDeleteText">Czy usunąć?</p><div class="modal-buttons"><button id="modalCancelBtn" data-i18n-key="modalCancel">Anuluj</button><button id="modalConfirmBtn" data-i18n-key="modalConfirm">Usuń</button></div></div></div>
     <div id="detailsModal" class="modal-overlay" style="display: none;"><div class="modal-content"><button id="modalCloseBtn" class="modal-close-x">&times;</button><h3 data-i18n-key="detailsTitle">Szczegóły</h3><div id="detailsContent" style="text-align: left;"></div></div></div>
-    <script src="script.js"></script>
+    
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

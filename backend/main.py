@@ -15,6 +15,7 @@ import shutil
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, HTTPException, Request, Depends, Response, status, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any
@@ -26,7 +27,6 @@ from sqlalchemy.dialects.mysql import DATETIME
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError
-
 import pymysql
 
 # --- Konfiguracja Logowania ---
@@ -34,22 +34,26 @@ LOG_DIR = '/app/data/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'app.log')
 
-log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
+# Format logów
+log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+# Handler plikowy (rotacja co 5MB)
 file_handler = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=5, encoding='utf-8')
 file_handler.setFormatter(log_formatter)
 file_handler.setLevel(logging.INFO)
 
+# Handler konsolowy (terminal)
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(log_formatter)
 stream_handler.setLevel(logging.INFO)
 
-root_logger = logging.getLogger()
-if root_logger.hasHandlers():
-    root_logger.handlers.clear()
-    
+# Konfiguracja głównego loggera
 logging.basicConfig(level=logging.INFO, handlers=[file_handler, stream_handler], force=True)
+
+# Wyciszenie logów bibliotek, żeby nie śmieciły
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logging.getLogger("schedule").setLevel(logging.WARNING)
+logging.getLogger("multipart").setLevel(logging.WARNING)
 
 # --- Konfiguracja ENV i DB ---
 DB_USER = os.getenv("DB_USERNAME")
@@ -58,7 +62,7 @@ DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_DATABASE")
 
-# --- KONFIGURACJA LOGOWANIA ---
+# --- KONFIGURACJA LOGOWANIA (Auth) ---
 auth_env = os.getenv("AUTH_ENABLED", "true").lower()
 AUTH_ENABLED = auth_env in ["true", "1", "yes"]
 
@@ -116,6 +120,7 @@ app_state = {"schedule_job": None, "schedule_hours": 1, "engine": None, "Session
 
 # --- Inicjalizacja DB ---
 def initialize_db(max_retries=10, delay=5):
+    logging.info("⏳ Inicjalizacja bazy danych...")
     global engine, SessionLocal
     engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -125,10 +130,14 @@ def initialize_db(max_retries=10, delay=5):
         try:
             with engine.connect():
                 Base.metadata.create_all(bind=engine)
+                logging.info("✅ Połączono z bazą danych.")
                 return
         except OperationalError:
+            logging.warning(f"⚠️ Baza niedostępna, ponowna próba za {delay}s ({i+1}/{max_retries})...")
             if i < max_retries - 1: time.sleep(delay)
-            else: raise
+            else: 
+                logging.error("❌ Nie udało się połączyć z bazą danych.")
+                raise
 
 def get_db():
     db = app_state["SessionLocal"]()
@@ -137,12 +146,14 @@ def get_db():
 
 # --- Helpery ---
 def get_closest_servers():
+    logging.info("🌍 Pobieranie listy serwerów Speedtest...")
     if not os.path.exists(SERVERS_FILE) or os.stat(SERVERS_FILE).st_size == 0:
         try:
             subprocess.run(['speedtest', '--accept-license', '--accept-gdpr', '--servers', '--format=json'], check=True, stdout=subprocess.DEVNULL)
             res = subprocess.run(['speedtest', '--accept-license', '--accept-gdpr', '--servers', '--format=json'], capture_output=True, text=True)
             with open(SERVERS_FILE, 'w', encoding='utf-8') as f: f.write(res.stdout)
-        except Exception as e: logging.error(f"Błąd serwerów: {e}")
+            logging.info("✅ Lista serwerów zaktualizowana.")
+        except Exception as e: logging.error(f"❌ Błąd pobierania serwerów: {e}")
 
 def load_settings_from_db(db_session):
     settings = db_session.query(AppSettings).filter(AppSettings.id == 1).first()
@@ -158,16 +169,27 @@ def save_settings_to_db(db_session, settings: Dict[str, Any]):
     rec.selected_server_id = settings.get("selected_server_id")
     rec.schedule_hours = settings.get("schedule_hours", 1)
     db_session.commit()
+    logging.info(f"⚙️ Zaktualizowano ustawienia: Serwer ID={rec.selected_server_id}, Harmonogram={rec.schedule_hours}h")
 
 def run_speed_test_and_save(server_id=None):
-    if not test_lock.acquire(blocking=False): return None
+    if not test_lock.acquire(blocking=False): 
+        logging.warning("⚠️ Test już trwa! Pomijanie nowego żądania.")
+        return None
+    
     db_session = app_state["SessionLocal"]()
     try:
+        sid_msg = f"ID: {server_id}" if server_id else "Auto"
+        logging.info(f"🚀 Rozpoczynanie testu prędkości (Serwer: {sid_msg})... To może potrwać chwilę.")
+        
         cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
         if server_id: cmd.extend(['--server-id', str(server_id)])
+        
         proc = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
         data = json.loads(proc.stdout)
-        if data.get('type') != 'result': return None
+        
+        if data.get('type') != 'result': 
+            logging.error("❌ Otrzymano nieprawidłowe dane z speedtest-cli.")
+            return None
         
         res = SpeedtestResult(
             id=str(uuid.uuid4()), timestamp=datetime.now(),
@@ -185,16 +207,17 @@ def run_speed_test_and_save(server_id=None):
         )
         db_session.add(res)
         db_session.commit()
-        logging.info(f"Zapisano wynik testu: {res.download} Mbps / {res.upload} Mbps")
+        logging.info(f"✅ Wynik zapisany: ↓ {res.download} Mbps | ↑ {res.upload} Mbps | Ping: {res.ping} ms")
         return res
     except Exception as e:
-        logging.error(f"Błąd testu: {e}")
+        logging.error(f"❌ Błąd podczas testu: {e}")
         return None
     finally:
         db_session.close()
         test_lock.release()
 
 def run_scheduled_test(job_tag=None):
+    logging.info(f"⏰ Uruchamianie zaplanowanego zadania: {job_tag}")
     if job_tag == 'startup-test': schedule.clear('startup-test')
     db = app_state["SessionLocal"]()
     settings = load_settings_from_db(db)
@@ -210,19 +233,32 @@ def run_schedule_loop():
 # --- FastAPI ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logging.info("🟢 Aplikacja startuje...")
     initialize_db()
     threading.Thread(target=get_closest_servers, daemon=True).start()
+    
     db = app_state["SessionLocal"]()
     s = load_settings_from_db(db)
     db.close()
+    
     app_state["schedule_hours"] = s.get("schedule_hours", 1)
+    logging.info(f"📅 Harmonogram: Test co {app_state['schedule_hours']} godzin.")
+    
     app_state["schedule_job"] = schedule.every(app_state["schedule_hours"]).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
+    
+    # Test startowy po 1 minucie
     schedule.every(1).minutes.do(run_speed_test_and_save_threaded, job_tag='startup-test').tag('startup-test')
+    
     threading.Thread(target=run_schedule_loop, daemon=True).start()
     yield
     if app_state["engine"]: app_state["engine"].dispose()
+    logging.info("🔴 Aplikacja zatrzymana.")
 
 app = FastAPI(lifespan=lifespan)
+
+# --- Montowanie plików statycznych ---
+app.mount("/css", StaticFiles(directory="css"), name="css")
+app.mount("/js", StaticFiles(directory="js"), name="js")
 
 # --- Auth Dependency ---
 async def verify_session(request: Request):
@@ -236,13 +272,16 @@ async def verify_session(request: Request):
 async def login(creds: LoginModel, response: Response):
     if not AUTH_ENABLED: return {"message": "Auth disabled"}
     if creds.username == APP_USERNAME and creds.password == APP_PASSWORD:
+        logging.info(f"🔑 Zalogowano użytkownika: {creds.username}")
         response.set_cookie(key=SESSION_COOKIE_NAME, value=SESSION_SECRET, httponly=True, samesite='strict')
         return {"message": "Logged in"}
+    logging.warning(f"⛔ Nieudana próba logowania: {creds.username}")
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @app.post("/api/logout")
 async def logout(response: Response):
     response.delete_cookie(SESSION_COOKIE_NAME)
+    logging.info("🚪 Wylogowano użytkownika.")
     return {"message": "Logged out"}
 
 @app.get("/api/auth-status")
@@ -279,24 +318,31 @@ async def set_set(s: SettingsModel, db=Depends(get_db)):
         if app_state["schedule_job"]: schedule.cancel_job(app_state["schedule_job"])
         app_state["schedule_hours"] = s.schedule_hours
         app_state["schedule_job"] = schedule.every(s.schedule_hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
+        logging.info(f"📅 Zmieniono harmonogram: co {s.schedule_hours}h")
+    
     save_settings_to_db(db, {"selected_server_id": s.server_id, "schedule_hours": s.schedule_hours or cur["schedule_hours"]})
     return s
 
 @app.post("/api/trigger-test", dependencies=[Depends(verify_session)])
 async def trig_test(s: SettingsModel):
-    if test_lock.locked(): raise HTTPException(status_code=429)
+    if test_lock.locked(): 
+        logging.warning("⚠️ Próba ręcznego uruchomienia testu podczas trwania innego.")
+        raise HTTPException(status_code=429)
+    logging.info("👆 Ręczne wyzwolenie testu.")
     threading.Thread(target=run_speed_test_and_save, args=(s.server_id,), daemon=True).start()
     schedule.clear('startup-test')
     return {"message": "Started"}
 
 @app.delete("/api/results", dependencies=[Depends(verify_session)])
 async def del_res(d: DeleteModel, db=Depends(get_db)):
-    c = db.query(SpeedtestResult).filter(SpeedtestResult.id.in_(d.ids)).delete(synchronize_session=False)
+    count = db.query(SpeedtestResult).filter(SpeedtestResult.id.in_(d.ids)).delete(synchronize_session=False)
     db.commit()
-    return {"deleted_count": c}
+    logging.info(f"🗑️ Usunięto {count} wpisów z bazy.")
+    return {"deleted_count": count}
 
 @app.get("/api/export", dependencies=[Depends(verify_session)])
 async def export_csv(db=Depends(get_db)):
+    logging.info("📥 Generowanie pliku CSV...")
     results = db.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).all()
     output = io.StringIO()
     writer = csv.writer(output)
@@ -309,86 +355,53 @@ async def export_csv(db=Depends(get_db)):
     response.headers["Content-Disposition"] = "attachment; filename=speedtest_history.csv"
     return response
 
-# --- NOWE ENDPOINTY BACKUP I RESTORE ---
-
 @app.get("/api/backup", dependencies=[Depends(verify_session)])
 async def backup_db():
-    """Tworzy zrzut bazy danych za pomocą mysqldump i zwraca go jako plik."""
+    logging.info("📦 Rozpoczynanie backupu bazy danych...")
     try:
-        # Ustawiamy zmienną środowiskową dla hasła, aby uniknąć ostrzeżeń w logach
         env = os.environ.copy()
         env["MYSQL_PWD"] = DB_PASSWORD
-        
-        # --no-tablespaces jest potrzebne w niektórych wersjach MariaDB w Dockerze
-        cmd = [
-            "mysqldump",
-            "-h", DB_HOST,
-            "-P", str(DB_PORT),
-            "-u", DB_USER,
-            "--no-tablespaces",
-            DB_NAME
-        ]
-        
-        # Uruchamiamy proces i przechwytujemy wyjście
+        cmd = ["mysqldump", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, "--no-tablespaces", DB_NAME]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         stdout, stderr = proc.communicate()
-        
         if proc.returncode != 0:
-            logging.error(f"Backup failed: {stderr.decode()}")
+            logging.error(f"❌ Backup failed: {stderr.decode()}")
             raise HTTPException(status_code=500, detail="Backup failed")
-            
-        # Zwracamy wynik jako plik SQL
+        
+        logging.info("✅ Backup wygenerowany pomyślnie.")
         filename = f"speedtest_backup_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.sql"
         return Response(content=stdout, media_type="application/sql", headers={"Content-Disposition": f"attachment; filename={filename}"})
-        
     except Exception as e:
-        logging.error(f"Backup exception: {e}")
+        logging.error(f"❌ Backup exception: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/restore", dependencies=[Depends(verify_session)])
 async def restore_db(file: UploadFile = File(...)):
-    """Przywraca bazę danych z przesłanego pliku SQL."""
+    logging.warning("⚠️ Rozpoczynanie przywracania bazy danych...")
     if not file.filename.endswith('.sql'):
         raise HTTPException(status_code=400, detail="Invalid file type. Only .sql files allowed.")
-        
     try:
-        # Zapisz plik tymczasowo
         temp_file_path = f"/tmp/{uuid.uuid4()}.sql"
         with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-            
-        # Przygotuj komendę restore
         env = os.environ.copy()
         env["MYSQL_PWD"] = DB_PASSWORD
-        
-        cmd = [
-            "mysql",
-            "-h", DB_HOST,
-            "-P", str(DB_PORT),
-            "-u", DB_USER,
-            DB_NAME
-        ]
-        
-        # Otwórz plik do czytania i przekaż do stdin procesu mysql
+        cmd = ["mysql", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, DB_NAME]
         with open(temp_file_path, "r") as f:
             proc = subprocess.Popen(cmd, stdin=f, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
             stdout, stderr = proc.communicate()
-            
-        # Usuń plik tymczasowy
         os.remove(temp_file_path)
-        
         if proc.returncode != 0:
-            logging.error(f"Restore failed: {stderr.decode()}")
+            logging.error(f"❌ Restore failed: {stderr.decode()}")
             raise HTTPException(status_code=500, detail=f"Restore failed: {stderr.decode()}")
-            
-        return {"message": "Database restored successfully"}
         
+        logging.info("✅ Baza przywrócona pomyślnie.")
+        return {"message": "Database restored successfully"}
     except Exception as e:
-        logging.error(f"Restore exception: {e}")
+        logging.error(f"❌ Restore exception: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# 4. Serwowanie plików statycznych
+# --- Serwowanie stron HTML ---
 @app.get("/")
 async def read_root(request: Request):
     if not AUTH_ENABLED: return FileResponse('index.html')
@@ -397,15 +410,15 @@ async def read_root(request: Request):
     return FileResponse('login.html')
 
 @app.get("/{filename}")
-async def read_file(filename: str, request: Request):
-    file_path = os.path.join("/app", filename)
-    # Dodano backup.html do dozwolonych
-    allowed_public = ["login.html", "style.css", "logo.png", "speedtest.png", "favicon.ico", "manifest.json"]
+async def read_html_files(filename: str, request: Request):
+    allowed = ["login.html", "backup.html", "manifest.json", "favicon.ico", "logo.png", "speedtest.png"]
     
-    if filename not in allowed_public and filename not in ["index.html", "script.js", "backup.html"]:
+    if filename not in allowed and filename != "index.html":
          raise HTTPException(status_code=404)
 
-    if AUTH_ENABLED and filename in ["index.html", "script.js", "backup.html"]:
+    file_path = os.path.join("/app", filename)
+    
+    if AUTH_ENABLED and filename in ["index.html", "backup.html"]:
         cookie = request.cookies.get(SESSION_COOKIE_NAME)
         if cookie != SESSION_SECRET: return FileResponse('login.html')
 
