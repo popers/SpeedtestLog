@@ -29,7 +29,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError
 import pymysql
 
-# --- Konfiguracja Logowania ---
+# --- Konfiguracja Logowania (NAPRAWIONA DLA DOCKERA) ---
 LOG_DIR = '/app/data/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'app.log')
@@ -37,21 +37,24 @@ LOG_FILE = os.path.join(LOG_DIR, 'app.log')
 # Format logów
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-# Handler plikowy (rotacja co 5MB)
-file_handler = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=5, encoding='utf-8')
-file_handler.setFormatter(log_formatter)
-file_handler.setLevel(logging.INFO)
-
-# Handler konsolowy (terminal)
+# Handler konsolowy (terminal) - to musi być pierwszy handler
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(log_formatter)
 stream_handler.setLevel(logging.INFO)
 
-# Konfiguracja głównego loggera
-logging.basicConfig(level=logging.INFO, handlers=[file_handler, stream_handler], force=True)
+# Handler plikowy
+file_handler = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=5, encoding='utf-8')
+file_handler.setFormatter(log_formatter)
+file_handler.setLevel(logging.INFO)
 
-# Wyciszenie logów bibliotek, żeby nie śmieciły
-logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+# Konfiguracja głównego loggera
+logging.basicConfig(level=logging.INFO, handlers=[stream_handler, file_handler], force=True)
+
+# Wymuś logowanie na konsolę również dla Uvicorn
+logging.getLogger("uvicorn").addHandler(stream_handler)
+logging.getLogger("uvicorn.access").addHandler(stream_handler)
+
+# Wyciszenie nadmiernych logów
 logging.getLogger("schedule").setLevel(logging.WARNING)
 logging.getLogger("multipart").setLevel(logging.WARNING)
 
@@ -69,7 +72,13 @@ AUTH_ENABLED = auth_env in ["true", "1", "yes"]
 APP_USERNAME = os.getenv("APP_USERNAME", "admin")
 APP_PASSWORD = os.getenv("APP_PASSWORD", "admin")
 SESSION_COOKIE_NAME = "speedtest_session"
-SESSION_SECRET = secrets.token_hex(16)
+
+SESSION_SECRET = os.getenv("SESSION_SECRET")
+if not SESSION_SECRET:
+    SESSION_SECRET = secrets.token_hex(16)
+    logging.warning("⚠️ SESSION_SECRET nie ustawiony! Używam losowego klucza (sesje wygasną po restarcie).")
+else:
+    logging.info("🔒 SESSION_SECRET załadowany z konfiguracji.")
 
 SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 Base = declarative_base()

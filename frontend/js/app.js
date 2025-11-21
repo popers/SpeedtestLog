@@ -1,9 +1,9 @@
 import { state } from './state.js';
 import { translations } from './i18n.js';
-import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser } from './api.js';
+import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser } from './api.js';
 import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText } from './utils.js';
 import { renderCharts } from './charts.js';
-import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility, exportToPNG } from './ui.js';
+import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
 // --- Main Logic & Event Listeners ---
 
@@ -19,24 +19,26 @@ async function initializeApp() {
     if (savedTheme === 'dark') setNightMode(true);
     else setNightMode(false);
 
-    // 3. Sprawdzenie Auth (Ukrywanie Logout)
-    try {
-        const authStatus = await getAuthStatus();
-        setLogoutButtonVisibility(authStatus.enabled);
-    } catch (e) {
-        console.warn("Could not check auth status, assuming disabled UI for safety");
-        setLogoutButtonVisibility(false);
+    // 3. Sprawdzenie Auth
+    if (!document.getElementById('loginForm')) {
+        try {
+            const authStatus = await getAuthStatus();
+            setLogoutButtonVisibility(authStatus.enabled);
+        } catch (e) {
+            console.warn("Could not check auth status", e);
+            setLogoutButtonVisibility(false);
+        }
     }
     
     // 4. Listenery
     setupEventListeners();
     
-    // 5. Pobranie danych (tylko jeśli jesteśmy na dashboardzie)
+    // 5. Pobranie danych
     if (document.getElementById('dashboard')) {
         await loadDashboardData();
     }
     
-    // 6. Listenery backupu (tylko jeśli jesteśmy na podstronie backup)
+    // 6. Listenery backupu
     if (document.getElementById('downloadBackupBtn')) {
         setupBackupListeners();
     }
@@ -87,13 +89,11 @@ function setupEventListeners() {
             langMenu.classList.remove('show'); 
             showToast('toastLangChanged', 'success');
             
-            // --- NAPRAWA: Aktualizacja czasu następnego testu po zmianie języka ---
             const nextRunEl = document.getElementById('nextRunTime');
             if (nextRunEl) {
                 nextRunEl.textContent = getNextRunTimeText();
             }
             
-            // Odświeżenie wykresów i tabeli (tłumaczenie etykiet)
             if (state.allResults.length > 0) {
                 renderData(); 
             }
@@ -105,6 +105,32 @@ function setupEventListeners() {
     if(themeToggle) themeToggle.addEventListener('click', () => {
         setNightMode(!document.body.classList.contains('dark-mode'));
     });
+
+    // Logowanie
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('loginError');
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            const lang = translations[state.currentLang];
+
+            btn.disabled = true;
+            btn.textContent = lang.loggingIn || 'Logowanie...';
+            errorMsg.style.display = 'none';
+
+            try {
+                await loginUser(data.username, data.password);
+                window.location.reload(); 
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = lang.loginBtn || 'Zaloguj';
+                errorMsg.style.display = 'block';
+            }
+        });
+    }
 
     // Test Trigger
     const triggerBtn = document.getElementById('triggerTestBtn');
@@ -121,16 +147,60 @@ function setupEventListeners() {
     const filterSelect = document.getElementById('filterSelect');
     const unitSelect = document.getElementById('unitSelect');
     
-    if(filterSelect) filterSelect.addEventListener('change', renderData);
-    if(unitSelect) unitSelect.addEventListener('change', renderData);
+    if(filterSelect) filterSelect.addEventListener('change', () => {
+        state.currentPage = 1; // Reset strony po zmianie filtra
+        localStorage.setItem('dashboardFilter', filterSelect.value);
+        renderData();
+        const selectedText = filterSelect.options[filterSelect.selectedIndex].text;
+        showToast('toastFilterChanged', 'info', ` ${selectedText}`);
+    });
+    
+    if(unitSelect) unitSelect.addEventListener('change', () => {
+        localStorage.setItem('displayUnit', unitSelect.value);
+        renderData();
+        showToast('toastUnitChanged', 'info', ` ${unitSelect.value}`);
+    });
+
+    // NOWE: Pagination Controls
+    const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+
+    if(rowsPerPageSelect) {
+        rowsPerPageSelect.addEventListener('change', () => {
+            state.itemsPerPage = rowsPerPageSelect.value === 'all' ? 'all' : parseInt(rowsPerPageSelect.value);
+            state.currentPage = 1; // Reset do pierwszej strony
+            renderData();
+        });
+    }
+
+    if(prevPageBtn) {
+        prevPageBtn.addEventListener('click', () => {
+            if (state.currentPage > 1) {
+                state.currentPage--;
+                renderData();
+            }
+        });
+    }
+
+    if(nextPageBtn) {
+        nextPageBtn.addEventListener('click', () => {
+            // Maksymalna strona jest obliczana w ui.js, ale możemy bezpiecznie inkrementować,
+            // bo ui.js zablokuje przycisk jeśli jesteśmy na końcu.
+            state.currentPage++;
+            renderData();
+        });
+    }
 
     // Delete
     const deleteBtn = document.getElementById('deleteSelectedBtn');
     if(deleteBtn) deleteBtn.addEventListener('click', handleDelete);
     
     // Modal Close
-    const modalClose = document.getElementById('modalCloseBtn');
-    if(modalClose) modalClose.addEventListener('click', () => {
+    const modalCloseX = document.getElementById('confirmModalCloseBtn');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    
+    if(modalCloseBtn) modalCloseBtn.addEventListener('click', () => {
         document.getElementById('detailsModal').classList.remove('show');
         setTimeout(() => document.getElementById('detailsModal').style.display = 'none', 200);
     });
@@ -145,16 +215,24 @@ function setupEventListeners() {
     const selectAll = document.getElementById('selectAllCheckbox');
     if(selectAll) {
         selectAll.addEventListener('change', (e) => {
-            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = e.target.checked);
+            const isChecked = e.target.checked;
+            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            rowCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+            
             const delBtn = document.getElementById('deleteSelectedBtn');
-            if(delBtn) delBtn.style.display = e.target.checked ? 'flex' : 'none';
+            if(delBtn) {
+                const count = rowCheckboxes.length;
+                if (isChecked && count > 0) {
+                    delBtn.style.display = 'flex';
+                    const baseText = translations[state.currentLang].deleteSelected;
+                    delBtn.innerHTML = `🗑️ ${baseText} (${count})`;
+                } else {
+                    delBtn.style.display = 'none';
+                }
+            }
         });
-    }
-    
-    // PNG Export
-    const pngBtn = document.getElementById('pngBtn');
-    if(pngBtn) {
-        pngBtn.addEventListener('click', exportToPNG);
     }
     
     // CSV Export
@@ -188,6 +266,15 @@ async function loadDashboardData() {
             state.currentScheduleHours = settingsData.schedule_hours || 1;
         }
         
+        const savedFilter = localStorage.getItem('dashboardFilter') || '24h';
+        const savedUnit = localStorage.getItem('displayUnit') || 'Mbps';
+        
+        const filterSelect = document.getElementById('filterSelect');
+        if (filterSelect) filterSelect.value = savedFilter;
+        
+        const unitSelect = document.getElementById('unitSelect');
+        if (unitSelect) unitSelect.value = savedUnit;
+
         state.lastTestTimestamp = settingsData.latest_test_timestamp;
         const nextRunEl = document.getElementById('nextRunTime');
         if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
@@ -269,18 +356,34 @@ async function handleManualTest() {
     }
 }
 
-async function handleSettingsChange() {
-    const serverId = document.getElementById('serverSelect').value;
-    const hours = parseInt(document.getElementById('scheduleSelect').value);
+async function handleSettingsChange(e) {
+    const serverSelect = document.getElementById('serverSelect');
+    const scheduleSelect = document.getElementById('scheduleSelect');
     
+    const newServerId = serverSelect.value;
+    const newScheduleHours = parseInt(scheduleSelect.value);
+    const sourceId = e.target.id;
+
     try {
         await updateSettings({
-            server_id: serverId === 'null' ? null : parseInt(serverId),
-            schedule_hours: hours
+            server_id: newServerId === 'null' ? null : parseInt(newServerId),
+            schedule_hours: newScheduleHours
         });
-        showToast('toastSettingsSaved', 'success');
-        state.currentScheduleHours = hours;
-        document.getElementById('nextRunTime').textContent = getNextRunTimeText();
+        
+        if (sourceId === 'serverSelect') {
+            const serverText = serverSelect.options[serverSelect.selectedIndex].text;
+            showToast('toastServerChanged', 'success', ` ${serverText}`);
+        } else if (sourceId === 'scheduleSelect') {
+            const intervalText = scheduleSelect.options[scheduleSelect.selectedIndex].text;
+            showToast('toastScheduleChanged', 'success', ` ${intervalText}`);
+            
+            state.currentScheduleHours = newScheduleHours;
+            document.getElementById('nextRunTime').textContent = getNextRunTimeText();
+            setTimeout(() => {
+                showToast('toastNextRun', 'info', ` ${getNextRunTimeText()}`);
+            }, 2500);
+        }
+
     } catch (e) {
         showToast('toastSettingsError', 'error');
     }
@@ -291,7 +394,38 @@ async function handleDelete() {
     const ids = Array.from(checked).map(cb => cb.dataset.id);
     if (ids.length === 0) return;
     
-    if (confirm(translations[state.currentLang].confirmDeleteText || "Are you sure?")) {
+    const modal = document.getElementById('confirmModal');
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    const cancelBtn = document.getElementById('modalCancelBtn');
+    const closeBtn = document.getElementById('confirmModalCloseBtn');
+    const msg = document.getElementById('confirmModalText');
+    
+    const lang = translations[state.currentLang];
+    
+    msg.textContent = lang.confirmDeleteText;
+    confirmBtn.textContent = `${lang.modalConfirm} (${ids.length})`;
+    
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+    
+    const userConfirmed = await new Promise((resolve) => {
+        const cleanup = () => {
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            closeBtn.removeEventListener('click', onCancel);
+        };
+        const onConfirm = () => { cleanup(); resolve(true); };
+        const onCancel = () => { cleanup(); resolve(false); };
+        
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+    });
+    
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 200);
+    
+    if (userConfirmed) {
         try {
             await deleteEntries(ids);
             showToast('toastDeleteSuccess', 'success');

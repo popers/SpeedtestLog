@@ -3,7 +3,6 @@
 export async function fetchResults() {
     const response = await fetch('/api/results');
     if (response.status === 401) {
-        // Jeśli sesja wygasła, ale jesteśmy na dashboardzie, odśwież (przekieruje na login)
         window.location.reload();
         return [];
     }
@@ -57,15 +56,25 @@ export async function getLatestResult() {
     return await response.json();
 }
 
-// --- NOWE: Sprawdzanie statusu autoryzacji ---
 export async function getAuthStatus() {
     try {
         const response = await fetch('/api/auth-status');
         return await response.json();
     } catch (e) {
         console.error("Auth check failed", e);
-        return { enabled: true }; // Fallback to true for safety
+        return { enabled: true };
     }
+}
+
+// --- NOWE: Funkcja logowania ---
+export async function loginUser(username, password) {
+    const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username, password })
+    });
+    if (!response.ok) throw new Error('Login failed');
+    return response.json();
 }
 
 export async function logoutUser() {

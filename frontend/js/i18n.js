@@ -118,7 +118,12 @@ export const translations = {
         'labelPass': 'Hasło',
         'loginBtn': 'Zaloguj',
         'loginError': 'Błędne dane logowania.',
-        'loggingIn': 'Logowanie...'
+        'loggingIn': 'Logowanie...',
+        // PAGINATION
+        'rowsPerPage': 'Wierszy na stronę:',
+        'pageOf': 'z',
+        'prevPage': 'Poprzednia',
+        'nextPage': 'Następna'
     },
     'en': {
         'title': 'SpeedtestLog Logo',
@@ -239,6 +244,11 @@ export const translations = {
         'labelPass': 'Password',
         'loginBtn': 'Log In',
         'loginError': 'Invalid credentials.',
-        'loggingIn': 'Logging in...'
+        'loggingIn': 'Logging in...',
+        // PAGINATION
+        'rowsPerPage': 'Rows per page:',
+        'pageOf': 'of',
+        'prevPage': 'Previous',
+        'nextPage': 'Next'
     }
 };

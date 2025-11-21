@@ -4,7 +4,6 @@ import { parseISOLocally, convertValue, getUnitLabel } from './utils.js';
 
 // --- UI Helpers ---
 
-// Aktualizacja wyglądu przycisku języka (Flaga + Tekst w headerze)
 export function updateLangButtonUI(lang) {
     const currentLangFlag = document.getElementById('currentLangFlag');
     const currentLangText = document.getElementById('currentLangText');
@@ -20,7 +19,6 @@ export function updateLangButtonUI(lang) {
     }
 }
 
-// Ukrywanie/Pokazywanie przycisku Wyloguj
 export function setLogoutButtonVisibility(enabled) {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
@@ -32,17 +30,14 @@ export function setLogoutButtonVisibility(enabled) {
 export function updateStatsCards(results) {
     const lang = translations[state.currentLang];
     const latestDownloadValue = document.getElementById('latestDownloadValue');
-    const latestUploadValue = document.getElementById('latestUploadValue');
-    const latestPingValue = document.getElementById('latestPingValue');
-    const latestJitterValue = document.getElementById('latestJitterValue');
     
-    if (!latestDownloadValue) return; // Not on dashboard
+    if (!latestDownloadValue) return; 
 
     if (results.length === 0) {
         latestDownloadValue.textContent = "-"; 
-        latestUploadValue.textContent = "-"; 
-        latestPingValue.textContent = "-"; 
-        latestJitterValue.textContent = "-";
+        document.getElementById('latestUploadValue').textContent = "-";
+        document.getElementById('latestPingValue').textContent = "-";
+        document.getElementById('latestJitterValue').textContent = "-";
         
         document.getElementById('latestDownloadCompare').textContent = lang.statsNoData;
         document.getElementById('latestUploadCompare').textContent = lang.statsNoData;
@@ -54,9 +49,9 @@ export function updateStatsCards(results) {
     const unitLabel = getUnitLabel(state.currentUnit);
 
     latestDownloadValue.textContent = convertValue(latest.download, state.currentUnit).toFixed(2);
-    latestUploadValue.textContent = convertValue(latest.upload, state.currentUnit).toFixed(2);
-    latestPingValue.textContent = latest.ping.toFixed(2);
-    latestJitterValue.textContent = latest.jitter.toFixed(2);
+    document.getElementById('latestUploadValue').textContent = convertValue(latest.upload, state.currentUnit).toFixed(2);
+    document.getElementById('latestPingValue').textContent = latest.ping.toFixed(2);
+    document.getElementById('latestJitterValue').textContent = latest.jitter.toFixed(2);
     
     document.getElementById('latestDownloadUnit').textContent = unitLabel;
     document.getElementById('latestUploadUnit').textContent = unitLabel;
@@ -143,16 +138,71 @@ export function showDetailsModal(resultId) {
     setTimeout(() => detailsModal.classList.add('show'), 10);
 }
 
+function handleCheckboxChange() {
+    const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+    const delBtn = document.getElementById('deleteSelectedBtn');
+    const selectAll = document.getElementById('selectAllCheckbox');
+    
+    if (delBtn) {
+        delBtn.style.display = checkedCount > 0 ? 'flex' : 'none';
+        const baseText = translations[state.currentLang].deleteSelected;
+        delBtn.innerHTML = `🗑️ ${baseText} (${checkedCount})`;
+    }
+    
+    if (selectAll) {
+        const allCheckboxes = document.querySelectorAll('.row-checkbox');
+        selectAll.checked = allCheckboxes.length > 0 && checkedCount === allCheckboxes.length;
+    }
+}
+
+// --- NOWE: Funkcja renderująca paginację ---
+export function renderPagination(totalItems) {
+    const pageInfo = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    
+    if(!pageInfo || !prevBtn || !nextBtn) return;
+
+    if (state.itemsPerPage === 'all') {
+        pageInfo.textContent = `${translations[state.currentLang].filterAll} (${totalItems})`;
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
+    }
+
+    const totalPages = Math.ceil(totalItems / state.itemsPerPage) || 1;
+    if (state.currentPage > totalPages) state.currentPage = totalPages;
+    if (state.currentPage < 1) state.currentPage = 1;
+
+    pageInfo.textContent = `${state.currentPage} ${translations[state.currentLang].pageOf} ${totalPages}`;
+    
+    prevBtn.disabled = state.currentPage === 1;
+    nextBtn.disabled = state.currentPage === totalPages;
+}
+
 // --- Table ---
 export function updateTable(results) {
     const resultsTableBody = document.querySelector('#resultsTable tbody');
     if (!resultsTableBody) return;
 
+    // ZMIANA: Logika paginacji
+    let paginatedResults = results;
+    if (state.itemsPerPage !== 'all') {
+        const startIndex = (state.currentPage - 1) * state.itemsPerPage;
+        const endIndex = startIndex + parseInt(state.itemsPerPage);
+        paginatedResults = results.slice(startIndex, endIndex);
+    }
+
     resultsTableBody.innerHTML = '';
+    const delBtn = document.getElementById('deleteSelectedBtn');
+    const selectAll = document.getElementById('selectAllCheckbox');
+    if (delBtn) delBtn.style.display = 'none';
+    if (selectAll) selectAll.checked = false;
+
     const lang = translations[state.currentLang];
     const unitLabel = getUnitLabel(state.currentUnit);
 
-    results.forEach(res => {
+    paginatedResults.forEach(res => {
         const row = document.createElement('tr');
         const timestamp = parseISOLocally(res.timestamp); 
         const resultLinkHtml = res.result_url ? `<a href="${res.result_url}" target="_blank" title="Speedtest.net">🔗</a>` : '';
@@ -168,14 +218,25 @@ export function updateTable(results) {
             <td data-label="${lang.tableResultLink}" class="link-cell">${resultLinkHtml}</td>
         `;
         resultsTableBody.appendChild(row);
+        
         row.addEventListener('click', (e) => {
-            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'A') {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'A' && !e.target.classList.contains('row-checkbox')) {
                  showDetailsModal(res.id);
             }
         });
+
+        const checkbox = row.querySelector('.row-checkbox');
+        if (checkbox) {
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                handleCheckboxChange();
+            });
+        }
     });
     
-    // Update headers translation
+    // Render controls
+    renderPagination(results.length);
+
     document.querySelectorAll('[data-sort]').forEach(th => {
         const key = th.dataset.i18nKey;
         if(key && lang[key]) {
@@ -185,126 +246,4 @@ export function updateTable(results) {
             th.textContent = text;
         }
     });
-}
-
-// --- Export PNG ---
-export async function exportToPNG() {
-    // Sprawdź czy biblioteki są załadowane
-    if (!window.html2canvas) {
-        alert("Błąd: Biblioteka html2canvas nie załadowana.");
-        return;
-    }
-    
-    const pngBtn = document.getElementById('pngBtn');
-    const lang = translations[state.currentLang];
-    const originalText = pngBtn.querySelector('span').textContent;
-    
-    // Ustaw stan ładowania przycisku
-    pngBtn.querySelector('span').textContent = lang.generatingPNG;
-    pngBtn.disabled = true;
-
-    // Element do przechwycenia
-    const elementToCapture = document.querySelector('#contentToCapture');
-    
-    try {
-        const canvas = await html2canvas(elementToCapture, {
-            scale: 3, // Wysoka jakość
-            useCORS: true,
-            windowWidth: 1400, // Wymuś renderowanie w trybie desktop
-            scrollY: -window.scrollY, 
-            onclone: (clonedDoc) => {
-                const clone = clonedDoc.querySelector('#contentToCapture');
-
-                // 1. Reset stylów kontenera
-                clone.style.width = '1400px'; 
-                clone.style.height = 'auto'; 
-                clone.style.overflow = 'visible'; 
-                clone.style.position = 'static'; 
-                clone.style.maxHeight = 'none'; 
-
-                // 2. ODKRĘCENIE 75% SZEROKOŚCI (DLA PNG CHCEMY 100%)
-                const sections = clonedDoc.querySelectorAll('.content-scroll > section, .content-scroll > footer');
-                sections.forEach(section => {
-                    section.style.width = '100%'; // Wymuś pełną szerokość w PNG
-                    section.style.maxWidth = 'none';
-                });
-
-                // 3. Wymuszenie wysokości wykresów dla PNG
-                const charts = clonedDoc.querySelectorAll('.chart-block canvas');
-                charts.forEach(canvas => {
-                    canvas.style.width = '100%';
-                    canvas.style.height = '400px'; // Większa wysokość dla czytelności
-                });
-
-                // 4. Ukrywanie zbędnych elementów
-                const controls = clonedDoc.querySelector('.controls-dashboard');
-                if(controls) controls.style.display = 'none';
-                const stats = clonedDoc.querySelector('.stats-container');
-                if(stats) stats.style.display = 'none';
-                const actions = clonedDoc.querySelector('.table-actions');
-                if(actions) actions.style.display = 'none';
-                const footerControls = clonedDoc.querySelector('.table-footer-controls');
-                if(footerControls) footerControls.style.display = 'none';
-                const footer = clonedDoc.querySelector('footer');
-                if(footer) footer.style.display = 'none';
-                
-                // 5. Nagłówek raportu
-                const headerDiv = clonedDoc.createElement('div');
-                headerDiv.style.display = 'flex';
-                headerDiv.style.alignItems = 'center';
-                headerDiv.style.marginBottom = '20px';
-                headerDiv.style.paddingBottom = '10px';
-                headerDiv.style.borderBottom = '2px solid #ddd';
-                
-                const logoImg = clonedDoc.createElement('img');
-                logoImg.src = 'logo.png';
-                logoImg.style.height = '40px';
-                logoImg.style.marginRight = '15px';
-                
-                const title = clonedDoc.createElement('h1');
-                title.textContent = 'SpeedtestLog Report';
-                title.style.fontSize = '1.5rem';
-                title.style.color = '#333';
-                title.style.margin = '0';
-                
-                headerDiv.appendChild(logoImg);
-                headerDiv.appendChild(title);
-                
-                clone.insertBefore(headerDiv, clone.firstChild);
-                
-                // 6. Tło
-                clone.style.backgroundColor = '#ffffff';
-                if (document.body.classList.contains('dark-mode')) {
-                    clone.style.backgroundColor = '#1e1e1e';
-                    title.style.color = '#fff';
-                }
-                clone.style.padding = '20px';
-            }
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hour = String(now.getHours()).padStart(2, '0');
-        const minute = String(now.getMinutes()).padStart(2, '0');
-        
-        const filename = `speedtest_report_${year}-${month}-${day}_${hour}-${minute}.png`;
-        
-        const link = document.createElement('a');
-        link.href = imgData;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-    } catch (error) {
-        console.error("PNG Generation Error:", error);
-        alert("Błąd generowania PNG: " + error.message);
-    } finally {
-        pngBtn.querySelector('span').textContent = originalText;
-        pngBtn.disabled = false;
-    }
 }

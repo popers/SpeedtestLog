@@ -31,10 +31,11 @@ export function parseISOLocally(isoString) {
 // --- UX Helpers ---
 export function showToast(messageKey, type = 'success', extraContent = '') { 
     const toastNotification = document.getElementById('toastNotification');
+    if (!toastNotification) return;
+
     if (state.toastTimer) clearTimeout(state.toastTimer); 
     
     const lang = translations[state.currentLang];
-    // Jeśli messageKey jest w tłumaczeniach, użyj go, jeśli nie - wyświetl jako surowy tekst
     const message = (lang[messageKey] || messageKey) + extraContent; 
     
     toastNotification.textContent = message;
@@ -46,10 +47,15 @@ export function showToast(messageKey, type = 'success', extraContent = '') {
     }, 3000);
 }
 
+// ZMIANA: Usunięto auto-toast z tej funkcji, aby nie pojawiał się przy przeładowaniu/nawigacji
 export function setNightMode(isNight) {
     const themeToggle = document.getElementById('themeToggle');
     document.body.classList.toggle('dark-mode', isNight);
-    if(themeToggle) themeToggle.textContent = isNight ? '☀️' : '🌙';
+    
+    if(themeToggle) {
+        themeToggle.textContent = isNight ? '☀️' : '🌙';
+    }
+    
     localStorage.setItem('theme', isNight ? 'dark' : 'light');
 }
 
@@ -62,7 +68,6 @@ export function setLanguage(lang) {
     
     const t = translations[lang];
 
-    // Aktualizacja DOM
     document.querySelectorAll('[data-i18n-key]').forEach(el => {
         const key = el.dataset.i18nKey;
         if (t[key]) {
@@ -71,27 +76,18 @@ export function setLanguage(lang) {
             } else if (el.tagName === 'INPUT' && el.dataset.i18nAttr === 'placeholder') {
                 el.placeholder = t[key];
             } else {
-                // Bezpieczna aktualizacja tekstu dla elementów z ikonami (np. sidebar)
-                // Sprawdzamy czy element ma dzieci (np. <span class="icon">)
-                // Chcemy zaktualizować tylko węzeł tekstowy lub konkretny span z tekstem
-                
-                // 1. Jeśli element ma bezpośrednio tekst (np. <h3>Tytuł</h3>)
                 if (el.children.length === 0) {
                     el.textContent = t[key];
                 } else {
-                    // 2. Jeśli element ma strukturę (np. <a class="nav-link"> <span class="icon">...</span> <span>Tekst</span> </a>)
-                    // Szukamy wewnątrz spana, który nie jest ikoną, albo po prostu ostatniego dziecka tekstowego
                     const textSpan = Array.from(el.children).find(child => child.tagName === 'SPAN' && !child.classList.contains('icon') && !child.classList.contains('btn-dot-loader'));
                     
                     if (textSpan) {
                         textSpan.textContent = t[key];
                     } else {
-                        // Fallback: szukaj węzła tekstowego bezpośrednio w elemencie
                         const textNode = Array.from(el.childNodes).find(node => node.nodeType === 3 && node.textContent.trim().length > 0);
                         if (textNode) {
                             textNode.textContent = t[key];
                         } else {
-                            // Jeśli struktura jest inna, np. button ze spanem .btn-text
                              const btnText = el.querySelector('.btn-text');
                              if(btnText) btnText.textContent = t[key];
                         }

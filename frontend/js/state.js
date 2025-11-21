@@ -11,7 +11,10 @@ export const state = {
     currentSort: { column: null, direction: 'none' },
     currentFilteredResults: [],
     currentSelectedServerId: 'null',
-    // currentLimit usunięte
+    // Pagination
+    currentPage: 1,
+    itemsPerPage: 10, // Domyślnie 10
+    
     pollingInterval: null,
     toastTimer: null
 };

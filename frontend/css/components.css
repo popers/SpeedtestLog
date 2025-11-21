@@ -3,9 +3,20 @@ label { font-weight: 600; margin-bottom: 0.5rem; color: var(--text-color-seconda
 button, select, input { padding: 0.75rem 1rem; font-size: 1rem; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; background-color: var(--card-bg-color); color: var(--text-color); transition: background-color 0.2s, border-color 0.2s; }
 button { background-color: var(--primary-color); color: white; border-color: var(--primary-color); font-weight: 600; }
 button:hover { background-color: var(--primary-color-hover); }
+
 .action-btn { padding: 0.5rem 1rem; border: 1px solid transparent; border-radius: 4px; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; white-space: nowrap; min-height: 38px; }
-.logout-btn { width: 100%; background: transparent; border: 1px solid var(--danger-color); color: var(--danger-color); margin-top: 10px; padding: 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-.logout-btn:hover { background-color: var(--danger-color); color: white; }
+
+.logout-btn { width: 100%; background: transparent; border: 1px solid #8a0000; color: #8a0000; margin-top: 10px; padding: 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.logout-btn:hover { background-color: #8a0000; color: white; }
+
+#deleteSelectedBtn { background-color: #8a0000 !important; border-color: #8a0000 !important; color: white !important; }
+#deleteSelectedBtn:hover { background-color: #600000 !important; border-color: #600000 !important; }
+
+#modalConfirmBtn { background-color: #8a0000 !important; border-color: #8a0000 !important; }
+#modalConfirmBtn:hover { background-color: #600000 !important; }
+
+.modal-buttons { display: flex; justify-content: center; gap: 2rem; margin-top: 1.5rem; }
+.modal-buttons button { min-width: 130px; padding: 0.75rem 2rem; flex: 1; }
 
 /* Theme & Lang Toggles */
 .theme-btn { background: transparent; border: 1px solid var(--border-color); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; color: var(--text-color); padding: 0; font-size: 1.2rem; line-height: 1; transition: background-color 0.2s; }
@@ -81,3 +92,40 @@ button#triggerTestBtn:disabled { cursor: not-allowed; opacity: 0.8; }
 #triggerTestBtn.is-loading .btn-text { opacity: 0; visibility: hidden; }
 #triggerTestBtn.is-loading img { opacity: 0; }
 #triggerTestBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
+
+/* --- PAGINATION STYLES --- */
+.pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: var(--card-bg-color);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.pagination-left, .pagination-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    min-width: 40px;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .pagination-controls {
+        flex-direction: column;
+        justify-content: center;
+    }
+}
