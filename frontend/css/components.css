@@ -246,9 +246,41 @@ body.light-mode th { background-color: #f9f9f9; }
 tbody tr { transition: background-color 0.1s; }
 tbody tr:hover { background-color: rgba(255,255,255, 0.03); }
 body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
-.table-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; gap: 1rem; }
+
+/* ZMIANA: position relative dla kontenera nagłówka tabeli (umożliwia absolutne pozycjonowanie przycisku usuwania na mobile) */
+.table-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    flex-wrap: wrap; 
+    margin-bottom: 1rem; 
+    gap: 1rem; 
+    position: relative; 
+}
 .table-header h2 { margin: 0; font-size: 1.5rem; color: var(--text-color); font-weight: 400; }
 .table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ZMIANA: Style dla pola wyszukiwania */
+.search-input {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 20px; /* Bardziej zaokrąglone */
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+    width: 200px;
+    transition: all 0.2s;
+}
+.search-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--active-link-bg);
+    outline: none;
+}
+
+/* ZMIANA: Kolory pomocnicze dla wartości tabeli */
+.text-success { color: var(--success-color); font-weight: 700; }
+.text-warning { color: var(--color-ping); font-weight: 700; }
+.text-danger { color: var(--danger-color); font-weight: 700; }
 
 /* Pagination */
 .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 1rem; }
@@ -275,7 +307,6 @@ body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
     z-index: 2000; 
     display: flex; align-items: center; justify-content: center;
     min-width: 280px;
-    /* ZMIANA: Nowy kolor tła powiadomień */
     background-color: #00374f !important; 
     color: #ffffff !important;
 }
@@ -365,6 +396,38 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
     .watchdog-popover { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); right: auto; width: 90%; max-width: 300px; }
     /* ZMIANA: Mniejszy padding na mobilkach dla backupu */
     .backup-card { padding: 1rem; gap: 1rem; }
+
+    /* NOWE: Reguły dla table-actions na mobilkach (szukanie w jednej linii z eksportem) */
+    .table-actions {
+        width: 100%;
+        justify-content: space-between; /* Rozsuwa elementy */
+        gap: 10px;
+        flex-wrap: nowrap; /* Wymusza jedną linię */
+    }
+    .search-input {
+        width: auto;
+        flex: 1; /* Input zajmuje resztę miejsca */
+        min-width: 0; /* Pozwala na zmniejszanie się inputa */
+    }
+    .action-btn {
+        white-space: nowrap;
+    }
+
+    /* ZMIANA: Pozycjonowanie przycisku usuwania w jednej linii z nagłówkiem na mobile */
+    #deleteSelectedBtn {
+        position: absolute;
+        top: 0;
+        right: 0;
+        margin-top: 0;
+        height: 32px; /* Dopasowana wysokość */
+        font-size: 0.75rem;
+        padding: 0 0.8rem;
+        min-height: 32px;
+    }
+    /* Zabezpieczenie, żeby długi nagłówek nie wjechał na przycisk */
+    .table-header h2 {
+        max-width: calc(100% - 140px);
+    }
 }
 
 /* Settings Card */

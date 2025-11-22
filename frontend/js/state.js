@@ -12,6 +12,9 @@ export const state = {
     currentFilteredResults: [],
     currentSelectedServerId: 'null',
     
+    // NOWE: Stan wyszukiwarki
+    searchTerm: '',
+    
     // NOWE: Deklarowane prędkości
     declaredSpeeds: {
         download: 0,

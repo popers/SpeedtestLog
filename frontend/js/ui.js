@@ -281,18 +281,51 @@ export function updateTable(results) {
     const lang = translations[state.currentLang];
     const unitLabel = getUnitLabel(state.currentUnit);
 
+    const declaredDl = state.declaredSpeeds.download;
+    const declaredUl = state.declaredSpeeds.upload;
+
     paginatedResults.forEach(res => {
         const row = document.createElement('tr');
         const timestamp = parseISOLocally(res.timestamp); 
         const resultLinkHtml = res.result_url ? `<a href="${res.result_url}" target="_blank" title="Speedtest.net">🔗</a>` : '';
         
+        // Ping Color
+        let pingClass = '';
+        if (res.ping < 20) pingClass = 'text-success';
+        else if (res.ping < 100) pingClass = 'text-warning';
+        else pingClass = 'text-danger';
+
+        // Jitter Color
+        let jitterClass = '';
+        if (res.jitter < 10) jitterClass = 'text-success';
+        else if (res.jitter < 30) jitterClass = 'text-warning';
+        else jitterClass = 'text-danger';
+
+        // Download Color
+        let downloadClass = '';
+        if (declaredDl > 0) {
+            const pct = (res.download / declaredDl) * 100;
+            if (pct >= 80) downloadClass = 'text-success';
+            else if (pct >= 50) downloadClass = 'text-warning';
+            else downloadClass = 'text-danger';
+        }
+
+        // Upload Color
+        let uploadClass = '';
+        if (declaredUl > 0) {
+            const pct = (res.upload / declaredUl) * 100;
+            if (pct >= 80) uploadClass = 'text-success';
+            else if (pct >= 50) uploadClass = 'text-warning';
+            else uploadClass = 'text-danger';
+        }
+
         row.innerHTML = `
             <td><input type="checkbox" class="row-checkbox" data-id="${res.id}"></td>
             <td data-label="${lang.tableTime}">${timestamp.toLocaleString(state.currentLang)}</td>
-            <td data-label="${lang.tableDownload}"><strong>${convertValue(res.download, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
-            <td data-label="${lang.tableUpload}"><strong>${convertValue(res.upload, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
-            <td data-label="${lang.tablePing}"><strong>${res.ping}</strong> ms</td>
-            <td data-label="${lang.tableJitter}"><strong>${res.jitter}</strong> ms</td>
+            <td data-label="${lang.tableDownload}"><strong class="${downloadClass}">${convertValue(res.download, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
+            <td data-label="${lang.tableUpload}"><strong class="${uploadClass}">${convertValue(res.upload, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
+            <td data-label="${lang.tablePing}"><strong class="${pingClass}">${res.ping}</strong> ms</td>
+            <td data-label="${lang.tableJitter}"><strong class="${jitterClass}">${res.jitter}</strong> ms</td>
             <td data-label="${lang.tableServer}">(${res.server_id}) ${res.server_name} (${res.server_location})</td>
             <td data-label="${lang.tableResultLink}" class="link-cell">${resultLinkHtml}</td>
         `;

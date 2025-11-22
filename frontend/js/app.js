@@ -35,6 +35,14 @@ async function initializeApp() {
         }
     }
     
+    // NOWE: Ładowanie zapisanej ilości wierszy
+    const savedPerPage = localStorage.getItem('itemsPerPage');
+    if(savedPerPage) {
+        state.itemsPerPage = savedPerPage === 'all' ? 'all' : parseInt(savedPerPage);
+        const select = document.getElementById('rowsPerPageSelect');
+        if(select) select.value = savedPerPage;
+    }
+
     const pendingToast = sessionStorage.getItem('pendingToast');
     if (pendingToast) {
         sessionStorage.removeItem('pendingToast');
@@ -368,7 +376,13 @@ function setupEventListeners() {
     });
 
     const rowsPerPage = document.getElementById('rowsPerPageSelect');
-    if(rowsPerPage) rowsPerPage.addEventListener('change', () => { state.itemsPerPage = rowsPerPage.value === 'all' ? 'all' : parseInt(rowsPerPage.value); state.currentPage = 1; renderData(); });
+    if(rowsPerPage) rowsPerPage.addEventListener('change', () => { 
+        state.itemsPerPage = rowsPerPage.value === 'all' ? 'all' : parseInt(rowsPerPage.value); 
+        // NOWE: Zapis wyboru do localStorage
+        localStorage.setItem('itemsPerPage', rowsPerPage.value);
+        state.currentPage = 1; 
+        renderData(); 
+    });
     const prevPage = document.getElementById('prevPageBtn'); if(prevPage) prevPage.addEventListener('click', () => { if(state.currentPage > 1) { state.currentPage--; renderData(); } });
     const nextPage = document.getElementById('nextPageBtn'); if(nextPage) nextPage.addEventListener('click', () => { state.currentPage++; renderData(); });
 
@@ -436,7 +450,6 @@ function setupEventListeners() {
     }
     const restoreForm = document.getElementById('restoreForm');
     if(restoreForm) {
-        // ZMIANA: Obsługa zmiany pliku dla własnego inputa
         const fileInput = document.getElementById('backupFile');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
         if (fileInput && fileNameDisplay) {
@@ -444,7 +457,6 @@ function setupEventListeners() {
                 if (fileInput.files.length > 0) {
                     fileNameDisplay.textContent = fileInput.files[0].name;
                 } else {
-                    // Przywróć domyślny tekst z tłumaczeń
                     const key = fileNameDisplay.getAttribute('data-i18n-key');
                     if (key && translations[state.currentLang][key]) {
                         fileNameDisplay.textContent = translations[state.currentLang][key];
@@ -474,6 +486,16 @@ function setupEventListeners() {
             if (sortKey) handleSort(sortKey);
         });
     });
+
+    // NOWE: Nasłuchiwanie na input wyszukiwania
+    const searchInput = document.getElementById('tableSearch');
+    if(searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            state.searchTerm = e.target.value;
+            state.currentPage = 1;
+            renderData();
+        });
+    }
 
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
@@ -552,6 +574,17 @@ function renderData() {
     } else {
         filtered = state.allResults.slice();
     }
+
+    // NOWE: Filtrowanie po wyszukiwarce
+    if (state.searchTerm && state.searchTerm.trim() !== '') {
+        const lowerTerm = state.searchTerm.toLowerCase();
+        filtered = filtered.filter(res => {
+            const serverName = res.server_name ? res.server_name.toLowerCase() : '';
+            const serverLoc = res.server_location ? res.server_location.toLowerCase() : '';
+            const isp = res.isp ? res.isp.toLowerCase() : '';
+            return serverName.includes(lowerTerm) || serverLoc.includes(lowerTerm) || isp.includes(lowerTerm);
+        });
+    }
     
     if (state.currentSort.column) {
         filtered.sort((a, b) => {
@@ -562,7 +595,6 @@ function renderData() {
                 valA = new Date(valA).getTime();
                 valB = new Date(valB).getTime();
             }
-            // FIX: Obsługa pustych wartości dla stringów
             if (valA == null) valA = (typeof valA === 'string' ? '' : 0);
             if (valB == null) valB = (typeof valB === 'string' ? '' : 0);
 

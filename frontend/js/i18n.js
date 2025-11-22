@@ -141,7 +141,9 @@ export const translations = {
         'toastLogoutSuccess': 'Wylogowano pomyślnie.',
         // NEW: Custom File Input
         'selectFile': 'Wybierz plik',
-        'noFileChosen': 'Brak wybranego pliku'
+        'noFileChosen': 'Brak wybranego pliku',
+        // NEW: Search
+        'searchPlaceholder': 'Szukaj serwera...'
     },
     'en': {
         'title': 'SpeedtestLog Logo',
@@ -285,6 +287,8 @@ export const translations = {
         'toastLogoutSuccess': 'Logged out successfully.',
         // NEW: Custom File Input
         'selectFile': 'Select File',
-        'noFileChosen': 'No file chosen'
+        'noFileChosen': 'No file chosen',
+        // NEW: Search
+        'searchPlaceholder': 'Search server...'
     }
 };
