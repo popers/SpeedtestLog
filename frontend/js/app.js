@@ -327,7 +327,7 @@ function renderSparkline(history) {
                             font: {
                                 size: 9 // Mała czcionka
                             },
-                            maxTicksLimit: 4 // Ograniczamy liczbę etykiet
+                            stepSize: 0.5 // ZMIANA: Krok siatki co 0.5
                         },
                         suggestedMin: 0
                     } 
@@ -493,7 +493,11 @@ function setupEventListeners() {
             document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = e.target.checked);
             const c = document.querySelectorAll('.row-checkbox:checked').length;
             const del = document.getElementById('deleteSelectedBtn');
-            if(del) { del.style.display = c > 0 ? 'flex' : 'none'; del.innerHTML=`🗑️ ${translations[state.currentLang].deleteSelected} (${c})`; }
+            if(del) { 
+                del.style.display = c > 0 ? 'flex' : 'none'; 
+                // ZMIANA: Użycie ikony Material Symbols zamiast emoji
+                del.innerHTML=`<span class="material-symbols-rounded">delete</span> ${translations[state.currentLang].deleteSelected} (${c})`; 
+            }
         });
     }
 

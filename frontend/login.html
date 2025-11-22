@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logowanie - SpeedtestLog</title>
     <link rel="stylesheet" href="css/main.css">
+    <!-- ZMIANA: Dodano fonty Material Symbols Rounded -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="manifest" href="manifest.json">
 </head>
@@ -12,17 +14,21 @@
     
     <div class="login-controls">
         <div class="lang-dropdown-wrapper">
+            <!-- ZMIANA: Usunięto flagę i dodano ikonę języka -->
             <button id="langBtn" class="lang-btn">
-                <img src="https://flagcdn.com/w40/pl.png" alt="PL" id="currentLangFlag">
+                <span class="material-symbols-rounded">language</span>
                 <span id="currentLangText">PL</span>
             </button>
             <ul id="langMenu" class="lang-menu">
-                <li data-lang="pl"><img src="https://flagcdn.com/w40/pl.png" alt="PL"> Polski</li>
-                <li data-lang="en"><img src="https://flagcdn.com/w40/gb.png" alt="EN"> English</li>
+                <li data-lang="pl">Polski</li>
+                <li data-lang="en">English</li>
             </ul>
         </div>
 
-        <button id="themeToggle" title="Zmień motyw" class="theme-btn">🌙</button>
+        <!-- ZMIANA: Ikonka zmiany motywu na Material Symbol -->
+        <button id="themeToggle" title="Zmień motyw" class="theme-btn">
+            <span class="material-symbols-rounded">dark_mode</span>
+        </button>
     </div>
 
     <div class="login-container">

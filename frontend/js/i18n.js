@@ -3,7 +3,7 @@ export const translations = {
         'title': 'SpeedtestLog Logo',
         'navDashboard': 'Panel Główny',
         'navCharts': 'Wykresy',
-        'navHistory': 'Historia',
+        'navHistory': 'Pomiary', // ZMIANA: Historia -> Pomiary
         'navSettings': 'Ustawienia',
         'navBackup': 'Kopia Zapasowa',
         'manualTest': 'Test ręczny',
@@ -32,7 +32,7 @@ export const translations = {
         'uploadChartTitle': 'Wysyłanie (Mbps)',
         'pingChartTitle': 'Ping (ms)',
         'jitterChartTitle': 'Jitter (ms)',
-        'historyTable': 'Historia Pomiarów',
+        'historyTable': 'Pomiary', // ZMIANA: Historia Pomiarów -> Pomiary
         'tableTime': 'Data i Godzina',
         'tablePing': 'Ping',
         'tableJitter': 'Jitter',
@@ -159,7 +159,7 @@ export const translations = {
         'title': 'SpeedtestLog Logo',
         'navDashboard': 'Dashboard',
         'navCharts': 'Charts',
-        'navHistory': 'History',
+        'navHistory': 'Measurements', // ZMIANA: History -> Measurements
         'navSettings': 'Settings',
         'navBackup': 'Backup & Restore',
         'manualTest': 'Manual Test',
@@ -188,7 +188,7 @@ export const translations = {
         'uploadChartTitle': 'Upload (Mbps)',
         'pingChartTitle': 'Ping (ms)',
         'jitterChartTitle': 'Jitter (ms)',
-        'historyTable': 'Measurement History',
+        'historyTable': 'Measurements', // ZMIANA: Measurement History -> Measurements
         'tableTime': 'Date & Time',
         'tablePing': 'Ping',
         'tableJitter': 'Jitter',

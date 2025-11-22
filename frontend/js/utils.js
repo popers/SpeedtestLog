@@ -47,24 +47,26 @@ export function showToast(messageKey, type = 'success', extraContent = '') {
     }, 3000);
 }
 
-// ZMIANA: Funkcja zarządza klasą .light-mode
-// isNight = true  -> Tryb CIEMNY (Domyślny) -> Usuń klasę .light-mode
-// isNight = false -> Tryb JASNY  (Opcjonalny) -> Dodaj klasę .light-mode
+// ZMIANA: Funkcja zarządza klasą .light-mode oraz ikoną Material Symbols
+// isNight = true  -> Tryb CIEMNY -> Ikona Słońca (aby przełączyć na jasny)
+// isNight = false -> Tryb JASNY  -> Ikona Księżyca (aby przełączyć na ciemny)
 export function setNightMode(isNight) {
     const themeToggle = document.getElementById('themeToggle');
     
     if (isNight) {
         document.body.classList.remove('light-mode'); 
-        // Opcjonalnie usuwamy starą klasę dark-mode dla pewności, choć nie jest już używana
         document.body.classList.remove('dark-mode'); 
     } else {
         document.body.classList.add('light-mode');
     }
     
     if(themeToggle) {
-        // Słońce = Przełącz na jasny (czyli jesteśmy w ciemnym)
-        // Księżyc = Przełącz na ciemny (czyli jesteśmy w jasnym)
-        themeToggle.textContent = isNight ? '☀️' : '🌙';
+        const iconSpan = themeToggle.querySelector('.material-symbols-rounded');
+        if (iconSpan) {
+            // Jeśli jest ciemno (isNight=true), pokaż "light_mode" (słońce) jako opcję zmiany
+            // Jeśli jest jasno (isNight=false), pokaż "dark_mode" (księżyc)
+            iconSpan.textContent = isNight ? 'light_mode' : 'dark_mode';
+        }
     }
     
     localStorage.setItem('theme', isNight ? 'dark' : 'light');
@@ -90,7 +92,7 @@ export function setLanguage(lang) {
                 if (el.children.length === 0) {
                     el.textContent = t[key];
                 } else {
-                    const textSpan = Array.from(el.children).find(child => child.tagName === 'SPAN' && !child.classList.contains('icon') && !child.classList.contains('btn-dot-loader'));
+                    const textSpan = Array.from(el.children).find(child => child.tagName === 'SPAN' && !child.classList.contains('icon') && !child.classList.contains('btn-dot-loader') && !child.classList.contains('material-symbols-rounded'));
                     
                     if (textSpan) {
                         textSpan.textContent = t[key];
@@ -112,7 +114,6 @@ export function setLanguage(lang) {
 export function getNextRunTimeText() {
     const lang = translations[state.currentLang];
     
-    // NOWE: Obsługa wyłączonego harmonogramu
     if (state.currentScheduleHours === 0) {
         return lang.nextTestDisabled || 'Harmonogram wyłączony';
     }

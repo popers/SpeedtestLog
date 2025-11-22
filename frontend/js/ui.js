@@ -5,15 +5,12 @@ import { parseISOLocally, convertValue, getUnitLabel } from './utils.js';
 // --- UI Helpers ---
 
 export function updateLangButtonUI(lang) {
-    const currentLangFlag = document.getElementById('currentLangFlag');
     const currentLangText = document.getElementById('currentLangText');
-    
-    if (currentLangFlag && currentLangText) {
+    // ZMIANA: Usunięto logikę podmieniania flagi (img src), teraz tylko tekst
+    if (currentLangText) {
         if (lang === 'pl') {
-            currentLangFlag.src = 'https://flagcdn.com/w40/pl.png';
             currentLangText.textContent = 'PL';
         } else {
-            currentLangFlag.src = 'https://flagcdn.com/w40/gb.png';
             currentLangText.textContent = 'EN';
         }
     }
@@ -172,7 +169,7 @@ function handleCheckboxChange() {
     if (delBtn) {
         delBtn.style.display = checkedCount > 0 ? 'flex' : 'none';
         const baseText = translations[state.currentLang].deleteSelected;
-        delBtn.innerHTML = `🗑️ ${baseText} (${checkedCount})`;
+        delBtn.innerHTML = `<span class="material-symbols-rounded">delete</span> ${baseText} (${checkedCount})`;
     }
     
     if (selectAll) {
@@ -181,7 +178,7 @@ function handleCheckboxChange() {
     }
 }
 
-// --- ZMIANA: Nowa logika paginacji generująca przyciski zgodnie z projektem ---
+// --- Pagination ---
 export function renderPagination(totalItems) {
     const paginationNav = document.getElementById('paginationNav');
     
@@ -352,8 +349,10 @@ export function updateTable(results) {
         const key = th.dataset.i18nKey;
         if(key && lang[key]) {
             let text = lang[key];
-            if(th.dataset.sort === 'download' || th.dataset.sort === 'upload') text += ` (${unitLabel})`;
-            if(th.dataset.sort === 'ping' || th.dataset.sort === 'jitter') text += ` (ms)`;
+            
+            // ZMIANA: Usunięcie dopisywania jednostek do nagłówków tabeli zgodnie z życzeniem
+            // if(th.dataset.sort === 'download' || th.dataset.sort === 'upload') text += ` (${unitLabel})`;
+            // if(th.dataset.sort === 'ping' || th.dataset.sort === 'jitter') text += ` (ms)`;
             
             // ZMIANA: Dodanie wskaźnika sortowania
             if (th.dataset.sort === state.currentSort.column) {
