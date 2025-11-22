@@ -85,11 +85,15 @@
                             <h3 data-i18n-key="backupRestoreTitle">Przywróć Kopię (Restore)</h3>
                             <p data-i18n-key="backupRestoreText" style="color: var(--danger-text); font-weight: bold;">UWAGA: Przywrócenie kopii nadpisze wszystkie obecne dane!</p>
                             
-                            <form id="restoreForm" style="margin-top: 1rem;">
-                                <div class="file-input-wrapper">
-                                    <input type="file" id="backupFile" name="file" accept=".sql" required>
+                            <form id="restoreForm">
+                                <!-- ZMIANA: Customowy file input do obsługi tłumaczeń i RWD -->
+                                <div class="file-input-custom">
+                                    <label for="backupFile" class="file-label" data-i18n-key="selectFile">Wybierz plik</label>
+                                    <span id="fileNameDisplay" data-i18n-key="noFileChosen">Brak wybranego pliku</span>
+                                    <input type="file" id="backupFile" name="file" accept=".sql" required style="display: none;">
                                 </div>
-                                <button type="submit" id="restoreBackupBtn" class="action-btn" style="background-color: var(--danger-color); border-color: var(--danger-color); margin-top: 10px;">
+                                
+                                <button type="submit" id="restoreBackupBtn" class="action-btn" style="background-color: var(--danger-color); border-color: var(--danger-color); margin-top: 15px;">
                                     <span data-i18n-key="backupRestoreBtn">Przywróć z pliku</span>
                                 </button>
                             </form>

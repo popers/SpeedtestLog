@@ -126,7 +126,7 @@ export const translations = {
         'wdInterval': 'Interwał (sekundy):',
         'wdStatusOnline': 'ONLINE',
         'wdStatusOffline': 'OFFLINE',
-        'rowsPerPage': 'Na stronę', // ZMIANA: Krótsza nazwa pasująca do buttona
+        'rowsPerPage': 'Na stronę', 
         'pageOf': 'z',
         'prevPage': 'Poprzednia',
         'nextPage': 'Następna',
@@ -138,7 +138,10 @@ export const translations = {
         'ispIntegrity': 'deklarowanej prędkości', 
         // NEW: Login notifications
         'toastLoginSuccess': 'Zalogowano: ',
-        'toastLogoutSuccess': 'Wylogowano pomyślnie.'
+        'toastLogoutSuccess': 'Wylogowano pomyślnie.',
+        // NEW: Custom File Input
+        'selectFile': 'Wybierz plik',
+        'noFileChosen': 'Brak wybranego pliku'
     },
     'en': {
         'title': 'SpeedtestLog Logo',
@@ -279,6 +282,9 @@ export const translations = {
         'ispIntegrity': 'declared speed',
         // NEW: Login notifications
         'toastLoginSuccess': 'Logged in: ',
-        'toastLogoutSuccess': 'Logged out successfully.'
+        'toastLogoutSuccess': 'Logged out successfully.',
+        // NEW: Custom File Input
+        'selectFile': 'Select File',
+        'noFileChosen': 'No file chosen'
     }
 };

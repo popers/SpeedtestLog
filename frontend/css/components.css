@@ -26,9 +26,9 @@ input:focus, select:focus {
     box-shadow: 0 0 0 2px var(--active-link-bg);
 }
 
-/* ZMIANA: Ciemne tło dla opcji w select (naprawa nieczytelności w trybie ciemnym) */
+/* Ciemne tło dla opcji w select */
 select option {
-    background-color: #1e1e1e; /* Wymuszony ciemny kolor */
+    background-color: #1e1e1e; 
     color: #e0e0e0;
 }
 body.light-mode select option {
@@ -44,7 +44,7 @@ button {
     font-weight: 500; 
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-radius: 24px;
+    border-radius: 24px; 
     box-shadow: var(--shadow-low);
     position: relative;
     overflow: hidden;
@@ -61,7 +61,7 @@ button:active {
     transform: translateY(0);
 }
 
-/* Loader Button - Kropki (ZMIANA: Style dla animacji) */
+/* Loader Button - Kropki */
 button#triggerTestBtn { 
     display: flex; align-items: center; justify-content: center; gap: 0.5rem; 
     background-color: var(--primary-color); 
@@ -71,7 +71,6 @@ button#triggerTestBtn {
 button#triggerTestBtn img { height: 24px; width: 24px; filter: brightness(0) invert(1); transition: opacity 0.2s; }
 button#triggerTestBtn .btn-text { transition: opacity 0.2s; }
 
-/* Logika ukrywania tekstu i pokazywania kropek */
 button#triggerTestBtn.is-loading .btn-text,
 button#triggerTestBtn.is-loading img { opacity: 0; }
 button#triggerTestBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
@@ -217,9 +216,18 @@ button#triggerTestBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visib
     width: 100%; background-color: var(--card-bg-color);
     padding: 1.5rem; border-radius: var(--border-radius-base);
     box-shadow: var(--shadow-low); box-sizing: border-box; 
+    position: relative;
+    min-width: 0; 
 }
 .chart-block h3 { margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--text-color); font-weight: 500; }
-.chart-block canvas { max-height: 300px; width: 100%; }
+
+/* ZMIANA: Naprawa wykresów. */
+.chart-block canvas { 
+    width: 100% !important; 
+    height: 100% !important;
+    max-height: 350px; 
+}
+
 .chart-controls { display: flex; gap: 1rem; }
 
 /* Tables */
@@ -242,85 +250,19 @@ body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
 .table-header h2 { margin: 0; font-size: 1.5rem; color: var(--text-color); font-weight: 400; }
 .table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* --- NEW PAGINATION STYLES (Segmented Control Style) --- */
-.pagination-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-/* Grupa "Per page" */
-.pagination-per-page {
-    display: flex;
-    align-items: center;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background-color: var(--card-bg-color);
-    overflow: hidden;
-}
-
-.pagination-label {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-    color: var(--text-color-secondary);
-    border-right: 1px solid var(--border-color);
-    background-color: rgba(0,0,0,0.05);
-    font-weight: 500;
-}
-
-.pagination-select {
-    padding: 0.5rem 2rem 0.5rem 1rem;
-    border: none;
-    background-color: transparent;
-    color: var(--text-color);
-    font-weight: 600;
-    cursor: pointer;
-    appearance: none;
-    /* Strzałka w dół (zakodowane SVG) */
-    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23888888%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.7rem top 50%;
-    background-size: 0.65rem auto;
-}
+/* Pagination */
+.pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 1rem; }
+.pagination-per-page { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--card-bg-color); overflow: hidden; }
+.pagination-label { padding: 0.5rem 1rem; font-size: 0.9rem; color: var(--text-color-secondary); border-right: 1px solid var(--border-color); background-color: rgba(0,0,0,0.05); font-weight: 500; }
+.pagination-select { padding: 0.5rem 2rem 0.5rem 1rem; border: none; background-color: transparent; color: var(--text-color); font-weight: 600; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23888888%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 0.7rem top 50%; background-size: 0.65rem auto; }
 .pagination-select:focus { outline: none; box-shadow: none; }
-
-/* Grupa nawigacji */
-.pagination-nav {
-    display: flex;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    overflow: hidden;
-    background-color: var(--card-bg-color);
-}
-
-.page-btn {
-    background: transparent;
-    border: none;
-    border-right: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 0.5rem 1rem;
-    min-width: 40px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border-radius: 0;
-    box-shadow: none;
-    display: flex; align-items: center; justify-content: center;
-}
-
+.pagination-nav { display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background-color: var(--card-bg-color); }
+.page-btn { background: transparent; border: none; border-right: 1px solid var(--border-color); color: var(--text-color); padding: 0.5rem 1rem; min-width: 40px; font-weight: 500; cursor: pointer; transition: background-color 0.2s; border-radius: 0; box-shadow: none; display: flex; align-items: center; justify-content: center; }
 .page-btn:last-child { border-right: none; }
 .page-btn:hover:not(:disabled) { background-color: rgba(255,255,255,0.05); }
 .page-btn:active:not(:disabled) { background-color: rgba(255,255,255,0.1); }
 .page-btn:disabled { color: var(--text-color-secondary); opacity: 0.5; cursor: default; }
-
-.page-btn.active {
-    color: var(--color-ping); /* Aktywna strona wyróżniona kolorem */
-    font-weight: 700;
-    background-color: rgba(255, 202, 44, 0.1);
-}
+.page-btn.active { color: var(--color-ping); font-weight: 700; background-color: rgba(255, 202, 44, 0.1); }
 
 /* Modals & Toasts */
 .toast { 
@@ -333,16 +275,12 @@ body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
     z-index: 2000; 
     display: flex; align-items: center; justify-content: center;
     min-width: 280px;
-    /* ZMIANA: Sztywny kolor dla wszystkich powiadomień */
-    background-color: #323232 !important; 
+    /* ZMIANA: Nowy kolor tła powiadomień */
+    background-color: #00374f !important; 
     color: #ffffff !important;
 }
-body.light-mode .toast { background-color: #323232 !important; color: #ffffff !important; }
-
+body.light-mode .toast { background-color: #00374f !important; color: #ffffff !important; }
 .toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
-
-/* Usunięto nadpisywanie kolorów dla .success, .error, .info, aby wymusić #323232 */
-
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); display: flex; justify-content: center; align-items: center; z-index: 2100; opacity: 0; visibility: hidden; transition: 0.2s; }
 .modal-overlay.show { opacity: 1; visibility: visible; }
 .modal-content { background-color: var(--card-bg-color); padding: 2rem; border-radius: 24px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; position: relative; text-align: center; transform: scale(0.9); transition: transform 0.2s cubic-bezier(0.0, 0.0, 0.2, 1); box-shadow: var(--shadow-high); border: none; }
@@ -354,10 +292,53 @@ body.light-mode .toast { background-color: #323232 !important; color: #ffffff !i
 .modal-buttons button#modalConfirmBtn { background-color: var(--danger-color) !important; color: white !important; border-radius: 24px; box-shadow: var(--shadow-low); }
 
 /* Backup Card */
-.backup-card { background-color: var(--card-bg-color); border: none; border-radius: var(--border-radius-base); box-shadow: var(--shadow-low); padding: 2rem; display: flex; align-items: flex-start; gap: 1.5rem; }
-.backup-icon { font-size: 3rem; opacity: 0.8; }
+.backup-card { 
+    background-color: var(--card-bg-color); 
+    border: none; 
+    border-radius: var(--border-radius-base); 
+    box-shadow: var(--shadow-low); 
+    padding: 2rem; 
+    display: flex; 
+    align-items: flex-start; 
+    gap: 1.5rem; 
+    /* ZMIANA: Zabezpieczenie przed wyciekaniem zawartości */
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+.backup-icon { font-size: 3rem; opacity: 0.8; flex-shrink: 0; }
+.backup-content { flex: 1; min-width: 0; /* Kluczowe dla flexboxa i długich tekstów */ }
 .backup-content h3 { margin-top: 0; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 500; }
 .backup-content p { color: var(--text-color-secondary); margin-bottom: 1.5rem; }
+
+/* ZMIANA: Stylizacja własnego inputa pliku */
+.file-input-custom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+.file-label {
+    background-color: rgba(255,255,255,0.1);
+    color: var(--text-color);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-block;
+}
+.file-label:hover {
+    background-color: rgba(255,255,255,0.15);
+}
+#fileNameDisplay {
+    font-size: 0.9rem; 
+    color: var(--text-color-secondary); 
+    word-break: break-all; /* Łamanie długich nazw plików */
+}
 
 /* Watchdog Styles */
 .watchdog-wrapper { position: relative; margin-right: 15px; display: flex; align-items: center; }
@@ -382,6 +363,8 @@ body.light-mode .toast { background-color: #323232 !important; color: #ffffff !i
     .stat-card h3 { font-size: 0.9rem; }
     .stat-card .value { font-size: 1.4rem; }
     .watchdog-popover { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); right: auto; width: 90%; max-width: 300px; }
+    /* ZMIANA: Mniejszy padding na mobilkach dla backupu */
+    .backup-card { padding: 1rem; gap: 1rem; }
 }
 
 /* Settings Card */

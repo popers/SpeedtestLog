@@ -257,7 +257,7 @@ export function renderPagination(totalItems) {
 
 function changePage(newPage) {
     state.currentPage = newPage;
-    updateTable(state.allResults); 
+    updateTable(state.allResults); // Note: this will reuse filtered/sorted list from state in renderData
 }
 
 // --- Table ---
@@ -321,6 +321,12 @@ export function updateTable(results) {
             let text = lang[key];
             if(th.dataset.sort === 'download' || th.dataset.sort === 'upload') text += ` (${unitLabel})`;
             if(th.dataset.sort === 'ping' || th.dataset.sort === 'jitter') text += ` (ms)`;
+            
+            // ZMIANA: Dodanie wskaźnika sortowania
+            if (th.dataset.sort === state.currentSort.column) {
+                text += state.currentSort.direction === 'asc' ? ' ▲' : ' ▼';
+            }
+            
             th.textContent = text;
         }
     });

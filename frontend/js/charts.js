@@ -19,7 +19,6 @@ export function renderCharts(results) {
 
     const unitLabel = getUnitLabel(state.currentUnit);
     
-    // ZMIANA: Sprawdzamy czy NIE MA klasy light-mode (bo domyślnie jest ciemno)
     const isDark = !document.body.classList.contains('light-mode');
     
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
@@ -40,6 +39,14 @@ export function renderCharts(results) {
 
 function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, serverData, label, unit, color, bgColor, gridColor, labelColor) {
     if (chartInstance) chartInstance.destroy(); 
+    
+    // FIX: Resetowanie canvasa w sposób bezpieczny dla flexboxa
+    ctx.canvas.removeAttribute('style');
+    ctx.canvas.removeAttribute('width');
+    ctx.canvas.removeAttribute('height');
+    
+    // Styl nadawany przez CSS components.css (width: 100%, height: 100%)
+
     const newChart = new Chart(ctx, {
         type: 'line', 
         data: {
@@ -51,20 +58,18 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                 borderWidth: 2,
                 backgroundColor: bgColor,
                 fill: true,
-                // ZMIANA: Użycie interpolacji 'monotone' zamiast tension, aby uniknąć glitchy graficznych przy zachowaniu wygładzenia
                 cubicInterpolationMode: 'monotone', 
                 pointRadius: 3, 
                 pointHoverRadius: 6,
                 pointBackgroundColor: color,
-                // ZMIANA: Dodano opcje optymalizujące renderowanie
                 spanGaps: true,
                 normalized: true
             }]
         },
         options: {
             responsive: true, 
+            // ZMIANA: Ważne - maintainAspectRatio: false pozwala na dopasowanie do kontenera (który ma max-height)
             maintainAspectRatio: false, 
-            // ZMIANA: Włączono animacje (pusty obiekt włącza domyślne)
             animation: {}, 
             interaction: { mode: 'index', intersect: false },
             scales: {

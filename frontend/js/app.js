@@ -1,14 +1,14 @@
 import { state } from './state.js';
 import { translations } from './i18n.js';
 import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser } from './api.js';
-// ZMIANA: Dodano import getUnitLabel
-import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel } from './utils.js';
+import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel, convertValue } from './utils.js';
 import { renderCharts } from './charts.js';
 import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
 // --- ZMIENNE WATCHDOGA ---
 let watchdogInterval = null;
 let wdChart = null;
+let resizeTimer = null;
 
 // --- Main Logic & Event Listeners ---
 
@@ -20,9 +20,6 @@ async function initializeApp() {
     
     const savedTheme = localStorage.getItem('theme');
     
-    // ZMIANA: Domyślnie ustawiamy tryb ciemny (jeśli brak zapisu lub 'dark')
-    // setNightMode(true) = Ciemny (usuwa .light-mode)
-    // setNightMode(false) = Jasny (dodaje .light-mode)
     if (!savedTheme || savedTheme === 'dark') {
         setNightMode(true); 
     } else {
@@ -38,7 +35,6 @@ async function initializeApp() {
         }
     }
     
-    // --- OBSŁUGA POWIADOMIEŃ PO PRZEŁADOWANIU STRONY (Login/Logout) ---
     const pendingToast = sessionStorage.getItem('pendingToast');
     if (pendingToast) {
         sessionStorage.removeItem('pendingToast');
@@ -256,6 +252,18 @@ function renderSparkline(history) {
     }
 }
 
+function handleSort(column) {
+    if (state.currentSort.column === column) {
+        state.currentSort.direction = state.currentSort.direction === 'desc' ? 'asc' : 'desc';
+    } else {
+        state.currentSort.column = column;
+        state.currentSort.direction = 'desc';
+    }
+    
+    state.currentPage = 1;
+    renderData();
+}
+
 function setupEventListeners() {
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
@@ -302,7 +310,6 @@ function setupEventListeners() {
         });
     });
 
-    // ZMIANA: Logika przełącznika motywu
     const themeToggle = document.getElementById('themeToggle');
     if(themeToggle) themeToggle.addEventListener('click', () => {
         const isCurrentlyLight = document.body.classList.contains('light-mode');
@@ -357,7 +364,6 @@ function setupEventListeners() {
     if(unitSelect) unitSelect.addEventListener('change', () => {
         localStorage.setItem('displayUnit', unitSelect.value);
         renderData();
-        // ZMIANA: Użycie getUnitLabel do poprawnego wyświetlania jednostki w powiadomieniu (np. MB/s)
         showToast('toastUnitChanged', 'info', ` ${getUnitLabel(unitSelect.value)}`);
     });
 
@@ -430,6 +436,25 @@ function setupEventListeners() {
     }
     const restoreForm = document.getElementById('restoreForm');
     if(restoreForm) {
+        // ZMIANA: Obsługa zmiany pliku dla własnego inputa
+        const fileInput = document.getElementById('backupFile');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        if (fileInput && fileNameDisplay) {
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    fileNameDisplay.textContent = fileInput.files[0].name;
+                } else {
+                    // Przywróć domyślny tekst z tłumaczeń
+                    const key = fileNameDisplay.getAttribute('data-i18n-key');
+                    if (key && translations[state.currentLang][key]) {
+                        fileNameDisplay.textContent = translations[state.currentLang][key];
+                    } else {
+                        fileNameDisplay.textContent = 'Brak wybranego pliku';
+                    }
+                }
+            });
+        }
+
         restoreForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('restoreBackupBtn');
@@ -441,6 +466,23 @@ function setupEventListeners() {
             } catch(e) { showToast('restoreError', 'error'); btn.disabled = false; }
         });
     }
+
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.style.cursor = 'pointer'; 
+        th.addEventListener('click', () => {
+            const sortKey = th.dataset.sort;
+            if (sortKey) handleSort(sortKey);
+        });
+    });
+
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (state.currentFilteredResults && state.currentFilteredResults.length > 0 && document.getElementById('downloadChart')) {
+                renderCharts(state.currentFilteredResults);
+            }
+        }, 250); 
+    });
 }
 
 async function loadDashboardData() {
@@ -511,6 +553,35 @@ function renderData() {
         filtered = state.allResults.slice();
     }
     
+    if (state.currentSort.column) {
+        filtered.sort((a, b) => {
+            let valA = a[state.currentSort.column];
+            let valB = b[state.currentSort.column];
+
+            if (state.currentSort.column === 'timestamp') {
+                valA = new Date(valA).getTime();
+                valB = new Date(valB).getTime();
+            }
+            // FIX: Obsługa pustych wartości dla stringów
+            if (valA == null) valA = (typeof valA === 'string' ? '' : 0);
+            if (valB == null) valB = (typeof valB === 'string' ? '' : 0);
+
+            if (typeof valA === 'string' && typeof valB === 'string') {
+                 return state.currentSort.direction === 'asc' 
+                    ? valA.localeCompare(valB) 
+                    : valB.localeCompare(valA);
+            }
+
+            if (state.currentSort.direction === 'asc') {
+                return valA > valB ? 1 : -1;
+            } else {
+                return valA < valB ? 1 : -1;
+            }
+        });
+    } else {
+        filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
+
     state.currentFilteredResults = filtered;
 
     renderCharts(filtered);
