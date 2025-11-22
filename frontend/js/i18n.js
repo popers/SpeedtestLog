@@ -104,11 +104,9 @@ export const translations = {
         'generatingPNG': 'Generowanie PNG...',
         'backupTitle': 'Zarządzanie Kopią Zapasową',
         'backupDesc': 'Możesz pobrać pełną kopię bazy danych lub przywrócić dane z wcześniej zapisanego pliku SQL.',
-        // ZMIANA: Usunięto "(Backup)"
         'backupDownloadTitle': 'Pobierz Kopię',
         'backupDownloadText': 'Pobierz plik SQL zawierający całą historię pomiarów oraz ustawienia.',
         'backupDownloadBtn': 'Pobierz .SQL',
-        // ZMIANA: Usunięto "(Restore)"
         'backupRestoreTitle': 'Przywróć Kopię',
         'backupRestoreText': 'UWAGA: Przywrócenie kopii nadpisze wszystkie obecne dane!',
         'backupRestoreBtn': 'Przywróć z pliku',
@@ -152,7 +150,10 @@ export const translations = {
         // NEW: Startup Test
         'startupTestTitle': 'Automatyczny test przy starcie',
         'startupTestLabel': 'Uruchom test po starcie kontenera',
-        'startupTestDesc': 'Jeśli włączone, test prędkości zostanie wykonany automatycznie 1 minutę po uruchomieniu aplikacji.'
+        'startupTestDesc': 'Jeśli włączone, test prędkości zostanie wykonany automatycznie 1 minutę po uruchomieniu aplikacji.',
+        // NEW: Toggle Toast
+        'toastStartupTestOn': 'Test startowy: Włączony',
+        'toastStartupTestOff': 'Test startowy: Wyłączony'
     },
     'en': {
         'title': 'SpeedtestLog Logo',
@@ -305,6 +306,9 @@ export const translations = {
         // NEW: Startup Test
         'startupTestTitle': 'Automatic Startup Test',
         'startupTestLabel': 'Run test on container startup',
-        'startupTestDesc': 'If enabled, a speed test will run automatically 1 minute after the application starts.'
+        'startupTestDesc': 'If enabled, a speed test will run automatically 1 minute after the application starts.',
+        // NEW: Toggle Toast
+        'toastStartupTestOn': 'Startup Test: Enabled',
+        'toastStartupTestOff': 'Startup Test: Disabled'
     }
 };

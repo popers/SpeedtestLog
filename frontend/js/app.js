@@ -110,6 +110,15 @@ async function loadSettingsToForm() {
         if(startupInput) {
             // API zwraca startup_test_enabled, domyślnie true jeśli undefined
             startupInput.checked = (s.startup_test_enabled !== false); 
+            
+            // Add immediate listener for feedback
+            startupInput.addEventListener('change', () => {
+                if (startupInput.checked) {
+                    showToast('toastStartupTestOn', 'success');
+                } else {
+                    showToast('toastStartupTestOff', 'info');
+                }
+            });
         }
         
     } catch (e) {
@@ -251,9 +260,22 @@ function renderSparkline(history) {
     const labels = history.map(h => h.time);
     const dataPoints = history.map(h => h.latency || 0);
     
+    // Pobieramy kolory z CSS, aby siatka pasowała do motywu
+    const style = getComputedStyle(document.body);
+    // Kolor siatki: delikatny biały w ciemnym trybie, delikatny czarny w jasnym
+    const isDark = !document.body.classList.contains('light-mode');
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+    const tickColor = isDark ? '#888' : '#666';
+
     if (wdChart) {
         wdChart.data.labels = labels;
         wdChart.data.datasets[0].data = dataPoints;
+        // Aktualizacja kolorów siatki przy zmianie motywu (jeśli wykres już istnieje)
+        wdChart.options.scales.x.grid.color = gridColor;
+        wdChart.options.scales.y.grid.color = gridColor;
+        wdChart.options.scales.x.ticks.color = tickColor;
+        wdChart.options.scales.y.ticks.color = tickColor;
+        
         wdChart.update('none');
     } else {
         wdChart = new Chart(ctx, {
@@ -263,9 +285,10 @@ function renderSparkline(history) {
                 datasets: [{
                     data: dataPoints,
                     borderColor: '#17a2b8',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)', // Lekkie wypełnienie pod wykresem
                     borderWidth: 2,
                     pointRadius: 0,
-                    fill: false,
+                    fill: true,
                     tension: 0.3
                 }]
             },
@@ -273,8 +296,42 @@ function renderSparkline(history) {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false, 
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                scales: { x: { display: false }, y: { display: false } }
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { 
+                        enabled: true, // Włączamy tooltipy, żeby siatka miała sens przy najeżdżaniu
+                        mode: 'index',
+                        intersect: false
+                    } 
+                },
+                scales: { 
+                    x: { 
+                        display: true, // Pokaż oś X
+                        grid: {
+                            color: gridColor,
+                            drawBorder: false,
+                            display: false // Ukrywamy pionowe linie siatki dla czystości (częste w sparkline'ach)
+                        },
+                        ticks: {
+                            display: false // Ukrywamy etykiety czasu, bo mało miejsca
+                        }
+                    }, 
+                    y: { 
+                        display: true, // Pokaż oś Y
+                        grid: {
+                            color: gridColor,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: tickColor,
+                            font: {
+                                size: 9 // Mała czcionka
+                            },
+                            maxTicksLimit: 4 // Ograniczamy liczbę etykiet
+                        },
+                        suggestedMin: 0
+                    } 
+                }
             }
         });
     }
@@ -346,8 +403,15 @@ function setupEventListeners() {
         if (isCurrentlyLight) showToast('toastThemeDark', 'info');
         else showToast('toastThemeLight', 'info');
         
+        // Odśwież wykresy (Chart.js), aby pobrały nowe kolory
         if (document.getElementById('downloadChart') && state.currentFilteredResults) {
             renderCharts(state.currentFilteredResults);
+        }
+        // Odśwież wykres watchdoga jeśli jest widoczny
+        if (wdChart) {
+            wdChart.destroy();
+            wdChart = null;
+            updateWatchdogUI();
         }
     });
 

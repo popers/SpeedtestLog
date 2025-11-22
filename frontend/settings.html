@@ -7,7 +7,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="logo.png">
     <title>Ustawienia - SpeedtestLog</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/chart.js](https://cdn.jsdelivr.net/npm/chart.js)"></script>
     <link rel="stylesheet" href="css/main.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">    
 </head>
@@ -52,10 +52,10 @@
                     </div>
 
                     <div class="lang-dropdown-wrapper">
-                        <button id="langBtn" class="lang-btn"><img src="https://flagcdn.com/w40/pl.png" alt="PL" id="currentLangFlag"><span id="currentLangText">PL</span></button>
+                        <button id="langBtn" class="lang-btn"><img src="[https://flagcdn.com/w40/pl.png](https://flagcdn.com/w40/pl.png)" alt="PL" id="currentLangFlag"><span id="currentLangText">PL</span></button>
                         <ul id="langMenu" class="lang-menu">
-                            <li data-lang="pl"><img src="https://flagcdn.com/w40/pl.png" alt="PL"> Polski</li>
-                            <li data-lang="en"><img src="https://flagcdn.com/w40/gb.png" alt="EN"> English</li>
+                            <li data-lang="pl"><img src="[https://flagcdn.com/w40/pl.png](https://flagcdn.com/w40/pl.png)" alt="PL"> Polski</li>
+                            <li data-lang="en"><img src="[https://flagcdn.com/w40/gb.png](https://flagcdn.com/w40/gb.png)" alt="EN"> English</li>
                         </ul>
                     </div>
                     <button id="themeToggle" title="Zmień motyw" class="theme-btn">🌙</button>
@@ -83,9 +83,14 @@
                     <div class="settings-card" style="margin-bottom: 2rem;">
                         <h3 data-i18n-key="startupTestTitle">Automatyczny test przy starcie</h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="startupTestDesc">Jeśli włączone, test prędkości zostanie wykonany automatycznie 1 minutę po uruchomieniu aplikacji.</p>
-                        <div class="control-group" style="flex-direction: row; align-items: center; gap: 10px;">
-                            <input type="checkbox" id="startupTestInput" style="width: auto; height: 20px; width: 20px; cursor: pointer;">
-                            <label for="startupTestInput" style="margin: 0; cursor: pointer;" data-i18n-key="startupTestLabel">Uruchom test po starcie kontenera</label>
+                        
+                        <!-- ZMIANA: Przełącznik (Toggle Switch) -->
+                        <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
+                            <label for="startupTestInput" style="margin: 0; cursor: pointer; font-weight: 600; color: var(--text-color);" data-i18n-key="startupTestLabel">Uruchom test po starcie kontenera</label>
+                            <label class="switch">
+                                <input type="checkbox" id="startupTestInput">
+                                <span class="slider round"></span>
+                            </label>
                         </div>
                     </div>
 
