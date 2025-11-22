@@ -23,7 +23,7 @@ from typing import List, Dict, Any
 from datetime import datetime, timedelta
 
 # --- Importy SQLAlchemy i MariaDB ---
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, text
 from sqlalchemy.dialects.mysql import DATETIME
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -72,6 +72,7 @@ class SettingsModel(BaseModel):
     ping_interval: int | None = 30
     declared_download: int | None = 0
     declared_upload: int | None = 0
+    startup_test_enabled: bool | None = True
 
 class DeleteModel(BaseModel):
     ids: list[str]
@@ -119,6 +120,7 @@ class AppSettings(Base):
     ping_interval = Column(Integer, default=30)
     declared_download = Column(Integer, default=0)
     declared_upload = Column(Integer, default=0)
+    startup_test_enabled = Column(Boolean, default=True)
 
 # --- Globalne Zmienne ---
 SERVERS_FILE = 'data/servers.json'
@@ -142,8 +144,15 @@ def initialize_db(max_retries=10, delay=5):
     app_state["SessionLocal"] = SessionLocal
     for i in range(max_retries):
         try:
-            with engine.connect():
+            with engine.connect() as connection:
                 Base.metadata.create_all(bind=engine)
+                try:
+                    connection.execute(text("SELECT startup_test_enabled FROM app_settings LIMIT 1"))
+                except Exception:
+                    logging.info("🔧 Migracja: Dodawanie kolumny startup_test_enabled...")
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN startup_test_enabled BOOLEAN DEFAULT 1"))
+                    connection.commit()
+                
                 logging.info("✅ Połączono z bazą danych.")
                 return
         except OperationalError:
@@ -160,7 +169,7 @@ def get_db():
 def load_settings_from_db(db_session):
     settings = db_session.query(AppSettings).filter(AppSettings.id == 1).first()
     if not settings:
-        settings = AppSettings(id=1, selected_server_id=None, schedule_hours=1, ping_target="8.8.8.8", ping_interval=30, declared_download=0, declared_upload=0)
+        settings = AppSettings(id=1, selected_server_id=None, schedule_hours=1, ping_target="8.8.8.8", ping_interval=30, declared_download=0, declared_upload=0, startup_test_enabled=True)
         db_session.add(settings)
         db_session.commit()
     return settings
@@ -229,9 +238,31 @@ def run_speed_test_and_save(server_id=None):
     try:
         cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
         if server_id: cmd.extend(['--server-id', str(server_id)])
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
+        
+        # ZMIANA: Obsługa błędów subprocess i mechanizm fallback (ponawiania bez ID)
+        proc = None
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
+        except subprocess.CalledProcessError as e:
+            # Jeśli błąd wystąpił przy konkretnym serwerze, spróbuj automatycznie
+            if server_id:
+                logging.warning(f"⚠️ Błąd testu na serwerze ID {server_id}. Próba automatycznego wyboru serwera...")
+                fallback_cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
+                try:
+                    proc = subprocess.run(fallback_cmd, capture_output=True, text=True, check=True, timeout=600)
+                except subprocess.CalledProcessError as e2:
+                    logging.error(f"❌ Błąd Speedtestu (Auto Fallback): {e2.stderr}")
+                    return None
+            else:
+                logging.error(f"❌ Błąd Speedtestu: {e.stderr}")
+                return None
+
+        if not proc: return None
+
         data = json.loads(proc.stdout)
-        if data.get('type') != 'result': return None
+        if data.get('type') != 'result': 
+            logging.error(f"❌ Nieprawidłowy format wyniku: {proc.stdout}")
+            return None
         
         res = SpeedtestResult(
             id=str(uuid.uuid4()), timestamp=datetime.now(),
@@ -252,7 +283,7 @@ def run_speed_test_and_save(server_id=None):
         logging.info(f"✅ Wynik Speedtestu: ↓ {res.download} Mbps")
         return res
     except Exception as e:
-        logging.error(f"❌ Błąd Speedtestu: {e}")
+        logging.error(f"❌ Krytyczny błąd Speedtestu: {e}")
         return None
     finally:
         db_session.close()
@@ -284,10 +315,17 @@ async def lifespan(app: FastAPI):
     db = app_state["SessionLocal"]()
     s = load_settings_from_db(db)
     hours = s.schedule_hours
+    run_on_startup = s.startup_test_enabled
     db.close()
     
-    app_state["schedule_job"] = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
-    schedule.every(1).minutes.do(run_speed_test_and_save_threaded, job_tag='startup-test').tag('startup-test')
+    if hours and hours > 0:
+        app_state["schedule_job"] = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
+    
+    if run_on_startup:
+        logging.info("🕒 Zaplanowano test startowy za 1 minutę.")
+        schedule.every(1).minutes.do(run_speed_test_and_save_threaded, job_tag='startup-test').tag('startup-test')
+    else:
+        logging.info("🚫 Test startowy jest wyłączony w ustawieniach.")
     
     yield
     if app_state["engine"]: app_state["engine"].dispose()
@@ -345,23 +383,29 @@ async def get_set(db=Depends(get_db)):
         "ping_interval": s.ping_interval,
         "declared_download": s.declared_download,
         "declared_upload": s.declared_upload,
+        "startup_test_enabled": s.startup_test_enabled,
         "latest_test_timestamp": l.timestamp if l else None
     }
 
 @app.post("/api/settings", dependencies=[Depends(verify_session)])
 async def set_set(s: SettingsModel, db=Depends(get_db)):
     rec = load_settings_from_db(db)
-    if s.schedule_hours and s.schedule_hours != rec.schedule_hours:
-        if app_state["schedule_job"]: schedule.cancel_job(app_state["schedule_job"])
-        app_state["schedule_job"] = schedule.every(s.schedule_hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
+    
+    if s.schedule_hours is not None and s.schedule_hours != rec.schedule_hours:
+        if app_state["schedule_job"]: 
+            schedule.cancel_job(app_state["schedule_job"])
+            app_state["schedule_job"] = None
+        
+        if s.schedule_hours > 0:
+            app_state["schedule_job"] = schedule.every(s.schedule_hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
     
     rec.selected_server_id = s.server_id
-    if s.schedule_hours: rec.schedule_hours = s.schedule_hours
+    if s.schedule_hours is not None: rec.schedule_hours = s.schedule_hours
     if s.ping_target: rec.ping_target = s.ping_target
     if s.ping_interval: rec.ping_interval = s.ping_interval
-    # Zapis nowych pól ISP
     if s.declared_download is not None: rec.declared_download = s.declared_download
     if s.declared_upload is not None: rec.declared_upload = s.declared_upload
+    if s.startup_test_enabled is not None: rec.startup_test_enabled = s.startup_test_enabled
     
     db.commit()
     logging.info(f"⚙️ Ustawienia zaktualizowane.")

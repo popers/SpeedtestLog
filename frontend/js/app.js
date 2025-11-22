@@ -35,7 +35,7 @@ async function initializeApp() {
         }
     }
     
-    // NOWE: Ładowanie zapisanej ilości wierszy
+    // Ładowanie zapisanej ilości wierszy
     const savedPerPage = localStorage.getItem('itemsPerPage');
     if(savedPerPage) {
         state.itemsPerPage = savedPerPage === 'all' ? 'all' : parseInt(savedPerPage);
@@ -104,6 +104,13 @@ async function loadSettingsToForm() {
 
         const ulInput = document.getElementById('declaredUploadInput');
         if(ulInput) ulInput.value = s.declared_upload || '';
+
+        // Ładowanie stanu checkboxa testu startowego
+        const startupInput = document.getElementById('startupTestInput');
+        if(startupInput) {
+            // API zwraca startup_test_enabled, domyślnie true jeśli undefined
+            startupInput.checked = (s.startup_test_enabled !== false); 
+        }
         
     } catch (e) {
         console.error("Error loading settings:", e);
@@ -118,6 +125,10 @@ async function saveSettingsFromPage() {
         const interval = parseInt(document.getElementById('pingIntervalInput').value);
         const dl = parseInt(document.getElementById('declaredDownloadInput').value) || 0;
         const ul = parseInt(document.getElementById('declaredUploadInput').value) || 0;
+        
+        // Odczyt checkboxa
+        const startupInput = document.getElementById('startupTestInput');
+        const startupEnabled = startupInput ? startupInput.checked : true;
 
         await updateSettings({
             server_id: currentSettings.selected_server_id, 
@@ -125,7 +136,8 @@ async function saveSettingsFromPage() {
             ping_target: target,
             ping_interval: interval,
             declared_download: dl,
-            declared_upload: ul
+            declared_upload: ul,
+            startup_test_enabled: startupEnabled
         });
         
         showToast('toastSettingsSaved', 'success');
@@ -153,22 +165,30 @@ async function handleQuickSettingsChange(e) {
             ping_target: currentSettings.ping_target,
             ping_interval: currentSettings.ping_interval,
             declared_download: currentSettings.declared_download, 
-            declared_upload: currentSettings.declared_upload 
+            declared_upload: currentSettings.declared_upload,
+            startup_test_enabled: currentSettings.startup_test_enabled
         });
         
         if (sourceId === 'serverSelect') {
             const serverText = serverSelect.options[serverSelect.selectedIndex].text;
             showToast('toastServerChanged', 'success', ` ${serverText}`);
         } else if (sourceId === 'scheduleSelect') {
-            const intervalText = scheduleSelect.options[scheduleSelect.selectedIndex].text;
-            showToast('toastScheduleChanged', 'success', ` ${intervalText}`);
-            
             state.currentScheduleHours = newScheduleHours;
+            // Powiadomienie o wyłączeniu
+            if (newScheduleHours === 0) {
+                showToast('toastScheduleDisabled', 'info');
+            } else {
+                const intervalText = scheduleSelect.options[scheduleSelect.selectedIndex].text;
+                showToast('toastScheduleChanged', 'success', ` ${intervalText}`);
+            }
+            
             const nextRunEl = document.getElementById('nextRunTime');
             if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
-            setTimeout(() => {
-                showToast('toastNextRun', 'info', ` ${getNextRunTimeText()}`);
-            }, 2500);
+            if (newScheduleHours > 0) {
+                setTimeout(() => {
+                    showToast('toastNextRun', 'info', ` ${getNextRunTimeText()}`);
+                }, 2500);
+            }
         }
     } catch (e) {
         showToast('toastSettingsError', 'error');
@@ -378,7 +398,6 @@ function setupEventListeners() {
     const rowsPerPage = document.getElementById('rowsPerPageSelect');
     if(rowsPerPage) rowsPerPage.addEventListener('change', () => { 
         state.itemsPerPage = rowsPerPage.value === 'all' ? 'all' : parseInt(rowsPerPage.value); 
-        // NOWE: Zapis wyboru do localStorage
         localStorage.setItem('itemsPerPage', rowsPerPage.value);
         state.currentPage = 1; 
         renderData(); 
@@ -487,7 +506,6 @@ function setupEventListeners() {
         });
     });
 
-    // NOWE: Nasłuchiwanie na input wyszukiwania
     const searchInput = document.getElementById('tableSearch');
     if(searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -532,8 +550,9 @@ async function loadDashboardData() {
 
         const scheduleSelect = document.getElementById('scheduleSelect');
         if (scheduleSelect) {
-            scheduleSelect.value = settingsData.schedule_hours || 1;
-            state.currentScheduleHours = settingsData.schedule_hours || 1;
+            // Jeśli 0, to wyłączony, jeśli 1..24 to godziny
+            scheduleSelect.value = (settingsData.schedule_hours !== null) ? settingsData.schedule_hours : 1;
+            state.currentScheduleHours = (settingsData.schedule_hours !== null) ? settingsData.schedule_hours : 1;
         }
         
         const savedFilter = localStorage.getItem('dashboardFilter') || '24h';
@@ -575,7 +594,6 @@ function renderData() {
         filtered = state.allResults.slice();
     }
 
-    // NOWE: Filtrowanie po wyszukiwarce
     if (state.searchTerm && state.searchTerm.trim() !== '') {
         const lowerTerm = state.searchTerm.toLowerCase();
         filtered = filtered.filter(res => {
@@ -636,7 +654,16 @@ async function handleManualTest() {
             const isNew = latest && (!prevTimestamp || new Date(latest.timestamp) > new Date(prevTimestamp));
             if (isNew) {
                 clearInterval(state.pollingInterval); showToast('toastTestComplete', 'success');
-                state.allResults = await fetchResults(); renderData();
+                state.allResults = await fetchResults(); 
+                
+                // ZMIANA: Aktualizacja timestampa ostatniego testu po udanym teście
+                if (state.allResults.length > 0) {
+                    state.lastTestTimestamp = state.allResults[0].timestamp;
+                    const nextRunEl = document.getElementById('nextRunTime');
+                    if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
+                }
+                
+                renderData();
                 btn.disabled = false; btn.classList.remove('is-loading');
             } else if (attempts > 25) {
                 clearInterval(state.pollingInterval); showToast('toastTestTimeout', 'error');

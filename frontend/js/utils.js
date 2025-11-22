@@ -111,6 +111,12 @@ export function setLanguage(lang) {
 
 export function getNextRunTimeText() {
     const lang = translations[state.currentLang];
+    
+    // NOWE: Obsługa wyłączonego harmonogramu
+    if (state.currentScheduleHours === 0) {
+        return lang.nextTestDisabled || 'Harmonogram wyłączony';
+    }
+
     if (!state.lastTestTimestamp) return lang.nextTestAfterFirst;
     
     try {

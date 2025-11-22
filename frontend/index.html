@@ -82,7 +82,15 @@
                         </div>
                         <div class="control-group">
                             <label for="scheduleSelect" data-i18n-key="runEvery">Interwał:</label>
-                            <select id="scheduleSelect"><option value="1" data-i18n-key="hour1">1 godzina</option><option value="3" data-i18n-key="hour3">3 godziny</option><option value="6" data-i18n-key="hour6">6 godzin</option><option value="12" data-i18n-key="hour12">12 godzin</option><option value="24" data-i18n-key="hour24">24 godziny</option></select>
+                            <select id="scheduleSelect">
+                                <!-- NOWE: Opcja wyłączenia -->
+                                <option value="0" data-i18n-key="intervalDisabled">Wyłączony</option>
+                                <option value="1" data-i18n-key="hour1">1 godzina</option>
+                                <option value="3" data-i18n-key="hour3">3 godziny</option>
+                                <option value="6" data-i18n-key="hour6">6 godzin</option>
+                                <option value="12" data-i18n-key="hour12">12 godzin</option>
+                                <option value="24" data-i18n-key="hour24">24 godziny</option>
+                            </select>
                         </div>
                         <div class="control-group info-group">
                             <label data-i18n-key="nextTest">Następny test:</label>
@@ -128,7 +136,6 @@
                     <div class="table-header">
                         <h2 data-i18n-key="historyTable">Historia Pomiarów</h2>
                         <div class="table-actions">
-                            <!-- NOWE: Wyszukiwarka -->
                             <input type="text" id="tableSearch" class="search-input" placeholder="Szukaj..." data-i18n-attr="placeholder" data-i18n-key="searchPlaceholder">
                             <button id="exportBtn" class="action-btn" style="background-color: var(--info-color); border-color: var(--info-color);">📥 <span data-i18n-key="exportCSV">CSV</span></button>
                             <button id="deleteSelectedBtn" class="action-btn" style="display: none;">🗑️<span data-i18n-key="deleteSelected">Usuń zaznaczone</span></button>

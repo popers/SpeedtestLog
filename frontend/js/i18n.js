@@ -11,6 +11,7 @@ export const translations = {
         'selectServer': 'Serwer:',
         'autoSelect': 'Wybór automatyczny',
         'runEvery': 'Interwał:',
+        'intervalDisabled': 'Wyłączony',
         'hour1': '1 godzina',
         'hour3': '3 godziny',
         'hour6': '6 godzin',
@@ -76,6 +77,7 @@ export const translations = {
         'toastThemeDark': 'Tryb Ciemny',
         'toastServerChanged': 'Serwer zmieniony na:',
         'toastScheduleChanged': 'Test uruchomi się co',
+        'toastScheduleDisabled': 'Harmonogram testów został wyłączony.',
         'toastNextRun': 'Następny test:',
         'statsNoData': 'Brak danych',
         'statsFirstMeasurement': 'Pierwszy pomiar',
@@ -85,6 +87,7 @@ export const translations = {
         'nextTestAfterFirst': 'Po pierwszym teście',
         'nextTestSoon': 'Wkrótce (max 1 min)',
         'nextTestError': 'Błąd obliczeń',
+        'nextTestDisabled': 'Harmonogram wyłączony',
         'chartLabelDownload': 'Pobieranie',
         'chartLabelUpload': 'Wysyłanie',
         'chartLabelPing': 'Ping',
@@ -101,10 +104,12 @@ export const translations = {
         'generatingPNG': 'Generowanie PNG...',
         'backupTitle': 'Zarządzanie Kopią Zapasową',
         'backupDesc': 'Możesz pobrać pełną kopię bazy danych lub przywrócić dane z wcześniej zapisanego pliku SQL.',
-        'backupDownloadTitle': 'Pobierz Kopię (Backup)',
+        // ZMIANA: Usunięto "(Backup)"
+        'backupDownloadTitle': 'Pobierz Kopię',
         'backupDownloadText': 'Pobierz plik SQL zawierający całą historię pomiarów oraz ustawienia.',
         'backupDownloadBtn': 'Pobierz .SQL',
-        'backupRestoreTitle': 'Przywróć Kopię (Restore)',
+        // ZMIANA: Usunięto "(Restore)"
+        'backupRestoreTitle': 'Przywróć Kopię',
         'backupRestoreText': 'UWAGA: Przywrócenie kopii nadpisze wszystkie obecne dane!',
         'backupRestoreBtn': 'Przywróć z pliku',
         'restoreSuccess': 'Baza danych została pomyślnie przywrócona!',
@@ -143,7 +148,11 @@ export const translations = {
         'selectFile': 'Wybierz plik',
         'noFileChosen': 'Brak wybranego pliku',
         // NEW: Search
-        'searchPlaceholder': 'Szukaj serwera...'
+        'searchPlaceholder': 'Szukaj serwera...',
+        // NEW: Startup Test
+        'startupTestTitle': 'Automatyczny test przy starcie',
+        'startupTestLabel': 'Uruchom test po starcie kontenera',
+        'startupTestDesc': 'Jeśli włączone, test prędkości zostanie wykonany automatycznie 1 minutę po uruchomieniu aplikacji.'
     },
     'en': {
         'title': 'SpeedtestLog Logo',
@@ -157,6 +166,7 @@ export const translations = {
         'selectServer': 'Server:',
         'autoSelect': 'Automatic Selection',
         'runEvery': 'Interval:',
+        'intervalDisabled': 'Disabled',
         'hour1': '1 hour',
         'hour3': '3 hours',
         'hour6': '6 hours',
@@ -222,6 +232,7 @@ export const translations = {
         'toastThemeDark': 'Dark Mode',
         'toastServerChanged': 'Server changed to:',
         'toastScheduleChanged': 'Test will run every',
+        'toastScheduleDisabled': 'Test schedule has been disabled.',
         'toastNextRun': 'Next test:',
         'statsNoData': 'No data',
         'statsFirstMeasurement': 'First measurement',
@@ -231,6 +242,7 @@ export const translations = {
         'nextTestAfterFirst': 'After first test',
         'nextTestSoon': 'Soon (max 1 min)',
         'nextTestError': 'Calc. error',
+        'nextTestDisabled': 'Schedule disabled',
         'chartLabelDownload': 'Download',
         'chartLabelUpload': 'Upload',
         'chartLabelPing': 'Ping',
@@ -289,6 +301,10 @@ export const translations = {
         'selectFile': 'Select File',
         'noFileChosen': 'No file chosen',
         // NEW: Search
-        'searchPlaceholder': 'Search server...'
+        'searchPlaceholder': 'Search server...',
+        // NEW: Startup Test
+        'startupTestTitle': 'Automatic Startup Test',
+        'startupTestLabel': 'Run test on container startup',
+        'startupTestDesc': 'If enabled, a speed test will run automatically 1 minute after the application starts.'
     }
 };
