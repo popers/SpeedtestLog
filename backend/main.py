@@ -12,6 +12,7 @@ import csv
 import io
 import secrets
 import shutil
+import re
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, HTTPException, Request, Depends, Response, status, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -19,42 +20,31 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # --- Importy SQLAlchemy i MariaDB ---
-from sqlalchemy import create_engine, Column, Integer, String, Float
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean
 from sqlalchemy.dialects.mysql import DATETIME
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError
 import pymysql
 
-# --- Konfiguracja Logowania (NAPRAWIONA DLA DOCKERA) ---
+# --- Konfiguracja Logowania ---
 LOG_DIR = '/app/data/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'app.log')
 
-# Format logów
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-# Handler konsolowy (terminal) - to musi być pierwszy handler
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(log_formatter)
 stream_handler.setLevel(logging.INFO)
-
-# Handler plikowy
 file_handler = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=5, encoding='utf-8')
 file_handler.setFormatter(log_formatter)
 file_handler.setLevel(logging.INFO)
 
-# Konfiguracja głównego loggera
 logging.basicConfig(level=logging.INFO, handlers=[stream_handler, file_handler], force=True)
-
-# Wymuś logowanie na konsolę również dla Uvicorn
 logging.getLogger("uvicorn").addHandler(stream_handler)
-logging.getLogger("uvicorn.access").addHandler(stream_handler)
-
-# Wyciszenie nadmiernych logów
 logging.getLogger("schedule").setLevel(logging.WARNING)
 logging.getLogger("multipart").setLevel(logging.WARNING)
 
@@ -65,28 +55,21 @@ DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_DATABASE")
 
-# --- KONFIGURACJA LOGOWANIA (Auth) ---
-auth_env = os.getenv("AUTH_ENABLED", "true").lower()
-AUTH_ENABLED = auth_env in ["true", "1", "yes"]
-
+AUTH_ENABLED = os.getenv("AUTH_ENABLED", "true").lower() in ["true", "1", "yes"]
 APP_USERNAME = os.getenv("APP_USERNAME", "admin")
 APP_PASSWORD = os.getenv("APP_PASSWORD", "admin")
 SESSION_COOKIE_NAME = "speedtest_session"
-
-SESSION_SECRET = os.getenv("SESSION_SECRET")
-if not SESSION_SECRET:
-    SESSION_SECRET = secrets.token_hex(16)
-    logging.warning("⚠️ SESSION_SECRET nie ustawiony! Używam losowego klucza (sesje wygasną po restarcie).")
-else:
-    logging.info("🔒 SESSION_SECRET załadowany z konfiguracji.")
+SESSION_SECRET = os.getenv("SESSION_SECRET") or secrets.token_hex(16)
 
 SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 Base = declarative_base()
 
-# --- Modele ---
+# --- Modele Pydantic ---
 class SettingsModel(BaseModel):
     server_id: int | None = None
     schedule_hours: int | None = 1
+    ping_target: str | None = "8.8.8.8"
+    ping_interval: int | None = 30
 
 class DeleteModel(BaseModel):
     ids: list[str]
@@ -95,6 +78,7 @@ class LoginModel(BaseModel):
     username: str
     password: str
 
+# --- Modele SQLAlchemy ---
 class SpeedtestResult(Base):
     __tablename__ = "speedtest_results"
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -115,17 +99,34 @@ class SpeedtestResult(Base):
     upload_latency_low = Column(Float, nullable=True)
     upload_latency_high = Column(Float, nullable=True)
 
+class PingLog(Base):
+    __tablename__ = "ping_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DATETIME(fsp=6), default=datetime.now)
+    target = Column(String(255))
+    latency = Column(Float, nullable=True) 
+    packet_loss = Column(Float) 
+    is_online = Column(Boolean)
+
 class AppSettings(Base):
     __tablename__ = "app_settings"
     id = Column(Integer, primary_key=True, index=True)
     selected_server_id = Column(Integer, nullable=True)
     schedule_hours = Column(Integer, default=1)
+    ping_target = Column(String(255), default="8.8.8.8")
+    ping_interval = Column(Integer, default=30)
 
 # --- Globalne Zmienne ---
 SERVERS_FILE = 'data/servers.json'
 os.makedirs('data', exist_ok=True)
 test_lock = threading.Lock()
-app_state = {"schedule_job": None, "schedule_hours": 1, "engine": None, "SessionLocal": None}
+app_state = {
+    "schedule_job": None, 
+    "engine": None, 
+    "SessionLocal": None,
+    "watchdog_config": {"target": "8.8.8.8", "interval": 30},
+    "latest_ping_status": {"online": False, "latency": 0, "loss": 0, "target": "init"}
+}
 
 # --- Inicjalizacja DB ---
 def initialize_db(max_retries=10, delay=5):
@@ -142,11 +143,9 @@ def initialize_db(max_retries=10, delay=5):
                 logging.info("✅ Połączono z bazą danych.")
                 return
         except OperationalError:
-            logging.warning(f"⚠️ Baza niedostępna, ponowna próba za {delay}s ({i+1}/{max_retries})...")
+            logging.warning(f"⚠️ Baza niedostępna... ({i+1}/{max_retries})")
             if i < max_retries - 1: time.sleep(delay)
-            else: 
-                logging.error("❌ Nie udało się połączyć z bazą danych.")
-                raise
+            else: raise
 
 def get_db():
     db = app_state["SessionLocal"]()
@@ -154,51 +153,81 @@ def get_db():
     finally: db.close()
 
 # --- Helpery ---
+def load_settings_from_db(db_session):
+    settings = db_session.query(AppSettings).filter(AppSettings.id == 1).first()
+    if not settings:
+        settings = AppSettings(id=1, selected_server_id=None, schedule_hours=1, ping_target="8.8.8.8", ping_interval=30)
+        db_session.add(settings)
+        db_session.commit()
+    return settings
+
+def run_ping_watchdog():
+    logging.info("🐶 Uruchamianie Ping Watchdog...")
+    while True:
+        db = app_state["SessionLocal"]()
+        try:
+            s = load_settings_from_db(db)
+            target = s.ping_target
+            interval = s.ping_interval if s.ping_interval and s.ping_interval >= 5 else 30
+            
+            app_state["watchdog_config"] = {"target": target, "interval": interval}
+
+            cmd = ["ping", "-c", "3", "-W", "2", target]
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            
+            latency = None
+            packet_loss = 100.0
+            is_online = False
+            output = proc.stdout
+            
+            loss_match = re.search(r"(\d+)% packet loss", output)
+            if loss_match:
+                packet_loss = float(loss_match.group(1))
+            
+            rtt_match = re.search(r"rtt min/avg/max/mdev = ([\d\.]+)/([\d\.]+)", output)
+            if rtt_match:
+                latency = float(rtt_match.group(2))
+                is_online = True
+            
+            log_entry = PingLog(target=target, latency=latency, packet_loss=packet_loss, is_online=is_online)
+            db.add(log_entry)
+            
+            cutoff = datetime.now() - timedelta(hours=24)
+            db.query(PingLog).filter(PingLog.timestamp < cutoff).delete()
+            db.commit()
+            
+            app_state["latest_ping_status"] = {
+                "online": is_online,
+                "latency": round(latency, 1) if latency else None,
+                "loss": packet_loss,
+                "target": target,
+                "updated": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logging.error(f"Watchdog error: {e}")
+        finally:
+            db.close()
+        
+        time.sleep(app_state["watchdog_config"]["interval"])
+
 def get_closest_servers():
-    logging.info("🌍 Pobieranie listy serwerów Speedtest...")
     if not os.path.exists(SERVERS_FILE) or os.stat(SERVERS_FILE).st_size == 0:
         try:
             subprocess.run(['speedtest', '--accept-license', '--accept-gdpr', '--servers', '--format=json'], check=True, stdout=subprocess.DEVNULL)
             res = subprocess.run(['speedtest', '--accept-license', '--accept-gdpr', '--servers', '--format=json'], capture_output=True, text=True)
             with open(SERVERS_FILE, 'w', encoding='utf-8') as f: f.write(res.stdout)
-            logging.info("✅ Lista serwerów zaktualizowana.")
-        except Exception as e: logging.error(f"❌ Błąd pobierania serwerów: {e}")
-
-def load_settings_from_db(db_session):
-    settings = db_session.query(AppSettings).filter(AppSettings.id == 1).first()
-    if not settings:
-        db_session.add(AppSettings(id=1, selected_server_id=None, schedule_hours=1))
-        db_session.commit()
-        return {"selected_server_id": None, "schedule_hours": 1}
-    return {"selected_server_id": settings.selected_server_id, "schedule_hours": settings.schedule_hours}
-
-def save_settings_to_db(db_session, settings: Dict[str, Any]):
-    rec = db_session.query(AppSettings).filter(AppSettings.id == 1).first()
-    if not rec: rec = AppSettings(id=1); db_session.add(rec)
-    rec.selected_server_id = settings.get("selected_server_id")
-    rec.schedule_hours = settings.get("schedule_hours", 1)
-    db_session.commit()
-    logging.info(f"⚙️ Zaktualizowano ustawienia: Serwer ID={rec.selected_server_id}, Harmonogram={rec.schedule_hours}h")
+        except Exception as e: logging.error(f"Błąd serwerów: {e}")
 
 def run_speed_test_and_save(server_id=None):
-    if not test_lock.acquire(blocking=False): 
-        logging.warning("⚠️ Test już trwa! Pomijanie nowego żądania.")
-        return None
-    
+    if not test_lock.acquire(blocking=False): return None
     db_session = app_state["SessionLocal"]()
     try:
-        sid_msg = f"ID: {server_id}" if server_id else "Auto"
-        logging.info(f"🚀 Rozpoczynanie testu prędkości (Serwer: {sid_msg})... To może potrwać chwilę.")
-        
         cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
         if server_id: cmd.extend(['--server-id', str(server_id)])
-        
         proc = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
         data = json.loads(proc.stdout)
-        
-        if data.get('type') != 'result': 
-            logging.error("❌ Otrzymano nieprawidłowe dane z speedtest-cli.")
-            return None
+        if data.get('type') != 'result': return None
         
         res = SpeedtestResult(
             id=str(uuid.uuid4()), timestamp=datetime.now(),
@@ -216,22 +245,22 @@ def run_speed_test_and_save(server_id=None):
         )
         db_session.add(res)
         db_session.commit()
-        logging.info(f"✅ Wynik zapisany: ↓ {res.download} Mbps | ↑ {res.upload} Mbps | Ping: {res.ping} ms")
+        logging.info(f"✅ Wynik Speedtestu: ↓ {res.download} Mbps")
         return res
     except Exception as e:
-        logging.error(f"❌ Błąd podczas testu: {e}")
+        logging.error(f"❌ Błąd Speedtestu: {e}")
         return None
     finally:
         db_session.close()
         test_lock.release()
 
 def run_scheduled_test(job_tag=None):
-    logging.info(f"⏰ Uruchamianie zaplanowanego zadania: {job_tag}")
     if job_tag == 'startup-test': schedule.clear('startup-test')
     db = app_state["SessionLocal"]()
-    settings = load_settings_from_db(db)
+    s = load_settings_from_db(db)
+    srv_id = s.selected_server_id 
     db.close()
-    run_speed_test_and_save(settings.get("selected_server_id"))
+    run_speed_test_and_save(srv_id)
 
 def run_speed_test_and_save_threaded(job_tag=None):
     threading.Thread(target=run_scheduled_test, args=(job_tag,), daemon=True).start()
@@ -242,38 +271,31 @@ def run_schedule_loop():
 # --- FastAPI ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logging.info("🟢 Aplikacja startuje...")
     initialize_db()
+    
     threading.Thread(target=get_closest_servers, daemon=True).start()
+    threading.Thread(target=run_schedule_loop, daemon=True).start()
+    threading.Thread(target=run_ping_watchdog, daemon=True).start()
     
     db = app_state["SessionLocal"]()
     s = load_settings_from_db(db)
+    hours = s.schedule_hours
     db.close()
     
-    app_state["schedule_hours"] = s.get("schedule_hours", 1)
-    logging.info(f"📅 Harmonogram: Test co {app_state['schedule_hours']} godzin.")
-    
-    app_state["schedule_job"] = schedule.every(app_state["schedule_hours"]).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
-    
-    # Test startowy po 1 minucie
+    app_state["schedule_job"] = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
     schedule.every(1).minutes.do(run_speed_test_and_save_threaded, job_tag='startup-test').tag('startup-test')
     
-    threading.Thread(target=run_schedule_loop, daemon=True).start()
     yield
     if app_state["engine"]: app_state["engine"].dispose()
-    logging.info("🔴 Aplikacja zatrzymana.")
 
 app = FastAPI(lifespan=lifespan)
-
-# --- Montowanie plików statycznych ---
 app.mount("/css", StaticFiles(directory="css"), name="css")
 app.mount("/js", StaticFiles(directory="js"), name="js")
 
-# --- Auth Dependency ---
 async def verify_session(request: Request):
     if not AUTH_ENABLED: return True
-    cookie = request.cookies.get(SESSION_COOKIE_NAME)
-    if cookie != SESSION_SECRET: raise HTTPException(status_code=401, detail="Unauthorized")
+    if request.cookies.get(SESSION_COOKIE_NAME) != SESSION_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     return True
 
 # --- Endpoints ---
@@ -281,158 +303,129 @@ async def verify_session(request: Request):
 async def login(creds: LoginModel, response: Response):
     if not AUTH_ENABLED: return {"message": "Auth disabled"}
     if creds.username == APP_USERNAME and creds.password == APP_PASSWORD:
-        logging.info(f"🔑 Zalogowano użytkownika: {creds.username}")
         response.set_cookie(key=SESSION_COOKIE_NAME, value=SESSION_SECRET, httponly=True, samesite='strict')
         return {"message": "Logged in"}
-    logging.warning(f"⛔ Nieudana próba logowania: {creds.username}")
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @app.post("/api/logout")
 async def logout(response: Response):
     response.delete_cookie(SESSION_COOKIE_NAME)
-    logging.info("🚪 Wylogowano użytkownika.")
     return {"message": "Logged out"}
 
 @app.get("/api/auth-status")
 async def auth_status(): return {"enabled": AUTH_ENABLED}
 
 @app.get("/api/results", dependencies=[Depends(verify_session)])
-async def get_results(db_session=Depends(get_db)):
-    results = db_session.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).limit(1000).all()
-    return results
+async def get_results(db=Depends(get_db)):
+    return db.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).limit(1000).all()
 
 @app.get("/api/results/latest", dependencies=[Depends(verify_session)])
-async def get_latest(db_session=Depends(get_db)):
-    res = db_session.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).first()
-    if not res: return JSONResponse(content={}, status_code=404)
-    return res
+async def get_latest(db=Depends(get_db)):
+    res = db.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).first()
+    return res if res else JSONResponse(content={}, status_code=404)
 
 @app.get("/api/servers", dependencies=[Depends(verify_session)])
 async def get_srv():
     if os.path.exists(SERVERS_FILE):
-        with open(SERVERS_FILE, 'r') as f: return json.load(f)
+        with open(SERVERS_FILE, 'r') as f:
+            return json.load(f)
     raise HTTPException(status_code=404)
 
 @app.get("/api/settings", dependencies=[Depends(verify_session)])
 async def get_set(db=Depends(get_db)):
     s = load_settings_from_db(db)
     l = db.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).first()
-    s["latest_test_timestamp"] = l.timestamp if l else None
-    return s
+    return {
+        "selected_server_id": s.selected_server_id,
+        "schedule_hours": s.schedule_hours,
+        "ping_target": s.ping_target,
+        "ping_interval": s.ping_interval,
+        "latest_test_timestamp": l.timestamp if l else None
+    }
 
 @app.post("/api/settings", dependencies=[Depends(verify_session)])
 async def set_set(s: SettingsModel, db=Depends(get_db)):
-    cur = load_settings_from_db(db)
-    if s.schedule_hours and s.schedule_hours != cur["schedule_hours"]:
+    rec = load_settings_from_db(db)
+    if s.schedule_hours and s.schedule_hours != rec.schedule_hours:
         if app_state["schedule_job"]: schedule.cancel_job(app_state["schedule_job"])
-        app_state["schedule_hours"] = s.schedule_hours
         app_state["schedule_job"] = schedule.every(s.schedule_hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
-        logging.info(f"📅 Zmieniono harmonogram: co {s.schedule_hours}h")
     
-    save_settings_to_db(db, {"selected_server_id": s.server_id, "schedule_hours": s.schedule_hours or cur["schedule_hours"]})
-    return s
+    rec.selected_server_id = s.server_id
+    if s.schedule_hours: rec.schedule_hours = s.schedule_hours
+    if s.ping_target: rec.ping_target = s.ping_target
+    if s.ping_interval: rec.ping_interval = s.ping_interval
+    
+    db.commit()
+    logging.info(f"⚙️ Ustawienia zaktualizowane.")
+    return {"message": "Settings saved"}
+
+@app.get("/api/watchdog/status", dependencies=[Depends(verify_session)])
+async def watchdog_status(db=Depends(get_db)):
+    history = db.query(PingLog).order_by(PingLog.timestamp.desc()).limit(60).all()
+    history_data = [{"time": log.timestamp.strftime("%H:%M:%S"), "latency": log.latency} for log in reversed(history)]
+    return {"current": app_state["latest_ping_status"], "history": history_data}
 
 @app.post("/api/trigger-test", dependencies=[Depends(verify_session)])
 async def trig_test(s: SettingsModel):
-    if test_lock.locked(): 
-        logging.warning("⚠️ Próba ręcznego uruchomienia testu podczas trwania innego.")
-        raise HTTPException(status_code=429)
-    logging.info("👆 Ręczne wyzwolenie testu.")
+    if test_lock.locked(): raise HTTPException(status_code=429)
     threading.Thread(target=run_speed_test_and_save, args=(s.server_id,), daemon=True).start()
-    schedule.clear('startup-test')
     return {"message": "Started"}
 
 @app.delete("/api/results", dependencies=[Depends(verify_session)])
 async def del_res(d: DeleteModel, db=Depends(get_db)):
-    count = db.query(SpeedtestResult).filter(SpeedtestResult.id.in_(d.ids)).delete(synchronize_session=False)
+    c = db.query(SpeedtestResult).filter(SpeedtestResult.id.in_(d.ids)).delete(synchronize_session=False)
     db.commit()
-    logging.info(f"🗑️ Usunięto {count} wpisów z bazy.")
-    return {"deleted_count": count}
+    return {"deleted_count": c}
 
 @app.get("/api/export", dependencies=[Depends(verify_session)])
 async def export_csv(db=Depends(get_db)):
-    logging.info("📥 Generowanie pliku CSV...")
     results = db.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    headers = ['Timestamp', 'Ping (ms)', 'Jitter (ms)', 'Download (Mbps)', 'Upload (Mbps)', 'Server', 'ISP', 'IP', 'Result URL']
-    writer.writerow(headers)
-    for r in results:
-        writer.writerow([r.timestamp, r.ping, r.jitter, r.download, r.upload, f"{r.server_name} ({r.server_location})", r.isp, r.client_ip, r.result_url])
+    writer.writerow(['Timestamp', 'Ping', 'Download', 'Upload'])
+    for r in results: writer.writerow([r.timestamp, r.ping, r.download, r.upload])
     output.seek(0)
-    response = StreamingResponse(iter([output.getvalue()]), media_type="text/csv")
-    response.headers["Content-Disposition"] = "attachment; filename=speedtest_history.csv"
-    return response
+    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=speedtest.csv"})
 
 @app.get("/api/backup", dependencies=[Depends(verify_session)])
 async def backup_db():
-    logging.info("📦 Rozpoczynanie backupu bazy danych...")
-    try:
-        env = os.environ.copy()
-        env["MYSQL_PWD"] = DB_PASSWORD
-        cmd = ["mysqldump", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, "--no-tablespaces", DB_NAME]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-        stdout, stderr = proc.communicate()
-        if proc.returncode != 0:
-            logging.error(f"❌ Backup failed: {stderr.decode()}")
-            raise HTTPException(status_code=500, detail="Backup failed")
-        
-        logging.info("✅ Backup wygenerowany pomyślnie.")
-        filename = f"speedtest_backup_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.sql"
-        return Response(content=stdout, media_type="application/sql", headers={"Content-Disposition": f"attachment; filename={filename}"})
-    except Exception as e:
-        logging.error(f"❌ Backup exception: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    env = os.environ.copy(); env["MYSQL_PWD"] = DB_PASSWORD
+    cmd = ["mysqldump", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, "--no-tablespaces", DB_NAME]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    stdout, stderr = proc.communicate()
+    if proc.returncode != 0: raise HTTPException(500)
+    return Response(content=stdout, media_type="application/sql", headers={"Content-Disposition": f"attachment; filename=backup.sql"})
 
 @app.post("/api/restore", dependencies=[Depends(verify_session)])
 async def restore_db(file: UploadFile = File(...)):
-    logging.warning("⚠️ Rozpoczynanie przywracania bazy danych...")
-    if not file.filename.endswith('.sql'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Only .sql files allowed.")
-    try:
-        temp_file_path = f"/tmp/{uuid.uuid4()}.sql"
-        with open(temp_file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        env = os.environ.copy()
-        env["MYSQL_PWD"] = DB_PASSWORD
-        cmd = ["mysql", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, DB_NAME]
-        with open(temp_file_path, "r") as f:
-            proc = subprocess.Popen(cmd, stdin=f, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-            stdout, stderr = proc.communicate()
-        os.remove(temp_file_path)
-        if proc.returncode != 0:
-            logging.error(f"❌ Restore failed: {stderr.decode()}")
-            raise HTTPException(status_code=500, detail=f"Restore failed: {stderr.decode()}")
-        
-        logging.info("✅ Baza przywrócona pomyślnie.")
-        return {"message": "Database restored successfully"}
-    except Exception as e:
-        logging.error(f"❌ Restore exception: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    temp = f"/tmp/{uuid.uuid4()}.sql"
+    with open(temp, "wb") as b: shutil.copyfileobj(file.file, b)
+    env = os.environ.copy(); env["MYSQL_PWD"] = DB_PASSWORD
+    cmd = ["mysql", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, DB_NAME]
+    with open(temp, "r") as f:
+        proc = subprocess.Popen(cmd, stdin=f, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        stdout, stderr = proc.communicate()
+    os.remove(temp)
+    if proc.returncode != 0: raise HTTPException(500)
+    return {"message": "Restored"}
 
-# --- Serwowanie stron HTML ---
 @app.get("/")
 async def read_root(request: Request):
-    if not AUTH_ENABLED: return FileResponse('index.html')
-    cookie = request.cookies.get(SESSION_COOKIE_NAME)
-    if cookie == SESSION_SECRET: return FileResponse('index.html')
+    if not AUTH_ENABLED or request.cookies.get(SESSION_COOKIE_NAME) == SESSION_SECRET: return FileResponse('index.html')
     return FileResponse('login.html')
 
 @app.get("/{filename}")
-async def read_html_files(filename: str, request: Request):
-    allowed = ["login.html", "backup.html", "manifest.json", "favicon.ico", "logo.png", "speedtest.png"]
+async def read_static(filename: str, request: Request):
+    allowed = ["index.html", "login.html", "backup.html", "settings.html", "manifest.json", "favicon.ico", "logo.png", "speedtest.png"]
     
-    if filename not in allowed and filename != "index.html":
-         raise HTTPException(status_code=404)
-
-    file_path = os.path.join("/app", filename)
-    
-    if AUTH_ENABLED and filename in ["index.html", "backup.html"]:
-        cookie = request.cookies.get(SESSION_COOKIE_NAME)
-        if cookie != SESSION_SECRET: return FileResponse('login.html')
-
-    if os.path.exists(file_path): return FileResponse(file_path)
-    raise HTTPException(status_code=404)
+    if filename not in allowed:
+        if os.path.exists(f"/app/{filename}"): return FileResponse(f"/app/{filename}")
+        raise HTTPException(404)
+        
+    if AUTH_ENABLED and request.cookies.get(SESSION_COOKIE_NAME) != SESSION_SECRET and filename in ["index.html", "backup.html", "settings.html"]:
+        return FileResponse('login.html')
+        
+    return FileResponse(f"/app/{filename}") if os.path.exists(f"/app/{filename}") else HTTPException(404)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -3,15 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#ffffff">
-    <meta name="description" content="Monitoruj prędkość łącza internetowego">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="logo.png">
     <title>SpeedtestLog</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <link rel="stylesheet" href="css/main.css">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">    
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
     <div class="app-wrapper">
@@ -27,17 +23,30 @@
                     <li><a href="index.html#history" class="nav-link"><span class="icon">📝</span> <span data-i18n-key="historyTable">Historia Pomiarów</span></a></li>
                     <li class="nav-spacer"></li>
                     <li><a href="backup.html" class="nav-link"><span class="icon">💾</span> <span data-i18n-key="navBackup">Kopia Zapasowa</span></a></li>
+                    <li><a href="settings.html" class="nav-link"><span class="icon">⚙️</span> <span data-i18n-key="navSettings">Ustawienia</span></a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
                 <button id="logoutBtn" class="logout-btn">🚪 <span data-i18n-key="logout">Wyloguj</span></button>
-                <div style="margin-top: 10px;"><small>SpeedtestLog v1.7</small></div>
+                <div style="margin-top: 10px;"><small>SpeedtestLog v1.9</small></div>
             </div>
         </aside>
         <main class="main-content">
             <header class="top-bar">
                 <button id="hamburgerBtn" class="hamburger-btn">☰</button>
                 <div class="top-bar-actions">
+                    <div class="watchdog-wrapper">
+                        <div id="watchdogIcon" class="watchdog-indicator" title="Ping Watchdog"></div>
+                        <div id="watchdogPopover" class="watchdog-popover">
+                            <h4 id="wdStatus">...</h4>
+                            <div class="wd-detail"><span data-i18n-key="wdTarget">Cel:</span> <span id="wdTarget">...</span></div>
+                            <div class="wd-detail"><span data-i18n-key="wdPing">Ping:</span> <span id="wdLatency">...</span></div>
+                            <div class="wd-detail"><span data-i18n-key="wdLoss">Pakiety:</span> <span id="wdLoss">...</span></div>
+                            <div style="height: 60px; width: 100%; margin-top: 10px;">
+                                <canvas id="wdChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
                     <div class="lang-dropdown-wrapper">
                         <button id="langBtn" class="lang-btn"><img src="https://flagcdn.com/w40/pl.png" alt="PL" id="currentLangFlag"><span id="currentLangText">PL</span></button>
                         <ul id="langMenu" class="lang-menu">
@@ -48,7 +57,9 @@
                     <button id="themeToggle" title="Zmień motyw" class="theme-btn">🌙</button>
                 </div>
             </header>
+            
             <div class="content-scroll" id="contentToCapture">
+                
                 <section id="dashboard" class="section-block">
                     <div class="controls-dashboard">
                         <div class="control-group manual-test-group">
@@ -72,6 +83,7 @@
                             <span id="nextRunTime" class="next-run-indicator" data-i18n-key="calculating">Obliczanie...</span>
                         </div>
                     </div>
+
                     <div class="stats-container">
                         <div class="stat-card"><h3><span data-i18n-key="latestDownload">Pobieranie</span></h3><div class="value-container"><span class="value" id="latestDownloadValue">...</span><span class="unit" id="latestDownloadUnit">Mbps</span></div><div class="comparison" id="latestDownloadCompare">...</div></div>
                         <div class="stat-card"><h3><span data-i18n-key="latestUpload">Wysyłanie</span></h3><div class="value-container"><span class="value" id="latestUploadValue">...</span><span class="unit" id="latestUploadUnit">Mbps</span></div><div class="comparison" id="latestUploadCompare">...</div></div>
@@ -79,6 +91,7 @@
                         <div class="stat-card"><h3><span data-i18n-key="latestJitter">Jitter</span></h3><div class="value-container"><span class="value" id="latestJitterValue">...</span><span class="unit" id="latestJitterUnit">ms</span></div><div class="comparison" id="latestJitterCompare">...</div></div>
                     </div>
                 </section>
+
                 <section id="charts" class="section-block">
                     <div class="section-header-inline">
                         <h2 data-i18n-key="historyCharts">Wykresy Historii</h2>
@@ -94,6 +107,7 @@
                         <div class="chart-block"><h3 data-i18n-key="jitterChartTitle">Jitter</h3><canvas id="jitterChart"></canvas></div>
                     </div>
                 </section>
+
                 <section id="history" class="section-block">
                     <div class="table-header">
                         <h2 data-i18n-key="historyTable">Historia Pomiarów</h2>
@@ -108,17 +122,10 @@
                             <tbody></tbody>
                         </table>
                     </div>
-                    
                     <div class="pagination-controls">
                         <div class="pagination-left">
                             <span data-i18n-key="rowsPerPage">Wierszy na stronę:</span>
-                            <select id="rowsPerPageSelect">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="all" data-i18n-key="filterAll">Wszystko</option>
-                            </select>
+                            <select id="rowsPerPageSelect"><option value="5">5</option><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="all" data-i18n-key="filterAll">Wszystko</option></select>
                         </div>
                         <div class="pagination-right">
                             <span id="pageInfo"></span>
@@ -126,9 +133,8 @@
                             <button id="nextPageBtn" class="page-btn"><span data-i18n-key="nextPage">Następna</span> &gt;</button>
                         </div>
                     </div>
-
                 </section>
-                <footer style="text-align: center; padding: 20px; color: var(--text-color-secondary); font-size: 0.8rem;">&copy; 2025 SpeedtestLog</footer>
+
             </div>
         </main>
         <div class="sidebar-overlay" id="sidebarOverlay"></div>

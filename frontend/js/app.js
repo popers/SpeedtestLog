@@ -5,68 +5,242 @@ import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeTe
 import { renderCharts } from './charts.js';
 import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
+// --- ZMIENNE WATCHDOGA ---
+let watchdogInterval = null;
+let wdChart = null;
+
 // --- Main Logic & Event Listeners ---
 
 async function initializeApp() {
-    // 1. Inicjalizacja Języka
     const savedLang = localStorage.getItem('language') || navigator.language.split('-')[0];
     const initialLang = translations[savedLang] ? savedLang : 'pl';
     setLanguage(initialLang); 
     updateLangButtonUI(initialLang); 
     
-    // 2. Inicjalizacja Motywu
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') setNightMode(true);
     else setNightMode(false);
 
-    // 3. Sprawdzenie Auth
+    // Sprawdzenie Auth (wszędzie poza loginem)
     if (!document.getElementById('loginForm')) {
         try {
             const authStatus = await getAuthStatus();
             setLogoutButtonVisibility(authStatus.enabled);
         } catch (e) {
-            console.warn("Could not check auth status", e);
             setLogoutButtonVisibility(false);
         }
     }
     
-    // 4. Listenery
     setupEventListeners();
     
-    // 5. Pobranie danych
-    if (document.getElementById('dashboard')) {
-        await loadDashboardData();
-    }
+    // Wykrywanie strony
+    const page = window.location.pathname.split("/").pop();
     
-    // 6. Listenery backupu
-    if (document.getElementById('downloadBackupBtn')) {
-        setupBackupListeners();
+    if (page === 'settings.html') {
+        // Strona Ustawień
+        loadWatchdogSettings();
+    } else if (page === 'index.html' || page === '' || page === '/') {
+        // Strona Główna (Dashboard) - ładujemy wszystko
+        // Nie ukrywamy sekcji, bo ma to być "One Page Scroll"
+        loadDashboardData();
+    }
+
+    // Inicjalizacja Watchdoga (wszędzie poza loginem)
+    if (!document.getElementById('loginForm')) {
+        startWatchdogPolling();
+    }
+}
+
+// Ładowanie formularza na settings.html (tylko Watchdog)
+async function loadWatchdogSettings() {
+    const s = await fetchSettings();
+    const targetInput = document.getElementById('pingTargetInput');
+    if(targetInput) targetInput.value = s.ping_target || '8.8.8.8';
+    
+    const intervalInput = document.getElementById('pingIntervalInput');
+    if(intervalInput) intervalInput.value = s.ping_interval || 30;
+}
+
+// Zapisywanie ze strony settings.html (Tylko Watchdog, Speedtest zachowujemy)
+async function saveWatchdogSettingsOnly() {
+    try {
+        const currentSettings = await fetchSettings();
+        const target = document.getElementById('pingTargetInput').value;
+        const interval = parseInt(document.getElementById('pingIntervalInput').value);
+
+        await updateSettings({
+            server_id: currentSettings.selected_server_id, // Zachowaj
+            schedule_hours: currentSettings.schedule_hours, // Zachowaj
+            ping_target: target,
+            ping_interval: interval
+        });
+        
+        showToast('toastSettingsSaved', 'success');
+        stopWatchdogPolling();
+        startWatchdogPolling();
+    } catch (e) {
+        showToast('toastSettingsError', 'error');
+    }
+}
+
+// Zapisywanie ze strony index.html (Tylko Speedtest - dropdowny)
+async function handleQuickSettingsChange(e) {
+    const serverSelect = document.getElementById('serverSelect');
+    const scheduleSelect = document.getElementById('scheduleSelect');
+    if (!serverSelect || !scheduleSelect) return;
+
+    const newServerId = serverSelect.value;
+    const newScheduleHours = parseInt(scheduleSelect.value);
+    const sourceId = e.target.id;
+
+    try {
+        const currentSettings = await fetchSettings();
+        await updateSettings({
+            server_id: newServerId === 'null' ? null : parseInt(newServerId),
+            schedule_hours: newScheduleHours,
+            ping_target: currentSettings.ping_target,
+            ping_interval: currentSettings.ping_interval
+        });
+        
+        if (sourceId === 'serverSelect') {
+            const serverText = serverSelect.options[serverSelect.selectedIndex].text;
+            showToast('toastServerChanged', 'success', ` ${serverText}`);
+        } else if (sourceId === 'scheduleSelect') {
+            const intervalText = scheduleSelect.options[scheduleSelect.selectedIndex].text;
+            showToast('toastScheduleChanged', 'success', ` ${intervalText}`);
+            
+            state.currentScheduleHours = newScheduleHours;
+            const nextRunEl = document.getElementById('nextRunTime');
+            if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
+            setTimeout(() => {
+                showToast('toastNextRun', 'info', ` ${getNextRunTimeText()}`);
+            }, 2500);
+        }
+    } catch (e) {
+        showToast('toastSettingsError', 'error');
+    }
+}
+
+// --- Watchdog Logic ---
+function startWatchdogPolling() {
+    if (watchdogInterval) clearInterval(watchdogInterval);
+    updateWatchdogUI(); 
+    watchdogInterval = setInterval(updateWatchdogUI, 5000); 
+}
+
+function stopWatchdogPolling() {
+    if (watchdogInterval) clearInterval(watchdogInterval);
+}
+
+async function updateWatchdogUI() {
+    try {
+        const icon = document.getElementById('watchdogIcon');
+        if(!icon) return; 
+
+        const res = await fetch('/api/watchdog/status');
+        if(!res.ok) return;
+        const data = await res.json();
+        const current = data.current;
+        
+        // Aktualizacja ikonki
+        if (current.online) {
+            icon.className = 'watchdog-indicator online';
+        } else {
+            icon.className = 'watchdog-indicator offline';
+        }
+
+        // Aktualizacja tekstów w dymku (jeśli otwarty)
+        const popover = document.getElementById('watchdogPopover');
+        if (popover && popover.classList.contains('show')) {
+            const statusText = document.getElementById('wdStatus');
+            const targetText = document.getElementById('wdTarget');
+            const pingText = document.getElementById('wdLatency');
+            const lossText = document.getElementById('wdLoss');
+            
+            if(statusText) {
+                statusText.textContent = current.online ? 
+                    (translations[state.currentLang].wdStatusOnline || "ONLINE") : 
+                    (translations[state.currentLang].wdStatusOffline || "OFFLINE");
+                statusText.style.color = current.online ? "#28a745" : "#dc3545";
+            }
+            if(targetText) targetText.textContent = current.target;
+            if(pingText) pingText.textContent = current.latency ? `${current.latency} ms` : '-';
+            if(lossText) lossText.textContent = `${current.loss}%`;
+            
+            renderSparkline(data.history);
+        }
+        
+    } catch (e) { }
+}
+
+function renderSparkline(history) {
+    const canvas = document.getElementById('wdChart');
+    if(!canvas) return;
+    
+    // Jeśli canvas jest ukryty (np. display:none rodzica), Chart.js może mieć problem
+    if (canvas.offsetParent === null) return;
+
+    const ctx = canvas.getContext('2d');
+    const labels = history.map(h => h.time);
+    const dataPoints = history.map(h => h.latency || 0);
+    
+    if (wdChart) {
+        wdChart.data.labels = labels;
+        wdChart.data.datasets[0].data = dataPoints;
+        wdChart.update('none'); // Optymalizacja: brak animacji przy update
+    } else {
+        wdChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataPoints,
+                    borderColor: '#17a2b8',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false, 
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: { x: { display: false }, y: { display: false } }
+            }
+        });
     }
 }
 
 function setupEventListeners() {
-    // Sidebar
+    // --- Sidebar ---
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     const sidebar = document.getElementById('sidebar');
     
+    const closeSidebar = () => {
+        if(sidebar) sidebar.classList.remove('open');
+        if(sidebarOverlay) sidebarOverlay.classList.remove('show');
+    };
+
     if(hamburgerBtn) hamburgerBtn.addEventListener('click', () => {
-        sidebar.classList.add('open');
-        sidebarOverlay.classList.add('show');
+        if(sidebar) sidebar.classList.add('open');
+        if(sidebarOverlay) sidebarOverlay.classList.add('show');
     });
-    
-    if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('show');
+    if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
+    if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+
+    // Zamykanie menu mobilnego po kliknięciu
+    const navLinks = document.querySelectorAll('.sidebar-nav a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 992) closeSidebar();
+        });
     });
 
-    if(sidebarOverlay) sidebarOverlay.addEventListener('click', () => {
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('show');
-    });
-
-    // Język - Dropdown
+    // --- Lang & Theme ---
     const langBtn = document.getElementById('langBtn');
     const langMenu = document.getElementById('langMenu');
     if (langBtn) {
@@ -76,49 +250,40 @@ function setupEventListeners() {
         });
     }
     window.addEventListener('click', () => {
-        if (langMenu && langMenu.classList.contains('show')) {
-            langMenu.classList.remove('show');
-        }
+        if (langMenu) langMenu.classList.remove('show');
     });
-
     document.querySelectorAll('.lang-menu li').forEach(li => {
         li.addEventListener('click', () => {
-            const lang = li.dataset.lang;
-            setLanguage(lang);            
-            updateLangButtonUI(lang);     
-            langMenu.classList.remove('show'); 
+            setLanguage(li.dataset.lang);            
+            updateLangButtonUI(li.dataset.lang);     
             showToast('toastLangChanged', 'success');
-            
-            const nextRunEl = document.getElementById('nextRunTime');
-            if (nextRunEl) {
-                nextRunEl.textContent = getNextRunTimeText();
-            }
-            
-            if (state.allResults.length > 0) {
-                renderData(); 
-            }
+            if (state.allResults.length > 0) renderData();
+            // Odśwież datę następnego testu (tłumaczenie)
+            const nextRun = document.getElementById('nextRunTime');
+            if(nextRun) nextRun.textContent = getNextRunTimeText();
         });
     });
 
-    // Motyw
     const themeToggle = document.getElementById('themeToggle');
     if(themeToggle) themeToggle.addEventListener('click', () => {
-        setNightMode(!document.body.classList.contains('dark-mode'));
+        const isDarkNow = document.body.classList.contains('dark-mode');
+        setNightMode(!isDarkNow); 
+        if (!isDarkNow) showToast('toastThemeDark', 'info');
+        else showToast('toastThemeLight', 'info');
     });
 
-    // Logowanie
+    // --- Login ---
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('loginBtn');
             const errorMsg = document.getElementById('loginError');
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData);
+            const data = Object.fromEntries(new FormData(e.target));
             const lang = translations[state.currentLang];
 
             btn.disabled = true;
-            btn.textContent = lang.loggingIn || 'Logowanie...';
+            btn.textContent = lang.loggingIn || '...';
             errorMsg.style.display = 'none';
 
             try {
@@ -132,113 +297,128 @@ function setupEventListeners() {
         });
     }
 
-    // Test Trigger
+    // --- Dashboard Actions ---
     const triggerBtn = document.getElementById('triggerTestBtn');
     if(triggerBtn) triggerBtn.addEventListener('click', handleManualTest);
 
-    // Settings
     const serverSelect = document.getElementById('serverSelect');
     const scheduleSelect = document.getElementById('scheduleSelect');
-    
-    if(serverSelect) serverSelect.addEventListener('change', handleSettingsChange);
-    if(scheduleSelect) scheduleSelect.addEventListener('change', handleSettingsChange);
+    // Tylko jeśli NIE jesteśmy na Settings.html (brak saveSettingsBtn)
+    if(serverSelect && !document.getElementById('saveSettingsBtn')) {
+        serverSelect.addEventListener('change', handleQuickSettingsChange);
+        scheduleSelect.addEventListener('change', handleQuickSettingsChange);
+    }
 
-    // Filter & Unit
     const filterSelect = document.getElementById('filterSelect');
-    const unitSelect = document.getElementById('unitSelect');
-    
     if(filterSelect) filterSelect.addEventListener('change', () => {
-        state.currentPage = 1; // Reset strony po zmianie filtra
+        state.currentPage = 1; 
         localStorage.setItem('dashboardFilter', filterSelect.value);
         renderData();
-        const selectedText = filterSelect.options[filterSelect.selectedIndex].text;
-        showToast('toastFilterChanged', 'info', ` ${selectedText}`);
+        showToast('toastFilterChanged', 'info', ` ${filterSelect.options[filterSelect.selectedIndex].text}`);
     });
     
+    const unitSelect = document.getElementById('unitSelect');
     if(unitSelect) unitSelect.addEventListener('change', () => {
         localStorage.setItem('displayUnit', unitSelect.value);
         renderData();
         showToast('toastUnitChanged', 'info', ` ${unitSelect.value}`);
     });
 
-    // NOWE: Pagination Controls
-    const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
-    const prevPageBtn = document.getElementById('prevPageBtn');
-    const nextPageBtn = document.getElementById('nextPageBtn');
+    // --- Pagination ---
+    const rowsPerPage = document.getElementById('rowsPerPageSelect');
+    if(rowsPerPage) rowsPerPage.addEventListener('change', () => {
+        state.itemsPerPage = rowsPerPage.value === 'all' ? 'all' : parseInt(rowsPerPage.value);
+        state.currentPage = 1; renderData();
+    });
+    const prevPage = document.getElementById('prevPageBtn');
+    if(prevPage) prevPage.addEventListener('click', () => { if(state.currentPage > 1) { state.currentPage--; renderData(); } });
+    const nextPage = document.getElementById('nextPageBtn');
+    if(nextPage) nextPage.addEventListener('click', () => { state.currentPage++; renderData(); });
 
-    if(rowsPerPageSelect) {
-        rowsPerPageSelect.addEventListener('change', () => {
-            state.itemsPerPage = rowsPerPageSelect.value === 'all' ? 'all' : parseInt(rowsPerPageSelect.value);
-            state.currentPage = 1; // Reset do pierwszej strony
-            renderData();
-        });
-    }
-
-    if(prevPageBtn) {
-        prevPageBtn.addEventListener('click', () => {
-            if (state.currentPage > 1) {
-                state.currentPage--;
-                renderData();
-            }
-        });
-    }
-
-    if(nextPageBtn) {
-        nextPageBtn.addEventListener('click', () => {
-            // Maksymalna strona jest obliczana w ui.js, ale możemy bezpiecznie inkrementować,
-            // bo ui.js zablokuje przycisk jeśli jesteśmy na końcu.
-            state.currentPage++;
-            renderData();
-        });
-    }
-
-    // Delete
+    // --- Delete & Export ---
     const deleteBtn = document.getElementById('deleteSelectedBtn');
     if(deleteBtn) deleteBtn.addEventListener('click', handleDelete);
     
-    // Modal Close
-    const modalCloseX = document.getElementById('confirmModalCloseBtn');
+    const csvBtn = document.getElementById('exportBtn');
+    if(csvBtn) csvBtn.addEventListener('click', () => { window.location.href = '/api/export'; });
+
+    // --- Modal ---
     const modalCloseBtn = document.getElementById('modalCloseBtn');
-    
     if(modalCloseBtn) modalCloseBtn.addEventListener('click', () => {
-        document.getElementById('detailsModal').classList.remove('show');
-        setTimeout(() => document.getElementById('detailsModal').style.display = 'none', 200);
+        const modal = document.getElementById('detailsModal');
+        if(modal) { modal.classList.remove('show'); setTimeout(() => modal.style.display = 'none', 200); }
     });
     
-    // Logout
+    // --- Logout ---
     const logoutBtn = document.getElementById('logoutBtn');
-    if(logoutBtn) {
-         logoutBtn.addEventListener('click', logoutUser);
-    }
+    if(logoutBtn) logoutBtn.addEventListener('click', logoutUser);
 
-    // Checkbox Select All
+    // --- Select All ---
     const selectAll = document.getElementById('selectAllCheckbox');
     if(selectAll) {
         selectAll.addEventListener('change', (e) => {
-            const isChecked = e.target.checked;
-            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-            rowCheckboxes.forEach(cb => {
-                cb.checked = isChecked;
-            });
-            
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = e.target.checked);
+            // Update button visibility manually or trigger handler
+            const checked = document.querySelectorAll('.row-checkbox:checked').length;
             const delBtn = document.getElementById('deleteSelectedBtn');
             if(delBtn) {
-                const count = rowCheckboxes.length;
-                if (isChecked && count > 0) {
-                    delBtn.style.display = 'flex';
-                    const baseText = translations[state.currentLang].deleteSelected;
-                    delBtn.innerHTML = `🗑️ ${baseText} (${count})`;
-                } else {
-                    delBtn.style.display = 'none';
-                }
+                delBtn.style.display = checked > 0 ? 'flex' : 'none';
+                const baseText = translations[state.currentLang].deleteSelected;
+                delBtn.innerHTML = `🗑️ ${baseText} (${checked})`;
             }
         });
     }
-    
-    // CSV Export
-    const csvBtn = document.getElementById('exportBtn');
-    if(csvBtn) {
-        csvBtn.addEventListener('click', () => { window.location.href = '/api/export'; });
+
+    // --- Watchdog Popover ---
+    const wdIcon = document.getElementById('watchdogIcon');
+    const wdPopover = document.getElementById('watchdogPopover');
+    if(wdIcon) {
+        wdIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            wdPopover.classList.toggle('show');
+            // Force update chart when showing
+            if(wdPopover.classList.contains('show')) updateWatchdogUI();
+        });
+    }
+    window.addEventListener('click', (e) => {
+        if(wdPopover && !wdPopover.contains(e.target) && e.target !== wdIcon) {
+            wdPopover.classList.remove('show');
+        }
+    });
+
+    // --- Settings Save (Settings Page) ---
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    if(saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveWatchdogSettingsOnly);
+
+    // --- Backup Page ---
+    const downBtn = document.getElementById('downloadBackupBtn');
+    if(downBtn) {
+        downBtn.addEventListener('click', async () => {
+            showToast('backupGenerating', 'info');
+            try {
+                const res = await fetch('/api/backup');
+                if(res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = 'backup.sql';
+                    document.body.appendChild(a); a.click(); a.remove();
+                    showToast('backupCreatedSuccess', 'success');
+                } else throw new Error();
+            } catch(e) { showToast('backupCreatedError', 'error'); }
+        });
+    }
+    const restoreForm = document.getElementById('restoreForm');
+    if(restoreForm) {
+        restoreForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('restoreBackupBtn');
+            btn.disabled = true; showToast('restoring', 'info');
+            try {
+                const res = await fetch('/api/restore', { method:'POST', body: new FormData(restoreForm) });
+                if(res.ok) { showToast('restoreSuccess', 'success'); setTimeout(() => window.location.reload(), 2000); }
+                else throw new Error();
+            } catch(e) { showToast('restoreError', 'error'); btn.disabled = false; }
+        });
     }
 }
 
@@ -271,7 +451,6 @@ async function loadDashboardData() {
         
         const filterSelect = document.getElementById('filterSelect');
         if (filterSelect) filterSelect.value = savedFilter;
-        
         const unitSelect = document.getElementById('unitSelect');
         if (unitSelect) unitSelect.value = savedUnit;
 
@@ -290,8 +469,8 @@ function renderData() {
     const filterSelect = document.getElementById('filterSelect');
     const unitSelect = document.getElementById('unitSelect');
     
-    state.currentFilter = filterSelect ? filterSelect.value : '24h';
-    state.currentUnit = unitSelect ? unitSelect.value : 'Mbps';
+    if(filterSelect) state.currentFilter = filterSelect.value;
+    if(unitSelect) state.currentUnit = unitSelect.value;
     
     const now = new Date();
     let filtered = [];
@@ -315,6 +494,9 @@ function renderData() {
     updateStatsCards(state.allResults); 
     updateTable(filtered);
 }
+
+// ... (handleManualTest, handleDelete, itp. - bez zmian z poprzedniej wersji) ...
+// Dla kompletności pliku powtarzam je poniżej:
 
 async function handleManualTest() {
     const btn = document.getElementById('triggerTestBtn');
@@ -356,39 +538,6 @@ async function handleManualTest() {
     }
 }
 
-async function handleSettingsChange(e) {
-    const serverSelect = document.getElementById('serverSelect');
-    const scheduleSelect = document.getElementById('scheduleSelect');
-    
-    const newServerId = serverSelect.value;
-    const newScheduleHours = parseInt(scheduleSelect.value);
-    const sourceId = e.target.id;
-
-    try {
-        await updateSettings({
-            server_id: newServerId === 'null' ? null : parseInt(newServerId),
-            schedule_hours: newScheduleHours
-        });
-        
-        if (sourceId === 'serverSelect') {
-            const serverText = serverSelect.options[serverSelect.selectedIndex].text;
-            showToast('toastServerChanged', 'success', ` ${serverText}`);
-        } else if (sourceId === 'scheduleSelect') {
-            const intervalText = scheduleSelect.options[scheduleSelect.selectedIndex].text;
-            showToast('toastScheduleChanged', 'success', ` ${intervalText}`);
-            
-            state.currentScheduleHours = newScheduleHours;
-            document.getElementById('nextRunTime').textContent = getNextRunTimeText();
-            setTimeout(() => {
-                showToast('toastNextRun', 'info', ` ${getNextRunTimeText()}`);
-            }, 2500);
-        }
-
-    } catch (e) {
-        showToast('toastSettingsError', 'error');
-    }
-}
-
 async function handleDelete() {
     const checked = document.querySelectorAll('.row-checkbox:checked');
     const ids = Array.from(checked).map(cb => cb.dataset.id);
@@ -401,7 +550,6 @@ async function handleDelete() {
     const msg = document.getElementById('confirmModalText');
     
     const lang = translations[state.currentLang];
-    
     msg.textContent = lang.confirmDeleteText;
     confirmBtn.textContent = `${lang.modalConfirm} (${ids.length})`;
     
@@ -436,60 +584,6 @@ async function handleDelete() {
         } catch(e) {
              showToast('toastDeleteError', 'error');
         }
-    }
-}
-
-function setupBackupListeners() {
-    const downBtn = document.getElementById('downloadBackupBtn');
-    if (downBtn) {
-        downBtn.addEventListener('click', async () => {
-            showToast('backupGenerating', 'info');
-            try {
-                const res = await fetch('/api/backup');
-                if(res.ok) {
-                    const blob = await res.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    const header = res.headers.get('Content-Disposition');
-                    const parts = header ? header.split('filename=') : [];
-                    const filename = parts.length > 1 ? parts[1].replace(/"/g, '') : 'backup.sql';
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    showToast('backupCreatedSuccess', 'success');
-                } else {
-                     throw new Error();
-                }
-            } catch(e) {
-                showToast('backupCreatedError', 'error');
-            }
-        });
-    }
-    
-    const restoreForm = document.getElementById('restoreForm');
-    if(restoreForm) {
-        restoreForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(restoreForm);
-            const btn = document.getElementById('restoreBackupBtn');
-            btn.disabled = true;
-            showToast('restoring', 'info');
-            
-            try {
-                const res = await fetch('/api/restore', { method:'POST', body: formData });
-                if(res.ok) {
-                    showToast('restoreSuccess', 'success');
-                    setTimeout(() => window.location.reload(), 2000);
-                } else {
-                    throw new Error();
-                }
-            } catch(e) {
-                showToast('restoreError', 'error');
-                btn.disabled = false;
-            }
-        });
     }
 }
 
