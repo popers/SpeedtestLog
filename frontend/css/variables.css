@@ -1,62 +1,89 @@
-/* DOMYŚLNY TRYB CIEMNY (:root) */
+/* DOMYŚLNY TRYB CIEMNY (:root) - Material Design Dark Theme */
 :root {
+    /* Tło główne - bardzo ciemne, ale nie czarne */
     --bg-color: #121212;
-    --card-bg-color: #1e1e1e;
-    --text-color: #eeeeee;
-    --text-color-secondary: #bbbbbb;
-    --border-color: #444444;
-    --primary-color: #0d6efd;
-    --primary-color-hover: #0b5ed7;
-    --danger-color: #C82333;
-    --success-color: #28a745;
-    --danger-text: #e4606d;
-    --success-text: #20c997;
-    --info-color: #0dcaf0;
-    --chart-grid-color: rgba(255, 255, 255, 0.1);
-    --chart-label-color: #999;
-    --color-download: #0dcaf0;
-    --color-download-bg: rgba(13, 202, 240, 0.2);
-    --color-upload: #e4606d;
-    --color-upload-bg: rgba(228, 96, 109, 0.2);
-    --color-ping: #ffca2c;
-    --color-ping-bg: rgba(255, 202, 44, 0.2);
-    --color-jitter: #28a745;
-    --color-jitter-bg: rgba(40, 167, 69, 0.2);
     
-    --sidebar-width: 260px;
-    --header-height: 60px;
+    /* Tło kart - "Surface color" (lżejsze od tła, by sugerować wyższą warstwę) */
+    --card-bg-color: #1e1e1e; 
+    
+    --text-color: #e0e0e0; /* High emphasis text */
+    --text-color-secondary: #b0b0b0; /* Medium emphasis text */
+    
+    /* W MD dark mode rzadziej używa się ramek, raczej różnic w jasności tła */
+    --border-color: #333333; 
+    
+    /* Kolory akcentujące - nieco bardziej pastelowe w dark mode */
+    --primary-color: #90caf9; /* Jasny niebieski (MD 200) */
+    --primary-color-hover: #42a5f5;
+    
+    --danger-color: #cf6679; /* MD Error Dark */
+    --success-color: #03dac6; /* MD Secondary/Success */
+    
+    --danger-text: #cf6679;
+    --success-text: #03dac6;
+    --info-color: #64b5f6;
+
+    /* Wykresy */
+    --chart-grid-color: rgba(255, 255, 255, 0.08);
+    --chart-label-color: #9e9e9e;
+    
+    --color-download: #4fc3f7;
+    --color-download-bg: rgba(79, 195, 247, 0.15);
+    --color-upload: #e57373;
+    --color-upload-bg: rgba(229, 115, 115, 0.15);
+    --color-ping: #ffd54f;
+    --color-ping-bg: rgba(255, 213, 79, 0.15);
+    --color-jitter: #81c784;
+    --color-jitter-bg: rgba(129, 199, 132, 0.15);
+    
+    --sidebar-width: 280px;
+    --header-height: 64px;
     --sidebar-bg: #1e1e1e;
-    --sidebar-border: #333;
-    --active-link-bg: rgba(13, 110, 253, 0.15);
-    --active-link-color: var(--primary-color);
+    --sidebar-border: transparent; /* W MD używamy cienia lub koloru, nie borderu */
+    
+    --active-link-bg: rgba(144, 202, 249, 0.12); /* Tint koloru primary */
+    --active-link-color: #90caf9;
+
+    /* Material Design specific vars */
+    --border-radius-base: 16px; /* Bardziej zaokrąglone rogi (MD3) */
+    --shadow-low: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    --shadow-medium: 0 4px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+    --shadow-high: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
 }
 
-/* TRYB JASNY (opcjonalny, aktywowany klasą) */
+/* TRYB JASNY - Material Design Light Theme */
 body.light-mode {
-    --bg-color: #f4f7f6;
-    --card-bg-color: #ffffff;
-    --text-color: #333333;
-    --text-color-secondary: #555555;
-    --border-color: #dddddd;
-    --primary-color: #007bff;
-    --primary-color-hover: #0056b3;
-    --danger-color: #D9534F;
-    --success-color: #20c997;
-    --danger-text: #e4606d;
-    --success-text: #28a745;
-    --info-color: #17a2b8;
-    --chart-grid-color: rgba(0, 0, 0, 0.1);
-    --chart-label-color: #666;
-    --color-download: #17a2b8;
-    --color-download-bg: rgba(23, 162, 184, 0.2);
-    --color-upload: #dc3545;
-    --color-upload-bg: rgba(220, 53, 69, 0.2);
-    --color-ping: #ffc107;
-    --color-ping-bg: rgba(255, 193, 7, 0.2);
-    --color-jitter: #20c997;
-    --color-jitter-bg: rgba(32, 201, 151, 0.2);
+    --bg-color: #f5f5f5; /* Jasnoszary, typowy dla MD background */
+    --card-bg-color: #ffffff; /* Białe karty */
+    
+    --text-color: #212121;
+    --text-color-secondary: #757575;
+    
+    --border-color: #e0e0e0;
+    
+    --primary-color: #1976d2; /* MD Blue 700 */
+    --primary-color-hover: #1565c0;
+    
+    --danger-color: #d32f2f;
+    --success-color: #388e3c;
+    
+    --danger-text: #d32f2f;
+    --success-text: #388e3c;
+    --info-color: #0288d1;
+
+    --chart-grid-color: rgba(0, 0, 0, 0.06);
+    --chart-label-color: #757575;
+    
+    --color-download: #0288d1;
+    --color-download-bg: rgba(2, 136, 209, 0.1);
+    --color-upload: #d32f2f;
+    --color-upload-bg: rgba(211, 47, 47, 0.1);
+    --color-ping: #fbc02d;
+    --color-ping-bg: rgba(251, 192, 45, 0.1);
+    --color-jitter: #388e3c;
+    --color-jitter-bg: rgba(56, 142, 60, 0.1);
 
     --sidebar-bg: #ffffff;
-    --sidebar-border: #e0e0e0;
-    --active-link-bg: rgba(0, 123, 255, 0.1);
+    --sidebar-border: transparent;
+    --active-link-bg: rgba(25, 118, 210, 0.08);
 }

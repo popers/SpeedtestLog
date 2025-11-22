@@ -44,12 +44,10 @@ export function updateStatsCards(results) {
         document.getElementById('latestPingCompare').textContent = lang.statsNoData;
         document.getElementById('latestJitterCompare').textContent = lang.statsNoData;
         
-        // Reset ISP elements
         const ispDl = document.getElementById('latestDownloadISP');
         const ispUl = document.getElementById('latestUploadISP');
         if (ispDl) ispDl.textContent = '';
         if (ispUl) ispUl.textContent = '';
-        
         return;
     }
     const latest = results[0];
@@ -76,7 +74,6 @@ export function updateStatsCards(results) {
          document.getElementById('latestJitterCompare').textContent = lang.statsFirstMeasurement;
     }
 
-    // --- NOWA LOGIKA WERYFIKACJI UMOWY ISP ---
     updateIspIntegrity(latest.download, state.declaredSpeeds.download, 'latestDownloadISP');
     updateIspIntegrity(latest.upload, state.declaredSpeeds.upload, 'latestUploadISP');
 }
@@ -84,25 +81,15 @@ export function updateStatsCards(results) {
 function updateIspIntegrity(currentVal, declaredVal, elementId) {
     const el = document.getElementById(elementId);
     if (!el) return;
-    
-    // Jeśli nie ustawiono deklarowanej prędkości lub jest 0, czyścimy element
     if (!declaredVal || declaredVal <= 0) {
         el.textContent = '';
         el.className = 'isp-stat';
         return;
     }
-
-    // Oblicz procent (tylko jeśli jednostka to Mbps, bo deklaracja jest w Mbps)
-    // Jeśli użytkownik przełączył na MB/s, musimy to uwzględnić w obliczeniach (currentVal w UI może być inne, ale tu mamy surowe dane lub musimy przekonwertować)
-    // UWAGA: 'currentVal' z API jest w Mbps (wg backendu). 'declaredVal' też w Mbps.
-    
     const pct = (currentVal / declaredVal) * 100;
     const formattedPct = pct.toFixed(0);
-    
     const langStr = translations[state.currentLang]['ispIntegrity'] || '% umowy';
     el.textContent = `${formattedPct}% ${langStr}`;
-    
-    // Klasa warning (< 80%)
     if (pct < 80) {
         el.className = 'isp-stat warning';
     } else {
@@ -153,7 +140,6 @@ export function showDetailsModal(resultId) {
     const content = `
         <p style="text-align: center;"><strong>${lang.detailsTime}</strong> ${timestamp}</p>
         <hr style="border-color: var(--border-color); margin: 10px 0;">
-        
         <p style="font-weight: 600; color: var(--primary-color); margin-top: 20px;">${lang.detailsSectionPerformance}</p>
         <div style="padding-left: 15px; margin-bottom: 15px;">
             <p style="color: var(--color-download); margin: 5px 0;"><strong>${lang.detailsDownload}</strong> ${downloadValue} ${unitLabel}</p>
@@ -195,29 +181,83 @@ function handleCheckboxChange() {
     }
 }
 
-// --- NOWE: Funkcja renderująca paginację ---
+// --- ZMIANA: Nowa logika paginacji generująca przyciski zgodnie z projektem ---
 export function renderPagination(totalItems) {
-    const pageInfo = document.getElementById('pageInfo');
-    const prevBtn = document.getElementById('prevPageBtn');
-    const nextBtn = document.getElementById('nextPageBtn');
+    const paginationNav = document.getElementById('paginationNav');
     
-    if(!pageInfo || !prevBtn || !nextBtn) return;
+    if (!paginationNav) return;
 
     if (state.itemsPerPage === 'all') {
-        pageInfo.textContent = `${translations[state.currentLang].filterAll} (${totalItems})`;
-        prevBtn.disabled = true;
-        nextBtn.disabled = true;
+        paginationNav.innerHTML = '';
         return;
     }
 
     const totalPages = Math.ceil(totalItems / state.itemsPerPage) || 1;
+    
     if (state.currentPage > totalPages) state.currentPage = totalPages;
     if (state.currentPage < 1) state.currentPage = 1;
 
-    pageInfo.textContent = `${state.currentPage} ${translations[state.currentLang].pageOf} ${totalPages}`;
+    // Generowanie przycisków
+    paginationNav.innerHTML = '';
     
-    prevBtn.disabled = state.currentPage === 1;
-    nextBtn.disabled = state.currentPage === totalPages;
+    // Przycisk Wstecz (<)
+    const btnPrev = document.createElement('button');
+    btnPrev.className = 'page-btn';
+    btnPrev.textContent = '‹';
+    btnPrev.disabled = state.currentPage === 1;
+    btnPrev.onclick = () => changePage(state.currentPage - 1);
+    paginationNav.appendChild(btnPrev);
+
+    // Algorytm wyświetlania numerów (1 ... 4 5 6 ... 10)
+    let delta = 1; 
+    let range = [];
+    let rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (i == 1 || i == totalPages || (i >= state.currentPage - delta && i <= state.currentPage + delta)) {
+            range.push(i);
+        }
+    }
+
+    for (let i of range) {
+        if (l) {
+            if (i - l === 2) {
+                rangeWithDots.push(l + 1);
+            } else if (i - l !== 1) {
+                rangeWithDots.push('...');
+            }
+        }
+        rangeWithDots.push(i);
+        l = i;
+    }
+
+    rangeWithDots.forEach(page => {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn';
+        if (page === '...') {
+            btn.textContent = '...';
+            btn.disabled = true;
+        } else {
+            btn.textContent = page;
+            if (page === state.currentPage) btn.classList.add('active');
+            btn.onclick = () => changePage(page);
+        }
+        paginationNav.appendChild(btn);
+    });
+
+    // Przycisk Dalej (>)
+    const btnNext = document.createElement('button');
+    btnNext.className = 'page-btn';
+    btnNext.textContent = '›';
+    btnNext.disabled = state.currentPage === totalPages;
+    btnNext.onclick = () => changePage(state.currentPage + 1);
+    paginationNav.appendChild(btnNext);
+}
+
+function changePage(newPage) {
+    state.currentPage = newPage;
+    updateTable(state.allResults); 
 }
 
 // --- Table ---
@@ -225,7 +265,6 @@ export function updateTable(results) {
     const resultsTableBody = document.querySelector('#resultsTable tbody');
     if (!resultsTableBody) return;
 
-    // ZMIANA: Logika paginacji
     let paginatedResults = results;
     if (state.itemsPerPage !== 'all') {
         const startIndex = (state.currentPage - 1) * state.itemsPerPage;
@@ -247,7 +286,6 @@ export function updateTable(results) {
         const timestamp = parseISOLocally(res.timestamp); 
         const resultLinkHtml = res.result_url ? `<a href="${res.result_url}" target="_blank" title="Speedtest.net">🔗</a>` : '';
         
-        // ZMIANA: Nowa kolejność kolumn - Data, Download, Upload, Ping, Jitter, Serwer, Link
         row.innerHTML = `
             <td><input type="checkbox" class="row-checkbox" data-id="${res.id}"></td>
             <td data-label="${lang.tableTime}">${timestamp.toLocaleString(state.currentLang)}</td>
@@ -275,24 +313,7 @@ export function updateTable(results) {
         }
     });
     
-    // Render controls
     renderPagination(results.length);
-
-    // Upewniamy się, że nagłówki również są w poprawnej kolejności (wymaga to zmiany w HTML index.html, ale tutaj zarządzamy tekstem sortowania)
-    // Uwaga: Poniższy kod jedynie aktualizuje tekst w istniejących nagłówkach. Aby fizycznie zmienić kolejność, musimy przebudować tabelę w HTML.
-    // Ponieważ `updateTable` generuje tylko wiersze (tbody), zakładam że poniżej (w tym samym pliku lub response) zaktualizujemy również HTML tabeli w index.html lub dynamicznie.
-    // Jednak w tym frameworku zazwyczaj `index.html` jest statyczny. 
-    // W sekcji `updateTable` generujemy `tbody`.
-    // Zmiana kolejności w `thead` musi nastąpić w `index.html` lub poprzez dynamiczne generowanie nagłówków (co nie jest tu robione).
-    // Wymuszę zmianę HTML tabeli w tym samym pliku JS (hack) lub poproszę o update index.html.
-    // W tym przypadku, jako że jestem ograniczony do plików JS, zaktualizuję `index.html` w następnym bloku, lub tutaj zaktualizuję nagłówki dynamicznie.
-    // Ale w `ui.js` nie ma funkcji generującej `thead`. 
-    // Zmiana w `ui.js` dotyczyła tylko generowania `tr` w `tbody`.
-    // Aby zmiana była kompletna, muszę podać zaktualizowany plik `js/ui.js` ORAZ `js/app.js`. 
-    // A co z `index.html`? Użytkownik poprosił o "zmianę kolejności rubryk". 
-    // Najlepszym wyjściem jest edycja `frontend/index.html`. 
-    // Jednak w poprzednim kroku cofnęliśmy zmiany w `index.html`.
-    // Wobec tego, dodam `frontend/index.html` do odpowiedzi.
 
     document.querySelectorAll('[data-sort]').forEach(th => {
         const key = th.dataset.i18nKey;

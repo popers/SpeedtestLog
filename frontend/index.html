@@ -35,6 +35,7 @@
             <header class="top-bar">
                 <button id="hamburgerBtn" class="hamburger-btn">☰</button>
                 <div class="top-bar-actions">
+                    <!-- PRZYWRÓCONO PING WATCHDOG W TYM MIEJSCU -->
                     <div class="watchdog-wrapper">
                         <div id="watchdogIcon" class="watchdog-indicator" title="Ping Watchdog"></div>
                         <div id="watchdogPopover" class="watchdog-popover">
@@ -47,6 +48,7 @@
                             </div>
                         </div>
                     </div>
+                    
                     <div class="lang-dropdown-wrapper">
                         <button id="langBtn" class="lang-btn"><img src="https://flagcdn.com/w40/pl.png" alt="PL" id="currentLangFlag"><span id="currentLangText">PL</span></button>
                         <ul id="langMenu" class="lang-menu">
@@ -64,10 +66,16 @@
                     <div class="controls-dashboard">
                         <div class="control-group manual-test-group">
                             <label style="visibility: hidden; height: 0; margin: 0;">Action</label>
+                            <!-- PRZYWRÓCONO KROPKI LOADERA -->
                             <button id="triggerTestBtn">
                                 <img src="speedtest.png" alt="Test Icon" /> 
                                 <span class="btn-text" data-i18n-key="runTest">Uruchom Test</span>
-                                <span class="btn-dot-loader"><span class="dot" style="--dot-index:0; --dot-color:var(--color-download);"></span><span class="dot" style="--dot-index:1; --dot-color:var(--color-upload);"></span><span class="dot" style="--dot-index:2; --dot-color:var(--color-ping);"></span><span class="dot" style="--dot-index:3; --dot-color:var(--color-jitter);"></span></span>
+                                <span class="btn-dot-loader">
+                                    <span class="dot" style="--dot-index:0; --dot-color:var(--color-download);"></span>
+                                    <span class="dot" style="--dot-index:1; --dot-color:var(--color-upload);"></span>
+                                    <span class="dot" style="--dot-index:2; --dot-color:var(--color-ping);"></span>
+                                    <span class="dot" style="--dot-index:3; --dot-color:var(--color-jitter);"></span>
+                                </span>
                             </button>
                         </div>
                         <div class="control-group">
@@ -130,7 +138,6 @@
                         <table id="resultsTable">
                             <thead>
                                 <tr>
-                                    <!-- ZMIANA: Zaktualizowana kolejność nagłówków tabeli -->
                                     <th><input type="checkbox" id="selectAllCheckbox"></th>
                                     <th data-i18n-key="tableTime">Data</th>
                                     <th data-i18n-key="tableDownload" data-sort="download">Download</th>
@@ -144,15 +151,21 @@
                             <tbody></tbody>
                         </table>
                     </div>
-                    <div class="pagination-controls">
-                        <div class="pagination-left">
-                            <span data-i18n-key="rowsPerPage">Wierszy na stronę:</span>
-                            <select id="rowsPerPageSelect"><option value="5">5</option><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="all" data-i18n-key="filterAll">Wszystko</option></select>
+                    
+                    <!-- PAGINACJA W NOWYM STYLU -->
+                    <div class="pagination-container">
+                        <div class="pagination-per-page">
+                            <div class="pagination-label" data-i18n-key="rowsPerPage">Na stronę</div>
+                            <select id="rowsPerPageSelect" class="pagination-select">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="all" data-i18n-key="filterAll">Wszystko</option>
+                            </select>
                         </div>
-                        <div class="pagination-right">
-                            <span id="pageInfo"></span>
-                            <button id="prevPageBtn" class="page-btn">&lt; <span data-i18n-key="prevPage">Poprzednia</span></button>
-                            <button id="nextPageBtn" class="page-btn"><span data-i18n-key="nextPage">Następna</span> &gt;</button>
+                        <div class="pagination-nav" id="paginationNav">
+                            <!-- Przyciski będą generowane dynamicznie w JS -->
                         </div>
                     </div>
                 </section>

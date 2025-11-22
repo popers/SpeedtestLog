@@ -51,7 +51,7 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                 borderWidth: 2,
                 backgroundColor: bgColor,
                 fill: true,
-                // ZMIANA: Przywrócono tension 0.4 zgodnie z życzeniem
+                // ZMIANA: Użycie interpolacji 'monotone' zamiast tension, aby uniknąć glitchy graficznych przy zachowaniu wygładzenia
                 cubicInterpolationMode: 'monotone', 
                 pointRadius: 3, 
                 pointHoverRadius: 6,

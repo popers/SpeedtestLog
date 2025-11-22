@@ -126,7 +126,7 @@ export const translations = {
         'wdInterval': 'Interwał (sekundy):',
         'wdStatusOnline': 'ONLINE',
         'wdStatusOffline': 'OFFLINE',
-        'rowsPerPage': 'Wierszy na stronę:',
+        'rowsPerPage': 'Na stronę', // ZMIANA: Krótsza nazwa pasująca do buttona
         'pageOf': 'z',
         'prevPage': 'Poprzednia',
         'nextPage': 'Następna',
@@ -135,8 +135,8 @@ export const translations = {
         'ispDesc': 'Wprowadź prędkości z umowy, aby monitorować jakość usług dostawcy (wskaźnik procentowy na Dashboardzie).',
         'ispDownload': 'Deklarowany Download (Mbps):',
         'ispUpload': 'Deklarowany Upload (Mbps):',
-        'ispIntegrity': 'deklarowanej prędkości', // ZMIANA Z: umowy
-        // NOWE: Powiadomienia logowania
+        'ispIntegrity': 'deklarowanej prędkości', 
+        // NEW: Login notifications
         'toastLoginSuccess': 'Zalogowano: ',
         'toastLogoutSuccess': 'Wylogowano pomyślnie.'
     },
@@ -267,7 +267,7 @@ export const translations = {
         'wdInterval': 'Interval (seconds):',
         'wdStatusOnline': 'ONLINE',
         'wdStatusOffline': 'OFFLINE',
-        'rowsPerPage': 'Rows per page:',
+        'rowsPerPage': 'Per page', 
         'pageOf': 'of',
         'prevPage': 'Previous',
         'nextPage': 'Next',
@@ -276,7 +276,7 @@ export const translations = {
         'ispDesc': 'Enter contract speeds to monitor provider quality (percentage indicator on Dashboard).',
         'ispDownload': 'Declared Download (Mbps):',
         'ispUpload': 'Declared Upload (Mbps):',
-        'ispIntegrity': 'declared speed', // ZMIANA Z: of contract
+        'ispIntegrity': 'declared speed',
         // NEW: Login notifications
         'toastLoginSuccess': 'Logged in: ',
         'toastLogoutSuccess': 'Logged out successfully.'
