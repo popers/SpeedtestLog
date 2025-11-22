@@ -79,7 +79,6 @@ button:hover {
 }
 
 /* --- MODAL STYLE UPDATES --- */
-/* Czerwony przycisk usuwania w modalu */
 #modalConfirmBtn {
     background-color: #8a0000 !important;
     border-color: #8a0000 !important;
@@ -89,7 +88,6 @@ button:hover {
     background-color: #600000 !important;
 }
 
-/* Układ przycisków w modalu (przerwa i szerokość) */
 .modal-buttons {
     display: flex;
     justify-content: center;
@@ -268,6 +266,26 @@ button:hover {
 .stat-card .comparison.negative { color: var(--danger-text); }
 .stat-card .comparison.neutral { color: var(--text-color-secondary); }
 
+/* ISP Indicator */
+.isp-stat {
+    margin-top: 5px;
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.isp-stat.warning {
+    color: var(--danger-text);
+    font-weight: 700;
+}
+
+.isp-stat.warning::before {
+    content: '⚠️';
+}
+
 /* Charts */
 .charts-container { 
     display: grid; 
@@ -292,8 +310,11 @@ button:hover {
 .table-wrapper { overflow-x: auto; width: 100%; }
 table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
 th, td { border: 1px solid var(--border-color); padding: 0.75rem; text-align: left; }
-th { background-color: var(--bg-color); }
-body.dark-mode th { background-color: #333333; }
+
+/* ZMIANA: Nagłówki tabeli domyślnie ciemne, jasne tylko w .light-mode */
+th { background-color: #333333; }
+body.light-mode th { background-color: var(--bg-color); }
+
 .table-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; gap: 1rem; }
 .table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
 .table-footer-controls { display: flex; justify-content: center; align-items: center; margin-top: 1.5rem; }
@@ -459,7 +480,6 @@ button#triggerTestBtn:disabled { cursor: not-allowed; opacity: 0.8; }
     gap: 8px;
 }
 
-/* --- POPRAWKA: Wyśrodkowanie okienka Watchdog na mobile --- */
 @media (max-width: 768px) {
     .watchdog-popover {
         position: fixed;
@@ -517,7 +537,7 @@ button#triggerTestBtn:disabled { cursor: not-allowed; opacity: 0.8; }
     cursor: not-allowed;
 }
 
-/* --- MEDIA QUERY ZMIANA NA MOBILE: 2 Kolumny --- */
+/* --- MEDIA QUERY DLA MOBILE --- */
 @media (max-width: 768px) {
     .controls-dashboard { flex-direction: column; align-items: stretch; }
     .control-group { width: 100%; }
@@ -528,7 +548,6 @@ button#triggerTestBtn:disabled { cursor: not-allowed; opacity: 0.8; }
         flex-direction: column;
         justify-content: center;
     }
-    /* Wymuszenie 2 kolumn na mobile */
     .stats-container {
         grid-template-columns: 1fr 1fr !important;
         gap: 1rem;

@@ -1,36 +1,5 @@
+/* DOMYŚLNY TRYB CIEMNY (:root) */
 :root {
-    --bg-color: #f4f7f6;
-    --card-bg-color: #ffffff;
-    --text-color: #333333;
-    --text-color-secondary: #555555;
-    --border-color: #dddddd;
-    --primary-color: #007bff;
-    --primary-color-hover: #0056b3;
-    --danger-color: #D9534F;
-    --success-color: #20c997;
-    --danger-text: #e4606d;
-    --success-text: #28a745;
-    --info-color: #17a2b8;
-    --chart-grid-color: rgba(0, 0, 0, 0.1);
-    --chart-label-color: #666;
-    --color-download: #17a2b8;
-    --color-download-bg: rgba(23, 162, 184, 0.2);
-    --color-upload: #dc3545;
-    --color-upload-bg: rgba(220, 53, 69, 0.2);
-    --color-ping: #ffc107;
-    --color-ping-bg: rgba(255, 193, 7, 0.2);
-    --color-jitter: #20c997;
-    --color-jitter-bg: rgba(32, 201, 151, 0.2);
-
-    --sidebar-width: 260px;
-    --header-height: 60px;
-    --sidebar-bg: #ffffff;
-    --sidebar-border: #e0e0e0;
-    --active-link-bg: rgba(0, 123, 255, 0.1);
-    --active-link-color: var(--primary-color);
-}
-
-body.dark-mode {
     --bg-color: #121212;
     --card-bg-color: #1e1e1e;
     --text-color: #eeeeee;
@@ -54,7 +23,40 @@ body.dark-mode {
     --color-jitter: #28a745;
     --color-jitter-bg: rgba(40, 167, 69, 0.2);
     
+    --sidebar-width: 260px;
+    --header-height: 60px;
     --sidebar-bg: #1e1e1e;
     --sidebar-border: #333;
     --active-link-bg: rgba(13, 110, 253, 0.15);
+    --active-link-color: var(--primary-color);
+}
+
+/* TRYB JASNY (opcjonalny, aktywowany klasą) */
+body.light-mode {
+    --bg-color: #f4f7f6;
+    --card-bg-color: #ffffff;
+    --text-color: #333333;
+    --text-color-secondary: #555555;
+    --border-color: #dddddd;
+    --primary-color: #007bff;
+    --primary-color-hover: #0056b3;
+    --danger-color: #D9534F;
+    --success-color: #20c997;
+    --danger-text: #e4606d;
+    --success-text: #28a745;
+    --info-color: #17a2b8;
+    --chart-grid-color: rgba(0, 0, 0, 0.1);
+    --chart-label-color: #666;
+    --color-download: #17a2b8;
+    --color-download-bg: rgba(23, 162, 184, 0.2);
+    --color-upload: #dc3545;
+    --color-upload-bg: rgba(220, 53, 69, 0.2);
+    --color-ping: #ffc107;
+    --color-ping-bg: rgba(255, 193, 7, 0.2);
+    --color-jitter: #20c997;
+    --color-jitter-bg: rgba(32, 201, 151, 0.2);
+
+    --sidebar-bg: #ffffff;
+    --sidebar-border: #e0e0e0;
+    --active-link-bg: rgba(0, 123, 255, 0.1);
 }

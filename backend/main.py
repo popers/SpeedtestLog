@@ -70,6 +70,9 @@ class SettingsModel(BaseModel):
     schedule_hours: int | None = 1
     ping_target: str | None = "8.8.8.8"
     ping_interval: int | None = 30
+    # Pola do weryfikacji umowy z ISP
+    declared_download: int | None = 0
+    declared_upload: int | None = 0
 
 class DeleteModel(BaseModel):
     ids: list[str]
@@ -115,6 +118,9 @@ class AppSettings(Base):
     schedule_hours = Column(Integer, default=1)
     ping_target = Column(String(255), default="8.8.8.8")
     ping_interval = Column(Integer, default=30)
+    # Kolumny deklarowanych prędkości
+    declared_download = Column(Integer, default=0)
+    declared_upload = Column(Integer, default=0)
 
 # --- Globalne Zmienne ---
 SERVERS_FILE = 'data/servers.json'
@@ -156,7 +162,7 @@ def get_db():
 def load_settings_from_db(db_session):
     settings = db_session.query(AppSettings).filter(AppSettings.id == 1).first()
     if not settings:
-        settings = AppSettings(id=1, selected_server_id=None, schedule_hours=1, ping_target="8.8.8.8", ping_interval=30)
+        settings = AppSettings(id=1, selected_server_id=None, schedule_hours=1, ping_target="8.8.8.8", ping_interval=30, declared_download=0, declared_upload=0)
         db_session.add(settings)
         db_session.commit()
     return settings
@@ -327,8 +333,7 @@ async def get_latest(db=Depends(get_db)):
 @app.get("/api/servers", dependencies=[Depends(verify_session)])
 async def get_srv():
     if os.path.exists(SERVERS_FILE):
-        with open(SERVERS_FILE, 'r') as f:
-            return json.load(f)
+        with open(SERVERS_FILE, 'r') as f: return json.load(f)
     raise HTTPException(status_code=404)
 
 @app.get("/api/settings", dependencies=[Depends(verify_session)])
@@ -340,6 +345,8 @@ async def get_set(db=Depends(get_db)):
         "schedule_hours": s.schedule_hours,
         "ping_target": s.ping_target,
         "ping_interval": s.ping_interval,
+        "declared_download": s.declared_download,
+        "declared_upload": s.declared_upload,
         "latest_test_timestamp": l.timestamp if l else None
     }
 
@@ -354,6 +361,9 @@ async def set_set(s: SettingsModel, db=Depends(get_db)):
     if s.schedule_hours: rec.schedule_hours = s.schedule_hours
     if s.ping_target: rec.ping_target = s.ping_target
     if s.ping_interval: rec.ping_interval = s.ping_interval
+    # Zapis nowych pól ISP
+    if s.declared_download is not None: rec.declared_download = s.declared_download
+    if s.declared_upload is not None: rec.declared_upload = s.declared_upload
     
     db.commit()
     logging.info(f"⚙️ Ustawienia zaktualizowane.")
@@ -417,14 +427,11 @@ async def read_root(request: Request):
 @app.get("/{filename}")
 async def read_static(filename: str, request: Request):
     allowed = ["index.html", "login.html", "backup.html", "settings.html", "manifest.json", "favicon.ico", "logo.png", "speedtest.png"]
-    
     if filename not in allowed:
         if os.path.exists(f"/app/{filename}"): return FileResponse(f"/app/{filename}")
         raise HTTPException(404)
-        
     if AUTH_ENABLED and request.cookies.get(SESSION_COOKIE_NAME) != SESSION_SECRET and filename in ["index.html", "backup.html", "settings.html"]:
         return FileResponse('login.html')
-        
     return FileResponse(f"/app/{filename}") if os.path.exists(f"/app/{filename}") else HTTPException(404)
 
 if __name__ == "__main__":

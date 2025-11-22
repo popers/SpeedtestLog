@@ -12,6 +12,10 @@ services:
       - DB_DATABASE=${DB_DATABASE}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
+      - AUTH_ENABLED=${AUTH_ENABLED}
+      - APP_USERNAME=${APP_USERNAME}
+      - APP_PASSWORD=${APP_PASSWORD}
+      - SESSION_SECRET=${SESSION_SECRET}      
       - OOKLA_EULA_GDPR=true
       - TZ=Europe/Amsterdam
     volumes:
@@ -48,16 +52,15 @@ services:
     restart: unless-stopped
     entrypoint: |
       sh -c "
-        # Tworzymy plik logu i przekazujemy uprawnienia
-        echo 'Przygotowywanie pliku logu...'
+        echo 'Przygotowywanie uprawnien logow...'
+        # Ustawiamy pełne prawa do folderu logów, aby user mysql mógł pisać
+        mkdir -p /var/log/mysql
+        chmod 777 /var/log/mysql
         touch /var/log/mysql/slow-query.log
-        chown mysql:mysql /var/log/mysql/slow-query.log
+        chmod 666 /var/log/mysql/slow-query.log
         
-        # Uruchamiamy oryginalny skrypt startowy MariaDB
-        # Ten skrypt sam obniży uprawnienia i uruchomi bazę
         exec /usr/local/bin/docker-entrypoint.sh mariadbd
       "
-    # 2. Te argumenty zostaną przekazane do 'mariadbd' przez skrypt powyżej
     command:
       - --slow_query_log=1
       - --slow_query_log_file=/var/log/mysql/slow-query.log

@@ -43,6 +43,12 @@ export function updateStatsCards(results) {
         document.getElementById('latestUploadCompare').textContent = lang.statsNoData;
         document.getElementById('latestPingCompare').textContent = lang.statsNoData;
         document.getElementById('latestJitterCompare').textContent = lang.statsNoData;
+        
+        // Reset ISP elements
+        const ispDl = document.getElementById('latestDownloadISP');
+        const ispUl = document.getElementById('latestUploadISP');
+        if (ispDl) ispDl.textContent = '';
+        if (ispUl) ispUl.textContent = '';
         return;
     }
     const latest = results[0];
@@ -67,6 +73,39 @@ export function updateStatsCards(results) {
          document.getElementById('latestUploadCompare').textContent = lang.statsFirstMeasurement;
          document.getElementById('latestPingCompare').textContent = lang.statsFirstMeasurement;
          document.getElementById('latestJitterCompare').textContent = lang.statsFirstMeasurement;
+    }
+
+    // --- NOWA LOGIKA WERYFIKACJI UMOWY ISP ---
+    updateIspIntegrity(latest.download, state.declaredSpeeds.download, 'latestDownloadISP');
+    updateIspIntegrity(latest.upload, state.declaredSpeeds.upload, 'latestUploadISP');
+}
+
+function updateIspIntegrity(currentVal, declaredVal, elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    // Jeśli nie ustawiono deklarowanej prędkości lub jest 0, czyścimy element
+    if (!declaredVal || declaredVal <= 0) {
+        el.textContent = '';
+        el.className = 'isp-stat';
+        return;
+    }
+
+    // Oblicz procent (tylko jeśli jednostka to Mbps, bo deklaracja jest w Mbps)
+    // Jeśli użytkownik przełączył na MB/s, musimy to uwzględnić w obliczeniach (currentVal w UI może być inne, ale tu mamy surowe dane lub musimy przekonwertować)
+    // UWAGA: 'currentVal' z API jest w Mbps (wg backendu). 'declaredVal' też w Mbps.
+    
+    const pct = (currentVal / declaredVal) * 100;
+    const formattedPct = pct.toFixed(0);
+    
+    const langStr = translations[state.currentLang]['ispIntegrity'] || '% umowy';
+    el.textContent = `${formattedPct}% ${langStr}`;
+    
+    // Klasa warning (< 80%)
+    if (pct < 80) {
+        el.className = 'isp-stat warning';
+    } else {
+        el.className = 'isp-stat';
     }
 }
 

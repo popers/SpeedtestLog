@@ -129,7 +129,16 @@ export const translations = {
         'rowsPerPage': 'Wierszy na stronę:',
         'pageOf': 'z',
         'prevPage': 'Poprzednia',
-        'nextPage': 'Następna'
+        'nextPage': 'Następna',
+        // ISP
+        'ispSettingsTitle': 'Weryfikacja Umowy (ISP)',
+        'ispDesc': 'Wprowadź prędkości z umowy, aby monitorować jakość usług dostawcy (wskaźnik procentowy na Dashboardzie).',
+        'ispDownload': 'Deklarowany Download (Mbps):',
+        'ispUpload': 'Deklarowany Upload (Mbps):',
+        'ispIntegrity': 'deklarowanej prędkości', // ZMIANA Z: umowy
+        // NOWE: Powiadomienia logowania
+        'toastLoginSuccess': 'Zalogowano: ',
+        'toastLogoutSuccess': 'Wylogowano pomyślnie.'
     },
     'en': {
         'title': 'SpeedtestLog Logo',
@@ -261,6 +270,15 @@ export const translations = {
         'rowsPerPage': 'Rows per page:',
         'pageOf': 'of',
         'prevPage': 'Previous',
-        'nextPage': 'Next'
+        'nextPage': 'Next',
+        // ISP
+        'ispSettingsTitle': 'ISP Contract Verification',
+        'ispDesc': 'Enter contract speeds to monitor provider quality (percentage indicator on Dashboard).',
+        'ispDownload': 'Declared Download (Mbps):',
+        'ispUpload': 'Declared Upload (Mbps):',
+        'ispIntegrity': 'declared speed', // ZMIANA Z: of contract
+        // NEW: Login notifications
+        'toastLoginSuccess': 'Logged in: ',
+        'toastLogoutSuccess': 'Logged out successfully.'
     }
 };

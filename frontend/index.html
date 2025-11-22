@@ -85,8 +85,20 @@
                     </div>
 
                     <div class="stats-container">
-                        <div class="stat-card"><h3><span data-i18n-key="latestDownload">Pobieranie</span></h3><div class="value-container"><span class="value" id="latestDownloadValue">...</span><span class="unit" id="latestDownloadUnit">Mbps</span></div><div class="comparison" id="latestDownloadCompare">...</div></div>
-                        <div class="stat-card"><h3><span data-i18n-key="latestUpload">Wysyłanie</span></h3><div class="value-container"><span class="value" id="latestUploadValue">...</span><span class="unit" id="latestUploadUnit">Mbps</span></div><div class="comparison" id="latestUploadCompare">...</div></div>
+                        <div class="stat-card">
+                            <h3><span data-i18n-key="latestDownload">Pobieranie</span></h3>
+                            <div class="value-container"><span class="value" id="latestDownloadValue">...</span><span class="unit" id="latestDownloadUnit">Mbps</span></div>
+                            <div class="comparison" id="latestDownloadCompare">...</div>
+                            <!-- NOWY ELEMENT WERYFIKACJI ISP -->
+                            <div class="isp-stat" id="latestDownloadISP"></div>
+                        </div>
+                        <div class="stat-card">
+                            <h3><span data-i18n-key="latestUpload">Wysyłanie</span></h3>
+                            <div class="value-container"><span class="value" id="latestUploadValue">...</span><span class="unit" id="latestUploadUnit">Mbps</span></div>
+                            <div class="comparison" id="latestUploadCompare">...</div>
+                            <!-- NOWY ELEMENT WERYFIKACJI ISP -->
+                            <div class="isp-stat" id="latestUploadISP"></div>
+                        </div>
                         <div class="stat-card"><h3><span data-i18n-key="latestPing">Ping</span></h3><div class="value-container"><span class="value" id="latestPingValue">...</span><span class="unit" id="latestPingUnit">ms</span></div><div class="comparison" id="latestPingCompare">...</div></div>
                         <div class="stat-card"><h3><span data-i18n-key="latestJitter">Jitter</span></h3><div class="value-container"><span class="value" id="latestJitterValue">...</span><span class="unit" id="latestJitterUnit">ms</span></div><div class="comparison" id="latestJitterCompare">...</div></div>
                     </div>

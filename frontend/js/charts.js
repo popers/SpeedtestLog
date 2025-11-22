@@ -18,7 +18,10 @@ export function renderCharts(results) {
     const jitterData = chartResults.map(res => res.jitter);
 
     const unitLabel = getUnitLabel(state.currentUnit);
-    const isDark = document.body.classList.contains('dark-mode');
+    
+    // ZMIANA: Sprawdzamy czy NIE MA klasy light-mode (bo domyślnie jest ciemno)
+    const isDark = !document.body.classList.contains('light-mode');
+    
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
     const labelColor = isDark ? '#999' : '#666';
     const style = getComputedStyle(document.body);
@@ -69,6 +72,8 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                         title: (tooltipItems) => tooltipItems[0].label,
                         label: (context) => {
                             let lbl = context.dataset.label || '';
+                            lbl = lbl.replace(/\s*\(.*?\)/, ''); 
+                            
                             if (lbl) lbl += ': ';
                             if (context.parsed.y !== null) lbl += `${context.parsed.y.toFixed(2)} ${unit}`; 
                             return lbl;

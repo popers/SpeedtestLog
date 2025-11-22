@@ -47,12 +47,23 @@ export function showToast(messageKey, type = 'success', extraContent = '') {
     }, 3000);
 }
 
-// ZMIANA: Usunięto auto-toast z tej funkcji, aby nie pojawiał się przy przeładowaniu/nawigacji
+// ZMIANA: Funkcja zarządza klasą .light-mode
+// isNight = true  -> Tryb CIEMNY (Domyślny) -> Usuń klasę .light-mode
+// isNight = false -> Tryb JASNY  (Opcjonalny) -> Dodaj klasę .light-mode
 export function setNightMode(isNight) {
     const themeToggle = document.getElementById('themeToggle');
-    document.body.classList.toggle('dark-mode', isNight);
+    
+    if (isNight) {
+        document.body.classList.remove('light-mode'); 
+        // Opcjonalnie usuwamy starą klasę dark-mode dla pewności, choć nie jest już używana
+        document.body.classList.remove('dark-mode'); 
+    } else {
+        document.body.classList.add('light-mode');
+    }
     
     if(themeToggle) {
+        // Słońce = Przełącz na jasny (czyli jesteśmy w ciemnym)
+        // Księżyc = Przełącz na ciemny (czyli jesteśmy w jasnym)
         themeToggle.textContent = isNight ? '☀️' : '🌙';
     }
     
