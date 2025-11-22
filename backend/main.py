@@ -446,7 +446,12 @@ async def backup_db():
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     stdout, stderr = proc.communicate()
     if proc.returncode != 0: raise HTTPException(500)
-    return Response(content=stdout, media_type="application/sql", headers={"Content-Disposition": f"attachment; filename=backup.sql"})
+    
+    # ZMIANA: Generowanie nazwy pliku z datą i godziną
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"backup_{timestamp}.sql"
+    
+    return Response(content=stdout, media_type="application/sql", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 @app.post("/api/restore", dependencies=[Depends(verify_session)])
 async def restore_db(file: UploadFile = File(...)):

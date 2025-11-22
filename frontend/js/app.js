@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { translations } from './i18n.js';
 import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser } from './api.js';
-import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel, convertValue } from './utils.js';
+import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel, convertValue, formatCountdown } from './utils.js';
 import { renderCharts } from './charts.js';
 import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
@@ -9,6 +9,7 @@ import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, se
 let watchdogInterval = null;
 let wdChart = null;
 let resizeTimer = null;
+let countdownInterval = null; // Zmienna dla interwału licznika
 
 // --- Main Logic & Event Listeners ---
 
@@ -79,6 +80,9 @@ function handleDashboardNavigation() {
 
     const hash = window.location.hash || '#dashboard';
     loadDashboardData();
+    
+    // Clear existing countdown when navigating away or refreshing dashboard
+    if (countdownInterval) clearInterval(countdownInterval);
     
     document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
     
@@ -193,6 +197,10 @@ async function handleQuickSettingsChange(e) {
             
             const nextRunEl = document.getElementById('nextRunTime');
             if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
+            
+            // Restartuj licznik po zmianie harmonogramu
+            startNextRunCountdown();
+
             if (newScheduleHours > 0) {
                 setTimeout(() => {
                     showToast('toastNextRun', 'info', ` ${getNextRunTimeText()}`);
@@ -212,6 +220,54 @@ function startWatchdogPolling() {
 
 function stopWatchdogPolling() {
     if (watchdogInterval) clearInterval(watchdogInterval);
+}
+
+// Funkcja uruchamiająca licznik (ZMIANA: Dynamiczne tłumaczenie)
+function startNextRunCountdown() {
+    const countdownEl = document.getElementById('nextRunCountdown');
+    if (!countdownEl) return;
+
+    // Wyczyść poprzedni interwał
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    // Jeśli harmonogram wyłączony lub brak danych o ostatnim teście, ukryj licznik
+    if (state.currentScheduleHours === 0 || !state.lastTestTimestamp) {
+        countdownEl.style.display = 'none';
+        countdownEl.textContent = '';
+        return;
+    }
+
+    countdownEl.style.display = 'block';
+    
+    // ZMIANA: Usunięto pobieranie stałego 'prefix' tutaj.
+    
+    const updateTimer = () => {
+        try {
+            // ZMIANA: Pobierz aktualny język i prefiks wewnątrz pętli
+            const lang = translations[state.currentLang];
+            const prefix = lang.countdownPrefix || 'za';
+
+            const lastRunDate = parseISOLocally(state.lastTestTimestamp);
+            if (!lastRunDate) return;
+
+            const scheduleIntervalMs = state.currentScheduleHours * 60 * 60 * 1000;
+            const nextRunDate = new Date(lastRunDate.getTime() + scheduleIntervalMs);
+            const now = new Date();
+            const diff = nextRunDate - now;
+
+            if (diff <= 0) {
+                // Czas minął, teoretycznie test powinien biec lub zaraz pobiegnie
+                countdownEl.textContent = ""; 
+            } else {
+                countdownEl.textContent = `${prefix} ${formatCountdown(diff)}`;
+            }
+        } catch (e) {
+            console.error("Countdown error", e);
+        }
+    };
+
+    updateTimer(); // Wywołaj raz natychmiast
+    countdownInterval = setInterval(updateTimer, 1000);
 }
 
 async function updateWatchdogUI() {
@@ -528,7 +584,21 @@ function setupEventListeners() {
                 if(res.ok) {
                     const blob = await res.blob();
                     const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url; a.download = 'backup.sql';
+                    
+                    // ZMIANA: Generowanie nazwy pliku z datą i godziną po stronie klienta
+                    const date = new Date();
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    const seconds = String(date.getSeconds()).padStart(2, '0');
+                    
+                    const filename = `backup_${year}-${month}-${day}_${hours}-${minutes}-${seconds}.sql`;
+                    
+                    const a = document.createElement('a'); a.href = url; 
+                    a.download = filename;
+                    
                     document.body.appendChild(a); a.click(); a.remove();
                     showToast('backupCreatedSuccess', 'success');
                 } else throw new Error();
@@ -631,6 +701,9 @@ async function loadDashboardData() {
         state.lastTestTimestamp = settingsData.latest_test_timestamp;
         const nextRunEl = document.getElementById('nextRunTime');
         if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
+        
+        // Uruchom licznik
+        startNextRunCountdown();
 
         state.allResults = await fetchResults();
         renderData();
@@ -729,6 +802,9 @@ async function handleManualTest() {
                     state.lastTestTimestamp = state.allResults[0].timestamp;
                     const nextRunEl = document.getElementById('nextRunTime');
                     if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
+                    
+                    // Restartuj licznik po nowym teście
+                    startNextRunCountdown();
                 }
                 
                 renderData();

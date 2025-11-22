@@ -101,22 +101,30 @@ function updateSingleStatCard(compareEl, latestVal, prevVal, positiveTrend) {
     if (prevVal !== 0) percent = (diff / prevVal) * 100;
     else if (latestVal > 0) percent = 100;
     
-    let text = '';
     let trendClass = 'neutral';
     
     if (Math.abs(percent) < 0.01) {
-        text = `${lang.statsNoChange} ➖`;
+        // ZMIANA: Ikona Material Symbols dla braku zmian (kreska)
+        compareEl.innerHTML = `<span class="material-symbols-rounded" style="font-size: 18px;">remove</span> ${lang.statsNoChange}`;
     } else {
         let isGoodChange = false;
         if (positiveTrend === 'positive') isGoodChange = (percent > 0);
         else isGoodChange = (percent < 0);
         
         const prefix = isGoodChange ? lang.statsFaster : lang.statsSlower;
-        const icon = isGoodChange ? '↑' : '↓';
+        
+        // ZMIANA: Ikony strzałek z Material Symbols
+        // Używamy arrow_upward (wzrost) lub arrow_downward (spadek)
+        const iconName = (percent > 0) ? 'arrow_upward' : 'arrow_downward';
+        
         trendClass = isGoodChange ? 'positive' : 'negative';
-        text = `${Math.abs(percent).toFixed(2)}% ${prefix} ${icon}`;
+        
+        // Konstrukcja HTML z ikoną po lewej stronie
+        compareEl.innerHTML = `
+            <span class="material-symbols-rounded" style="font-size: 18px; font-weight: bold;">${iconName}</span>
+            <span>${Math.abs(percent).toFixed(2)}% ${prefix}</span>
+        `;
     }
-    compareEl.textContent = text;
     compareEl.className = `comparison ${trendClass}`;
 }
 
@@ -284,7 +292,12 @@ export function updateTable(results) {
     paginatedResults.forEach(res => {
         const row = document.createElement('tr');
         const timestamp = parseISOLocally(res.timestamp); 
-        const resultLinkHtml = res.result_url ? `<a href="${res.result_url}" target="_blank" title="Speedtest.net">🔗</a>` : '';
+        
+        // ZMIANA: Użycie Material Symbols zamiast emoji '🔗'
+        const resultLinkHtml = res.result_url ? 
+            `<a href="${res.result_url}" target="_blank" class="result-link-icon" title="Speedtest.net">
+                <span class="material-symbols-rounded">open_in_new</span>
+             </a>` : '';
         
         // Ping Color
         let pingClass = '';
@@ -329,7 +342,7 @@ export function updateTable(results) {
         resultsTableBody.appendChild(row);
         
         row.addEventListener('click', (e) => {
-            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'A' && !e.target.classList.contains('row-checkbox')) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'A' && !e.target.parentNode.classList.contains('result-link-icon') && !e.target.classList.contains('row-checkbox')) {
                  showDetailsModal(res.id);
             }
         });

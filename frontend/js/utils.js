@@ -28,6 +28,17 @@ export function parseISOLocally(isoString) {
     return new Date(year, month, day, hour, minute, second); 
 }
 
+// NOWE: Funkcja formatująca czas do odliczania
+export function formatCountdown(ms) {
+    if (ms < 0) return "00:00:00";
+    const seconds = Math.floor((ms / 1000) % 60);
+    const minutes = Math.floor((ms / (1000 * 60)) % 60);
+    const hours = Math.floor((ms / (1000 * 60 * 60)));
+
+    const pad = (n) => n.toString().padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
+
 // --- UX Helpers ---
 export function showToast(messageKey, type = 'success', extraContent = '') { 
     const toastNotification = document.getElementById('toastNotification');
@@ -47,9 +58,6 @@ export function showToast(messageKey, type = 'success', extraContent = '') {
     }, 3000);
 }
 
-// ZMIANA: Funkcja zarządza klasą .light-mode oraz ikoną Material Symbols
-// isNight = true  -> Tryb CIEMNY -> Ikona Słońca (aby przełączyć na jasny)
-// isNight = false -> Tryb JASNY  -> Ikona Księżyca (aby przełączyć na ciemny)
 export function setNightMode(isNight) {
     const themeToggle = document.getElementById('themeToggle');
     

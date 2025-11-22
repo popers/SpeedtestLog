@@ -3,7 +3,7 @@ export const translations = {
         'title': 'SpeedtestLog Logo',
         'navDashboard': 'Panel Główny',
         'navCharts': 'Wykresy',
-        'navHistory': 'Pomiary', // ZMIANA: Historia -> Pomiary
+        'navHistory': 'Pomiary',
         'navSettings': 'Ustawienia',
         'navBackup': 'Kopia Zapasowa',
         'manualTest': 'Test ręczny',
@@ -32,7 +32,7 @@ export const translations = {
         'uploadChartTitle': 'Wysyłanie (Mbps)',
         'pingChartTitle': 'Ping (ms)',
         'jitterChartTitle': 'Jitter (ms)',
-        'historyTable': 'Pomiary', // ZMIANA: Historia Pomiarów -> Pomiary
+        'historyTable': 'Pomiary',
         'tableTime': 'Data i Godzina',
         'tablePing': 'Ping',
         'tableJitter': 'Jitter',
@@ -88,6 +88,7 @@ export const translations = {
         'nextTestSoon': 'Wkrótce (max 1 min)',
         'nextTestError': 'Błąd obliczeń',
         'nextTestDisabled': 'Harmonogram wyłączony',
+        'countdownPrefix': 'za',
         'chartLabelDownload': 'Pobieranie',
         'chartLabelUpload': 'Wysyłanie',
         'chartLabelPing': 'Ping',
@@ -133,25 +134,19 @@ export const translations = {
         'pageOf': 'z',
         'prevPage': 'Poprzednia',
         'nextPage': 'Następna',
-        // ISP
         'ispSettingsTitle': 'Weryfikacja Umowy (ISP)',
         'ispDesc': 'Wprowadź prędkości z umowy, aby monitorować jakość usług dostawcy (wskaźnik procentowy na Dashboardzie).',
         'ispDownload': 'Deklarowany Download (Mbps):',
         'ispUpload': 'Deklarowany Upload (Mbps):',
         'ispIntegrity': 'deklarowanej prędkości', 
-        // NEW: Login notifications
         'toastLoginSuccess': 'Zalogowano: ',
         'toastLogoutSuccess': 'Wylogowano pomyślnie.',
-        // NEW: Custom File Input
         'selectFile': 'Wybierz plik',
         'noFileChosen': 'Brak wybranego pliku',
-        // NEW: Search
         'searchPlaceholder': 'Szukaj serwera...',
-        // NEW: Startup Test
         'startupTestTitle': 'Automatyczny test przy starcie',
         'startupTestLabel': 'Uruchom test po starcie kontenera',
         'startupTestDesc': 'Jeśli włączone, test prędkości zostanie wykonany automatycznie 1 minutę po uruchomieniu aplikacji.',
-        // NEW: Toggle Toast
         'toastStartupTestOn': 'Test startowy: Włączony',
         'toastStartupTestOff': 'Test startowy: Wyłączony'
     },
@@ -159,7 +154,7 @@ export const translations = {
         'title': 'SpeedtestLog Logo',
         'navDashboard': 'Dashboard',
         'navCharts': 'Charts',
-        'navHistory': 'Measurements', // ZMIANA: History -> Measurements
+        'navHistory': 'Measurements',
         'navSettings': 'Settings',
         'navBackup': 'Backup & Restore',
         'manualTest': 'Manual Test',
@@ -188,7 +183,7 @@ export const translations = {
         'uploadChartTitle': 'Upload (Mbps)',
         'pingChartTitle': 'Ping (ms)',
         'jitterChartTitle': 'Jitter (ms)',
-        'historyTable': 'Measurements', // ZMIANA: Measurement History -> Measurements
+        'historyTable': 'Measurements',
         'tableTime': 'Date & Time',
         'tablePing': 'Ping',
         'tableJitter': 'Jitter',
@@ -244,6 +239,7 @@ export const translations = {
         'nextTestSoon': 'Soon (max 1 min)',
         'nextTestError': 'Calc. error',
         'nextTestDisabled': 'Schedule disabled',
+        'countdownPrefix': 'in',
         'chartLabelDownload': 'Download',
         'chartLabelUpload': 'Upload',
         'chartLabelPing': 'Ping',
@@ -289,25 +285,19 @@ export const translations = {
         'pageOf': 'of',
         'prevPage': 'Previous',
         'nextPage': 'Next',
-        // ISP
         'ispSettingsTitle': 'ISP Contract Verification',
         'ispDesc': 'Enter contract speeds to monitor provider quality (percentage indicator on Dashboard).',
         'ispDownload': 'Declared Download (Mbps):',
         'ispUpload': 'Declared Upload (Mbps):',
         'ispIntegrity': 'declared speed',
-        // NEW: Login notifications
         'toastLoginSuccess': 'Logged in: ',
         'toastLogoutSuccess': 'Logged out successfully.',
-        // NEW: Custom File Input
         'selectFile': 'Select File',
         'noFileChosen': 'No file chosen',
-        // NEW: Search
         'searchPlaceholder': 'Search server...',
-        // NEW: Startup Test
         'startupTestTitle': 'Automatic Startup Test',
         'startupTestLabel': 'Run test on container startup',
         'startupTestDesc': 'If enabled, a speed test will run automatically 1 minute after the application starts.',
-        // NEW: Toggle Toast
         'toastStartupTestOn': 'Startup Test: Enabled',
         'toastStartupTestOff': 'Startup Test: Disabled'
     }

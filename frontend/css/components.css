@@ -203,7 +203,14 @@ button#triggerTestBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visib
 .stat-card .value-container { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.25rem; }
 .stat-card .value { font-size: 2.5rem; font-weight: 400; color: var(--text-color); line-height: 1; }
 .stat-card .unit { font-size: 1rem; font-weight: 500; color: var(--text-color-secondary); }
-.stat-card .comparison { font-size: 0.9rem; font-weight: 500; }
+.stat-card .comparison { 
+    font-size: 0.9rem; 
+    font-weight: 500; 
+    /* ZMIANA: Flexbox dla wyrównania ikony i tekstu */
+    display: flex; 
+    align-items: center; 
+    gap: 4px; 
+}
 .stat-card .comparison.positive { color: var(--success-text); }
 .stat-card .comparison.negative { color: var(--danger-text); }
 .stat-card .comparison.neutral { color: var(--text-color-secondary); }
@@ -282,6 +289,24 @@ body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
 .text-success { color: var(--success-color); font-weight: 700; }
 .text-warning { color: var(--color-ping); font-weight: 700; }
 .text-danger { color: var(--danger-color); font-weight: 700; }
+
+/* ZMIANA: Stylowanie ikonki linku w tabeli */
+.result-link-icon {
+    text-decoration: none;
+    color: var(--text-color-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.result-link-icon:hover {
+    color: var(--primary-color);
+}
+
+.result-link-icon .material-symbols-rounded {
+    font-size: 20px;
+}
 
 /* Pagination */
 .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 1rem; }
@@ -434,6 +459,17 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
 /* Settings Card */
 .settings-card { background-color: var(--card-bg-color); border: none; border-radius: var(--border-radius-base); padding: 2rem; box-shadow: var(--shadow-low); }
 .settings-card h3 { margin-top: 0; margin-bottom: 1.5rem; color: var(--primary-color); border-bottom: none; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* NOWE: Styl dla licznika odliczania */
+.countdown-timer {
+    display: block;
+    color: var(--text-color-secondary);
+    font-size: 0.8rem;
+    margin-top: 4px;
+    font-weight: 500;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
 
 /* NOWE: Style dla przełącznika (Toggle Switch) */
 .switch {
