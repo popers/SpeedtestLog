@@ -1,7 +1,8 @@
 import { state } from './state.js';
 import { translations } from './i18n.js';
 import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser } from './api.js';
-import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText } from './utils.js';
+// ZMIANA: Dodano import getUnitLabel
+import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel } from './utils.js';
 import { renderCharts } from './charts.js';
 import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
@@ -304,21 +305,12 @@ function setupEventListeners() {
     // ZMIANA: Logika przełącznika motywu
     const themeToggle = document.getElementById('themeToggle');
     if(themeToggle) themeToggle.addEventListener('click', () => {
-        // Jeśli body MA klasę light-mode, to znaczy że jest jasno.
-        // isCurrentlyLight = true.
-        // Chcemy przełączyć na ciemny -> setNightMode(true).
-        
-        // Jeśli body NIE MA klasy light-mode, to znaczy że jest ciemno (domyślnie).
-        // isCurrentlyLight = false.
-        // Chcemy przełączyć na jasny -> setNightMode(false).
-        
         const isCurrentlyLight = document.body.classList.contains('light-mode');
-        setNightMode(isCurrentlyLight); // Jeśli było jasno(true), ustaw noc(true). Jeśli było ciemno(false), ustaw dzień(false) - czyli wyłącz noc.
+        setNightMode(isCurrentlyLight); 
         
         if (isCurrentlyLight) showToast('toastThemeDark', 'info');
         else showToast('toastThemeLight', 'info');
         
-        // Przeładuj wykresy, aby pobrały nowe kolory
         if (document.getElementById('downloadChart') && state.currentFilteredResults) {
             renderCharts(state.currentFilteredResults);
         }
@@ -365,7 +357,8 @@ function setupEventListeners() {
     if(unitSelect) unitSelect.addEventListener('change', () => {
         localStorage.setItem('displayUnit', unitSelect.value);
         renderData();
-        showToast('toastUnitChanged', 'info', ` ${unitSelect.value}`);
+        // ZMIANA: Użycie getUnitLabel do poprawnego wyświetlania jednostki w powiadomieniu (np. MB/s)
+        showToast('toastUnitChanged', 'info', ` ${getUnitLabel(unitSelect.value)}`);
     });
 
     const rowsPerPage = document.getElementById('rowsPerPageSelect');

@@ -70,7 +70,6 @@ class SettingsModel(BaseModel):
     schedule_hours: int | None = 1
     ping_target: str | None = "8.8.8.8"
     ping_interval: int | None = 30
-    # Pola do weryfikacji umowy z ISP
     declared_download: int | None = 0
     declared_upload: int | None = 0
 
@@ -118,7 +117,6 @@ class AppSettings(Base):
     schedule_hours = Column(Integer, default=1)
     ping_target = Column(String(255), default="8.8.8.8")
     ping_interval = Column(Integer, default=30)
-    # Kolumny deklarowanych prędkości
     declared_download = Column(Integer, default=0)
     declared_upload = Column(Integer, default=0)
 

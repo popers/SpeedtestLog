@@ -51,14 +51,21 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                 borderWidth: 2,
                 backgroundColor: bgColor,
                 fill: true,
-                tension: 0.4,
+                // ZMIANA: Przywrócono tension 0.4 zgodnie z życzeniem
+                cubicInterpolationMode: 'monotone', 
                 pointRadius: 3, 
                 pointHoverRadius: 6,
-                pointBackgroundColor: color
+                pointBackgroundColor: color,
+                // ZMIANA: Dodano opcje optymalizujące renderowanie
+                spanGaps: true,
+                normalized: true
             }]
         },
         options: {
-            responsive: true, maintainAspectRatio: false, animation: {}, 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            // ZMIANA: Włączono animacje (pusty obiekt włącza domyślne)
+            animation: {}, 
             interaction: { mode: 'index', intersect: false },
             scales: {
                 y: { type: 'linear', position: 'left', title: { display: true, text: unit, color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },

@@ -19,7 +19,7 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="index.html#dashboard" class="nav-link active"><span class="icon">📊</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
-                    <li><a href="index.html#charts" class="nav-link"><span class="icon">📈</span> <span data-i18n-key="historyCharts">Wykresy Historii</span></a></li>
+                    <li><a href="index.html#charts" class="nav-link"><span class="icon">📈</span> <span data-i18n-key="historyCharts">Wykresy</span></a></li>
                     <li><a href="index.html#history" class="nav-link"><span class="icon">📝</span> <span data-i18n-key="historyTable">Historia Pomiarów</span></a></li>
                     <li class="nav-spacer"></li>
                     <li><a href="backup.html" class="nav-link"><span class="icon">💾</span> <span data-i18n-key="navBackup">Kopia Zapasowa</span></a></li>
@@ -89,14 +89,12 @@
                             <h3><span data-i18n-key="latestDownload">Pobieranie</span></h3>
                             <div class="value-container"><span class="value" id="latestDownloadValue">...</span><span class="unit" id="latestDownloadUnit">Mbps</span></div>
                             <div class="comparison" id="latestDownloadCompare">...</div>
-                            <!-- NOWY ELEMENT WERYFIKACJI ISP -->
                             <div class="isp-stat" id="latestDownloadISP"></div>
                         </div>
                         <div class="stat-card">
                             <h3><span data-i18n-key="latestUpload">Wysyłanie</span></h3>
                             <div class="value-container"><span class="value" id="latestUploadValue">...</span><span class="unit" id="latestUploadUnit">Mbps</span></div>
                             <div class="comparison" id="latestUploadCompare">...</div>
-                            <!-- NOWY ELEMENT WERYFIKACJI ISP -->
                             <div class="isp-stat" id="latestUploadISP"></div>
                         </div>
                         <div class="stat-card"><h3><span data-i18n-key="latestPing">Ping</span></h3><div class="value-container"><span class="value" id="latestPingValue">...</span><span class="unit" id="latestPingUnit">ms</span></div><div class="comparison" id="latestPingCompare">...</div></div>
@@ -106,7 +104,7 @@
 
                 <section id="charts" class="section-block">
                     <div class="section-header-inline">
-                        <h2 data-i18n-key="historyCharts">Wykresy Historii</h2>
+                        <h2 data-i18n-key="historyCharts">Wykresy</h2>
                         <div class="chart-controls">
                              <select id="filterSelect" class="filter-btn"><option value="24h" data-i18n-key="filter24h">Ostatnie 24h</option><option value="7d" data-i18n-key="filter7d">Ostatnie 7 dni</option><option value="30d" data-i18n-key="filter30d">Ostatnie 30 dni</option><option value="all" data-i18n-key="filterAll">Wszystko</option></select>
                              <select id="unitSelect" class="filter-btn"><option value="Mbps">Mbps</option><option value="MBps">MB/s</option></select>
@@ -130,7 +128,19 @@
                     </div>
                     <div class="table-wrapper">
                         <table id="resultsTable">
-                            <thead><tr><th><input type="checkbox" id="selectAllCheckbox"></th><th data-i18n-key="tableTime">Data</th><th data-i18n-key="tablePing" data-sort="ping">Ping</th><th data-i18n-key="tableJitter" data-sort="jitter">Jitter</th><th data-i18n-key="tableDownload" data-sort="download">Download</th><th data-i18n-key="tableUpload" data-sort="upload">Upload</th><th data-i18n-key="tableServer">Serwer</th><th data-i18n-key="tableResultLink">Link</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <!-- ZMIANA: Zaktualizowana kolejność nagłówków tabeli -->
+                                    <th><input type="checkbox" id="selectAllCheckbox"></th>
+                                    <th data-i18n-key="tableTime">Data</th>
+                                    <th data-i18n-key="tableDownload" data-sort="download">Download</th>
+                                    <th data-i18n-key="tableUpload" data-sort="upload">Upload</th>
+                                    <th data-i18n-key="tablePing" data-sort="ping">Ping</th>
+                                    <th data-i18n-key="tableJitter" data-sort="jitter">Jitter</th>
+                                    <th data-i18n-key="tableServer">Serwer</th>
+                                    <th data-i18n-key="tableResultLink">Link</th>
+                                </tr>
+                            </thead>
                             <tbody></tbody>
                         </table>
                     </div>

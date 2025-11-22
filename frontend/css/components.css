@@ -316,6 +316,14 @@ th { background-color: #333333; }
 body.light-mode th { background-color: var(--bg-color); }
 
 .table-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; gap: 1rem; }
+
+/* ZMIANA: Kolor nagłówka tabeli taki sam jak wykresów */
+.table-header h2 { 
+    margin: 0; 
+    font-size: 1.5rem; 
+    color: var(--text-color-secondary); 
+}
+
 .table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
 .table-footer-controls { display: flex; justify-content: center; align-items: center; margin-top: 1.5rem; }
 .table-footer-controls .control-group { flex-direction: row; align-items: center; gap: 0.5rem; }

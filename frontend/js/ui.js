@@ -49,6 +49,7 @@ export function updateStatsCards(results) {
         const ispUl = document.getElementById('latestUploadISP');
         if (ispDl) ispDl.textContent = '';
         if (ispUl) ispUl.textContent = '';
+        
         return;
     }
     const latest = results[0];
@@ -246,13 +247,14 @@ export function updateTable(results) {
         const timestamp = parseISOLocally(res.timestamp); 
         const resultLinkHtml = res.result_url ? `<a href="${res.result_url}" target="_blank" title="Speedtest.net">🔗</a>` : '';
         
+        // ZMIANA: Nowa kolejność kolumn - Data, Download, Upload, Ping, Jitter, Serwer, Link
         row.innerHTML = `
             <td><input type="checkbox" class="row-checkbox" data-id="${res.id}"></td>
             <td data-label="${lang.tableTime}">${timestamp.toLocaleString(state.currentLang)}</td>
-            <td data-label="${lang.tablePing}"><strong>${res.ping}</strong> ms</td>
-            <td data-label="${lang.tableJitter}"><strong>${res.jitter}</strong> ms</td>
             <td data-label="${lang.tableDownload}"><strong>${convertValue(res.download, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
             <td data-label="${lang.tableUpload}"><strong>${convertValue(res.upload, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
+            <td data-label="${lang.tablePing}"><strong>${res.ping}</strong> ms</td>
+            <td data-label="${lang.tableJitter}"><strong>${res.jitter}</strong> ms</td>
             <td data-label="${lang.tableServer}">(${res.server_id}) ${res.server_name} (${res.server_location})</td>
             <td data-label="${lang.tableResultLink}" class="link-cell">${resultLinkHtml}</td>
         `;
@@ -275,6 +277,22 @@ export function updateTable(results) {
     
     // Render controls
     renderPagination(results.length);
+
+    // Upewniamy się, że nagłówki również są w poprawnej kolejności (wymaga to zmiany w HTML index.html, ale tutaj zarządzamy tekstem sortowania)
+    // Uwaga: Poniższy kod jedynie aktualizuje tekst w istniejących nagłówkach. Aby fizycznie zmienić kolejność, musimy przebudować tabelę w HTML.
+    // Ponieważ `updateTable` generuje tylko wiersze (tbody), zakładam że poniżej (w tym samym pliku lub response) zaktualizujemy również HTML tabeli w index.html lub dynamicznie.
+    // Jednak w tym frameworku zazwyczaj `index.html` jest statyczny. 
+    // W sekcji `updateTable` generujemy `tbody`.
+    // Zmiana kolejności w `thead` musi nastąpić w `index.html` lub poprzez dynamiczne generowanie nagłówków (co nie jest tu robione).
+    // Wymuszę zmianę HTML tabeli w tym samym pliku JS (hack) lub poproszę o update index.html.
+    // W tym przypadku, jako że jestem ograniczony do plików JS, zaktualizuję `index.html` w następnym bloku, lub tutaj zaktualizuję nagłówki dynamicznie.
+    // Ale w `ui.js` nie ma funkcji generującej `thead`. 
+    // Zmiana w `ui.js` dotyczyła tylko generowania `tr` w `tbody`.
+    // Aby zmiana była kompletna, muszę podać zaktualizowany plik `js/ui.js` ORAZ `js/app.js`. 
+    // A co z `index.html`? Użytkownik poprosił o "zmianę kolejności rubryk". 
+    // Najlepszym wyjściem jest edycja `frontend/index.html`. 
+    // Jednak w poprzednim kroku cofnęliśmy zmiany w `index.html`.
+    // Wobec tego, dodam `frontend/index.html` do odpowiedzi.
 
     document.querySelectorAll('[data-sort]').forEach(th => {
         const key = th.dataset.i18nKey;
