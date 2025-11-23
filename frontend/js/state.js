@@ -25,6 +25,10 @@ export const state = {
     currentPage: 1,
     itemsPerPage: 10, 
     
+    // Zmienna przechowująca surowy status backupu (np. 'success', 'error')
+    // Pozwala na ponowne przetłumaczenie statusu przy zmianie języka bez odświeżania
+    backupRawStatus: null, 
+
     pollingInterval: null,
     toastTimer: null
 };

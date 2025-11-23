@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { translations } from './i18n.js';
 // ZMIANA: Import triggerGoogleBackup 
 import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser, fetchBackupSettings, saveBackupSettings, getGoogleAuthUrl, revokeGoogleAuth, triggerGoogleBackup } from './api.js';
-import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel, convertValue, formatCountdown } from './utils.js';
+import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel, convertValue, formatCountdown, hexToRgba } from './utils.js';
 import { renderCharts } from './charts.js';
 import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
@@ -60,6 +60,10 @@ async function initializeApp() {
     
     setupEventListeners();
     
+    // NOWE: Aplikuj kolory zaraz po inicjalizacji, jeśli są zapisane na serwerze (lub fetchowane przy okazji innej logiki)
+    // Tutaj możemy wykonać wstępne pobranie ustawień nawet na Dashboardzie, aby kolory były poprawne
+    applySavedColorsGlobal();
+
     const page = window.location.pathname.split("/").pop();
     
     if (page === 'settings.html') {
@@ -73,6 +77,38 @@ async function initializeApp() {
 
     if (!document.getElementById('loginForm')) {
         startWatchdogPolling();
+    }
+}
+
+// NOWE: Funkcja pobierająca i aplikująca kolory globalnie
+async function applySavedColorsGlobal() {
+    try {
+        // Nie blokujemy ładowania strony, robimy to w tle
+        const s = await fetchSettings();
+        applyColorsToCSS(s);
+    } catch (e) {
+        console.log("Could not load color settings");
+    }
+}
+
+function applyColorsToCSS(settings) {
+    const root = document.documentElement;
+    
+    if (settings.chart_color_download) {
+        root.style.setProperty('--color-download', settings.chart_color_download);
+        root.style.setProperty('--color-download-bg', hexToRgba(settings.chart_color_download, 0.15));
+    }
+    if (settings.chart_color_upload) {
+        root.style.setProperty('--color-upload', settings.chart_color_upload);
+        root.style.setProperty('--color-upload-bg', hexToRgba(settings.chart_color_upload, 0.15));
+    }
+    if (settings.chart_color_ping) {
+        root.style.setProperty('--color-ping', settings.chart_color_ping);
+        root.style.setProperty('--color-ping-bg', hexToRgba(settings.chart_color_ping, 0.15));
+    }
+    if (settings.chart_color_jitter) {
+        root.style.setProperty('--color-jitter', settings.chart_color_jitter);
+        root.style.setProperty('--color-jitter-bg', hexToRgba(settings.chart_color_jitter, 0.15));
     }
 }
 
@@ -127,6 +163,19 @@ async function loadSettingsToForm() {
                 }
             });
         }
+
+        // NOWE: Ładowanie kolorów do inputów
+        const cDl = document.getElementById('colorDownloadInput');
+        const cUl = document.getElementById('colorUploadInput');
+        const cPi = document.getElementById('colorPingInput');
+        const cJi = document.getElementById('colorJitterInput');
+
+        // Pobieramy domyślne z CSS jeśli brak w bazie (fallback)
+        const style = getComputedStyle(document.body);
+        if(cDl) cDl.value = s.chart_color_download || style.getPropertyValue('--color-download').trim() || '#4fc3f7';
+        if(cUl) cUl.value = s.chart_color_upload || style.getPropertyValue('--color-upload').trim() || '#e57373';
+        if(cPi) cPi.value = s.chart_color_ping || style.getPropertyValue('--color-ping').trim() || '#ffd54f';
+        if(cJi) cJi.value = s.chart_color_jitter || style.getPropertyValue('--color-jitter').trim() || '#81c784';
         
     } catch (e) {
         console.error("Error loading settings:", e);
@@ -143,6 +192,14 @@ function getLocalizedStatus(status) {
     if (status.includes('error')) return lang.statusError || 'Błąd';
     
     return status;
+}
+
+// --- NOWE: Funkcja aktualizująca tekst statusu w UI ---
+function updateBackupStatusUI() {
+    const lastStatusVal = document.getElementById('lastStatusVal');
+    if (lastStatusVal && state.backupRawStatus) {
+        lastStatusVal.textContent = getLocalizedStatus(state.backupRawStatus);
+    }
 }
 
 // --- NOWE: Obsługa strony backup.html ---
@@ -182,7 +239,8 @@ async function loadBackupPage() {
         const gdRunBtn = document.getElementById('gdRunBtn');
 
         const lastRunVal = document.getElementById('lastRunVal');
-        const lastStatusVal = document.getElementById('lastStatusVal');
+        // ZMIANA: Zapisz surowy status w stanie
+        state.backupRawStatus = s.last_status;
 
         if(gdClientId) gdClientId.value = s.client_id || '';
         if(gdClientSecret) gdClientSecret.value = s.client_secret || '';
@@ -215,7 +273,8 @@ async function loadBackupPage() {
 
         // Ostatnie uruchomienie - tłumaczenie statusu
         if(lastRunVal) lastRunVal.textContent = s.last_run ? new Date(s.last_run).toLocaleString() : '-';
-        if(lastStatusVal) lastStatusVal.textContent = getLocalizedStatus(s.last_status);
+        // Wywołaj helper do wyświetlenia statusu
+        updateBackupStatusUI();
 
         // Obsługa przycisków
         if(gdSaveBtn) {
@@ -286,7 +345,10 @@ async function loadBackupPage() {
                                 if (isNewRun) {
                                     // Zaktualizuj UI
                                     if(lastRunVal) lastRunVal.textContent = new Date(freshSettings.last_run).toLocaleString();
-                                    if(lastStatusVal) lastStatusVal.textContent = getLocalizedStatus(freshSettings.last_status);
+                                    
+                                    // ZMIANA: Aktualizuj stan i UI statusu
+                                    state.backupRawStatus = freshSettings.last_status;
+                                    updateBackupStatusUI();
                                     
                                     if (freshSettings.last_status === 'success') {
                                         showToast('toastBackupSuccess', 'success');
@@ -357,16 +419,31 @@ async function saveSettingsFromPage() {
         const startupInput = document.getElementById('startupTestInput');
         const startupEnabled = startupInput ? startupInput.checked : true;
 
-        await updateSettings({
+        // NOWE: Odczyt kolorów
+        const cDl = document.getElementById('colorDownloadInput').value;
+        const cUl = document.getElementById('colorUploadInput').value;
+        const cPi = document.getElementById('colorPingInput').value;
+        const cJi = document.getElementById('colorJitterInput').value;
+
+        const payload = {
             server_id: currentSettings.selected_server_id, 
             schedule_hours: currentSettings.schedule_hours, 
             ping_target: target,
             ping_interval: interval,
             declared_download: dl,
             declared_upload: ul,
-            startup_test_enabled: startupEnabled
-        });
+            startup_test_enabled: startupEnabled,
+            chart_color_download: cDl,
+            chart_color_upload: cUl,
+            chart_color_ping: cPi,
+            chart_color_jitter: cJi
+        };
+
+        await updateSettings(payload);
         
+        // Aplikuj zmiany natychmiastowo
+        applyColorsToCSS(payload);
+
         showToast('toastSettingsSaved', 'success');
         stopWatchdogPolling();
         startWatchdogPolling();
@@ -393,7 +470,12 @@ async function handleQuickSettingsChange(e) {
             ping_interval: currentSettings.ping_interval,
             declared_download: currentSettings.declared_download, 
             declared_upload: currentSettings.declared_upload,
-            startup_test_enabled: currentSettings.startup_test_enabled
+            startup_test_enabled: currentSettings.startup_test_enabled,
+            // Zachowaj kolory przy szybkiej zmianie
+            chart_color_download: currentSettings.chart_color_download,
+            chart_color_upload: currentSettings.chart_color_upload,
+            chart_color_ping: currentSettings.chart_color_ping,
+            chart_color_jitter: currentSettings.chart_color_jitter
         });
         
         if (sourceId === 'serverSelect') {
@@ -659,6 +741,12 @@ function setupEventListeners() {
             setLanguage(li.dataset.lang);            
             updateLangButtonUI(li.dataset.lang);     
             showToast('toastLangChanged', 'success');
+            
+            // ZMIANA: Odśwież status backupu jeśli jesteśmy na tej stronie
+            if (window.location.pathname.includes('backup.html')) {
+                updateBackupStatusUI();
+            }
+
             if (state.allResults.length > 0) renderData();
             const nextRun = document.getElementById('nextRunTime');
             if(nextRun) nextRun.textContent = getNextRunTimeText();

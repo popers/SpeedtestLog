@@ -64,6 +64,7 @@ LOG_TRANS = {
     "en": {
         "db_init": "⏳ Initializing database...",
         "db_mig_startup": "🔧 Migration: Adding startup_test_enabled column...",
+        "db_mig_colors": "🔧 Migration: Adding chart color columns...",
         "db_connected": "✅ Connected to database.",
         "db_unavailable": "⚠️ Database unavailable... ({}/{})",
         "backup_start": "📂 Starting scheduled Google Drive backup...",
@@ -96,6 +97,7 @@ LOG_TRANS = {
     "pl": {
         "db_init": "⏳ Inicjalizacja bazy danych...",
         "db_mig_startup": "🔧 Migracja: Dodawanie kolumny startup_test_enabled...",
+        "db_mig_colors": "🔧 Migracja: Dodawanie kolumn kolorów wykresów...",
         "db_connected": "✅ Połączono z bazą danych.",
         "db_unavailable": "⚠️ Baza niedostępna... ({}/{})",
         "backup_start": "📂 Rozpoczynanie zaplanowanego backupu do Google Drive...",
@@ -165,6 +167,11 @@ class SettingsModel(BaseModel):
     declared_download: int | None = 0
     declared_upload: int | None = 0
     startup_test_enabled: bool | None = True
+    # Nowe pola kolorów
+    chart_color_download: str | None = None
+    chart_color_upload: str | None = None
+    chart_color_ping: str | None = None
+    chart_color_jitter: str | None = None
 
 class BackupSettingsModel(BaseModel):
     client_id: str | None = None
@@ -222,6 +229,11 @@ class AppSettings(Base):
     declared_download = Column(Integer, default=0)
     declared_upload = Column(Integer, default=0)
     startup_test_enabled = Column(Boolean, default=True)
+    # Nowe kolumny na kolory
+    chart_color_download = Column(String(20), nullable=True)
+    chart_color_upload = Column(String(20), nullable=True)
+    chart_color_ping = Column(String(20), nullable=True)
+    chart_color_jitter = Column(String(20), nullable=True)
 
 class DriveBackupSettings(Base):
     __tablename__ = "drive_backup_settings"
@@ -262,6 +274,8 @@ def initialize_db(max_retries=10, delay=5):
         try:
             with engine.connect() as connection:
                 Base.metadata.create_all(bind=engine)
+                
+                # Migracja: startup_test_enabled
                 try:
                     connection.execute(text("SELECT startup_test_enabled FROM app_settings LIMIT 1"))
                 except Exception:
@@ -269,6 +283,17 @@ def initialize_db(max_retries=10, delay=5):
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN startup_test_enabled BOOLEAN DEFAULT 1"))
                     connection.commit()
                 
+                # Migracja: kolory wykresów
+                try:
+                    connection.execute(text("SELECT chart_color_download FROM app_settings LIMIT 1"))
+                except Exception:
+                    logging.info(get_log("db_mig_colors"))
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_download VARCHAR(20) DEFAULT NULL"))
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_upload VARCHAR(20) DEFAULT NULL"))
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_ping VARCHAR(20) DEFAULT NULL"))
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_jitter VARCHAR(20) DEFAULT NULL"))
+                    connection.commit()
+
                 logging.info(get_log("db_connected"))
                 return
         except OperationalError:
@@ -636,6 +661,10 @@ async def get_set(db=Depends(get_db)):
         "declared_download": s.declared_download,
         "declared_upload": s.declared_upload,
         "startup_test_enabled": s.startup_test_enabled,
+        "chart_color_download": s.chart_color_download,
+        "chart_color_upload": s.chart_color_upload,
+        "chart_color_ping": s.chart_color_ping,
+        "chart_color_jitter": s.chart_color_jitter,
         "latest_test_timestamp": l.timestamp if l else None
     }
 
@@ -658,6 +687,12 @@ async def set_set(s: SettingsModel, db=Depends(get_db)):
     if s.declared_download is not None: rec.declared_download = s.declared_download
     if s.declared_upload is not None: rec.declared_upload = s.declared_upload
     if s.startup_test_enabled is not None: rec.startup_test_enabled = s.startup_test_enabled
+    
+    # Zapis kolorów
+    if s.chart_color_download: rec.chart_color_download = s.chart_color_download
+    if s.chart_color_upload: rec.chart_color_upload = s.chart_color_upload
+    if s.chart_color_ping: rec.chart_color_ping = s.chart_color_ping
+    if s.chart_color_jitter: rec.chart_color_jitter = s.chart_color_jitter
     
     db.commit()
     logging.info(get_log("settings_updated"))

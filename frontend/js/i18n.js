@@ -150,6 +150,13 @@ export const translations = {
         'toastStartupTestOn': 'Test startowy: Włączony',
         'toastStartupTestOff': 'Test startowy: Wyłączony',
         
+        // Settings - Chart Colors
+        'chartAppearanceTitle': 'Wygląd Wykresów',
+        'chartColorDownload': 'Pobieranie',
+        'chartColorUpload': 'Wysyłanie',
+        'chartColorPing': 'Ping',
+        'chartColorJitter': 'Jitter',
+
         // Google Drive
         'gDriveTitle': 'Google Drive Backup',
         'gDriveDesc': 'Automatycznie wysyłaj kopie zapasowe do folderu na Google Drive.',
@@ -335,6 +342,13 @@ export const translations = {
         'toastStartupTestOn': 'Startup Test: Enabled',
         'toastStartupTestOff': 'Startup Test: Disabled',
         
+        // Settings - Chart Colors
+        'chartAppearanceTitle': 'Chart Appearance',
+        'chartColorDownload': 'Download',
+        'chartColorUpload': 'Upload',
+        'chartColorPing': 'Ping',
+        'chartColorJitter': 'Jitter',
+
         // Google Drive
         'gDriveTitle': 'Google Drive Backup',
         'gDriveDesc': 'Automatically upload backups to a specific folder on Google Drive.',

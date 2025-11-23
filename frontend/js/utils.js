@@ -39,6 +39,20 @@ export function formatCountdown(ms) {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
+// NOWE: Helper do konwersji HEX na RGBA (dla wykresów)
+export function hexToRgba(hex, alpha) {
+    let c;
+    if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
+        c = hex.substring(1).split('');
+        if(c.length === 3){
+            c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+        }
+        c = '0x' + c.join('');
+        return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+','+alpha+')';
+    }
+    return hex; // Fallback jeśli nieprawidłowy hex
+}
+
 // --- UX Helpers ---
 export function showToast(messageKey, type = 'success', extraContent = '') { 
     const toastNotification = document.getElementById('toastNotification');
