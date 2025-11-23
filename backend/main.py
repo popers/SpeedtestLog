@@ -15,7 +15,7 @@ import shutil
 import re
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, HTTPException, Request, Depends, Response, status, UploadFile, File, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
@@ -622,7 +622,8 @@ def get_redirect_uri(request: Request):
 async def login(creds: LoginModel, response: Response):
     if not AUTH_ENABLED: return {"message": "Auth disabled"}
     if creds.username == APP_USERNAME and creds.password == APP_PASSWORD:
-        response.set_cookie(key=SESSION_COOKIE_NAME, value=SESSION_SECRET, httponly=True, samesite='strict')
+        # Zmiana: Lax pozwala na cross-site redirect (OAuth) przy zachowaniu bezpieczeństwa
+        response.set_cookie(key=SESSION_COOKIE_NAME, value=SESSION_SECRET, httponly=True, samesite='lax')
         return {"message": "Logged in"}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -826,40 +827,59 @@ async def google_callback(request: Request, db=Depends(get_db), code: Optional[s
     logging.info(get_log("callback_params", 'Yes' if code else 'No', error))
     logging.info(get_log("callback_full", request.query_params))
 
+    target_url = "/backup.html?auth=error"
+
     if error:
         logging.error(get_log("google_err", error))
-        return RedirectResponse(url=f"/backup.html?auth=error&msg={error}")
+        target_url = f"/backup.html?auth=error&msg={error}"
     
-    if not code:
+    elif not code:
         logging.warning(get_log("no_code"))
-        return RedirectResponse(url="/backup.html?auth=error&msg=no_code")
+        target_url = "/backup.html?auth=error&msg=no_code"
 
-    s = load_backup_settings(db)
-    redirect_uri = get_redirect_uri(request)
-    
-    client_config = {
-        "web": {
-            "client_id": s.client_id,
-            "client_secret": s.client_secret,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token"
+    else:
+        s = load_backup_settings(db)
+        redirect_uri = get_redirect_uri(request)
+        
+        client_config = {
+            "web": {
+                "client_id": s.client_id,
+                "client_secret": s.client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token"
+            }
         }
-    }
-    
-    flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
-    try:
-        flow.fetch_token(code=code)
-        creds = flow.credentials
         
-        s.token_json = creds.to_json()
-        s.is_enabled = True 
-        db.commit()
-        setup_backup_schedule(s)
-        
-        return RedirectResponse(url="/backup.html?auth=success")
-    except Exception as e:
-        logging.error(get_log("auth_callback_err", e))
-        return RedirectResponse(url="/backup.html?auth=error")
+        flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
+        try:
+            flow.fetch_token(code=code)
+            creds = flow.credentials
+            
+            s.token_json = creds.to_json()
+            s.is_enabled = True 
+            db.commit()
+            setup_backup_schedule(s)
+            
+            target_url = "/backup.html?auth=success"
+        except Exception as e:
+            logging.error(get_log("auth_callback_err", e))
+            target_url = "/backup.html?auth=error"
+
+    # Fix for cookie lost issue on redirect: Return HTML with JS redirect instead of 302
+    return HTMLResponse(content=f"""
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Redirecting...</title>
+                <meta http-equiv="refresh" content="0;url={target_url}">
+                <script>window.location.href = "{target_url}";</script>
+            </head>
+            <body>
+                <p>Redirecting to application...</p>
+            </body>
+        </html>
+    """)
 
 @app.post("/api/backup/google/revoke", dependencies=[Depends(verify_session)])
 async def google_revoke(db=Depends(get_db)):
