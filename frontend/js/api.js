@@ -82,7 +82,7 @@ export async function logoutUser() {
     window.location.reload();
 }
 
-// --- NOWE: Google Drive API Calls ---
+// --- NOWE: Google Drive API Calls --- 
 export async function fetchBackupSettings() {
     const response = await fetch('/api/backup/settings');
     if (!response.ok) throw new Error('Failed to fetch backup settings');

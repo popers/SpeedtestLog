@@ -15,7 +15,8 @@ services:
       - AUTH_ENABLED=${AUTH_ENABLED}
       - APP_USERNAME=${APP_USERNAME}
       - APP_PASSWORD=${APP_PASSWORD}
-      - SESSION_SECRET=${SESSION_SECRET}      
+      - SESSION_SECRET=${SESSION_SECRET}
+      - APP_LANG=${APP_LANG}
       - OOKLA_EULA_GDPR=true
       - TZ=Europe/Amsterdam
     volumes:

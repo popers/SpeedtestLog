@@ -14,7 +14,6 @@ import secrets
 import shutil
 import re
 from logging.handlers import RotatingFileHandler
-# ZMIANA: Import BackgroundTasks
 from fastapi import FastAPI, HTTPException, Request, Depends, Response, status, UploadFile, File, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -43,6 +42,9 @@ LOG_DIR = '/app/data/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'app.log')
 
+# Pobranie języka aplikacji z ENV (domyślnie polski)
+APP_LANG = os.getenv("APP_LANG", "pl").lower()
+
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(log_formatter)
@@ -57,6 +59,85 @@ logging.getLogger("schedule").setLevel(logging.WARNING)
 logging.getLogger("multipart").setLevel(logging.WARNING)
 logging.getLogger("googleapiclient").setLevel(logging.WARNING)
 
+# --- Słownik Tłumaczeń Logów ---
+LOG_TRANS = {
+    "en": {
+        "db_init": "⏳ Initializing database...",
+        "db_mig_startup": "🔧 Migration: Adding startup_test_enabled column...",
+        "db_connected": "✅ Connected to database.",
+        "db_unavailable": "⚠️ Database unavailable... ({}/{})",
+        "backup_start": "📂 Starting scheduled Google Drive backup...",
+        "backup_skipped": "Backup skipped: Disabled or no token.",
+        "backup_dump_err": "mysqldump error",
+        "drive_api_err": "No access to Drive API",
+        "backup_old_removed": "Removed old backup: {}",
+        "backup_success": "✅ Backup to Google Drive successful.",
+        "backup_crit_err": "Backup critical error: {}",
+        "backup_scheduled": "🗓️ Backup scheduled every {} days at {}",
+        "watchdog_start": "🐶 Starting Ping Watchdog...",
+        "servers_err": "Servers error: {}",
+        "test_err_fallback": "⚠️ Test error on server ID {}. Attempting auto fallback...",
+        "test_err_auto": "❌ Speedtest Error (Auto Fallback): {}",
+        "test_err": "❌ Speedtest Error: {}",
+        "result_format_err": "❌ Invalid result format: {}",
+        "test_result": "✅ Speedtest Result: ↓ {} Mbps",
+        "test_crit_err": "❌ Critical Speedtest Error: {}",
+        "startup_test_scheduled": "🕒 Startup test scheduled in 1 minute.",
+        "settings_updated": "⚙️ Settings updated.",
+        "auth_url_gen": "🔐 Generating auth URL with Redirect URI: {}",
+        "auth_url_warn": "⚠️ ENSURE THIS URL IS ADDED IN GOOGLE CLOUD CONSOLE!",
+        "callback_params": "Callback params - Code: {}, Error: {}",
+        "callback_full": "Callback Full Params: {}",
+        "google_err": "Google returned error: {}",
+        "no_code": "No auth code in callback",
+        "auth_callback_err": "Auth Callback Error: {}",
+        "watchdog_err": "Watchdog error: {}"
+    },
+    "pl": {
+        "db_init": "⏳ Inicjalizacja bazy danych...",
+        "db_mig_startup": "🔧 Migracja: Dodawanie kolumny startup_test_enabled...",
+        "db_connected": "✅ Połączono z bazą danych.",
+        "db_unavailable": "⚠️ Baza niedostępna... ({}/{})",
+        "backup_start": "📂 Rozpoczynanie zaplanowanego backupu do Google Drive...",
+        "backup_skipped": "Backup pominięty: Wyłączony lub brak tokena.",
+        "backup_dump_err": "Błąd mysqldump",
+        "drive_api_err": "Brak dostępu do API Drive",
+        "backup_old_removed": "Usunięto stary backup: {}",
+        "backup_success": "✅ Backup do Google Drive zakończony sukcesem.",
+        "backup_crit_err": "Backup critical error: {}",
+        "backup_scheduled": "🗓️ Zaplanowano backup co {} dni o {}",
+        "watchdog_start": "🐶 Uruchamianie Ping Watchdog...",
+        "servers_err": "Błąd serwerów: {}",
+        "test_err_fallback": "⚠️ Błąd testu na serwerze ID {}. Próba automatycznego wyboru serwera...",
+        "test_err_auto": "❌ Błąd Speedtestu (Auto Fallback): {}",
+        "test_err": "❌ Błąd Speedtestu: {}",
+        "result_format_err": "❌ Nieprawidłowy format wyniku: {}",
+        "test_result": "✅ Wynik Speedtestu: ↓ {} Mbps",
+        "test_crit_err": "❌ Krytyczny błąd Speedtestu: {}",
+        "startup_test_scheduled": "🕒 Zaplanowano test startowy za 1 minutę.",
+        "settings_updated": "⚙️ Ustawienia zaktualizowane.",
+        "auth_url_gen": "🔐 Generowanie URL autoryzacji z Redirect URI: {}",
+        "auth_url_warn": "⚠️ UPEWNIJ SIĘ, ŻE TEN ADRES JEST DODANY W GOOGLE CLOUD CONSOLE!",
+        "callback_params": "Callback params - Code: {}, Error: {}",
+        "callback_full": "Callback Full Params: {}",
+        "google_err": "Google zwróciło błąd: {}",
+        "no_code": "Brak kodu autoryzacji w callbacku",
+        "auth_callback_err": "Auth Callback Error: {}",
+        "watchdog_err": "Watchdog error: {}"
+    }
+}
+
+def get_log(key, *args):
+    """Helper do pobierania przetłumaczonego loga"""
+    lang_dict = LOG_TRANS.get(APP_LANG, LOG_TRANS["pl"])
+    msg = lang_dict.get(key, key)
+    if args:
+        try:
+            return msg.format(*args)
+        except Exception:
+            return msg + " " + str(args)
+    return msg
+
 # --- Konfiguracja ENV i DB ---
 DB_USER = os.getenv("DB_USERNAME")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
@@ -70,7 +151,6 @@ APP_PASSWORD = os.getenv("APP_PASSWORD", "admin")
 SESSION_COOKIE_NAME = "speedtest_session"
 SESSION_SECRET = os.getenv("SESSION_SECRET") or secrets.token_hex(16)
 
-# ZMIANA: Pozwala na działanie OAuth2 przez HTTP (wymagane dla localhost/docker bez https)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -148,15 +228,14 @@ class DriveBackupSettings(Base):
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(String(255), nullable=True)
     client_secret = Column(String(255), nullable=True)
-    # ZMIANA: Użycie poprawnego typu MEDIUMTEXT z dialektu MySQL (naprawa błędu TextClause)
-    token_json = Column(MEDIUMTEXT, nullable=True) # Przechowuje tokeny OAuth
+    token_json = Column(MEDIUMTEXT, nullable=True) 
     folder_name = Column(String(255), default="SpeedtestLog_Backup")
-    schedule_days = Column(Integer, default=1) # Co ile dni
-    schedule_time = Column(String(10), default="03:00") # O której godzinie
+    schedule_days = Column(Integer, default=1) 
+    schedule_time = Column(String(10), default="03:00") 
     retention_days = Column(Integer, default=30)
     is_enabled = Column(Boolean, default=False)
     last_run = Column(DATETIME, nullable=True)
-    last_status = Column(String(50), nullable=True) # 'success', 'error'
+    last_status = Column(String(50), nullable=True)
 
 # --- Globalne Zmienne ---
 SERVERS_FILE = 'data/servers.json'
@@ -173,7 +252,7 @@ app_state = {
 
 # --- Inicjalizacja DB ---
 def initialize_db(max_retries=10, delay=5):
-    logging.info("⏳ Inicjalizacja bazy danych...")
+    logging.info(get_log("db_init"))
     global engine, SessionLocal
     engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -186,14 +265,14 @@ def initialize_db(max_retries=10, delay=5):
                 try:
                     connection.execute(text("SELECT startup_test_enabled FROM app_settings LIMIT 1"))
                 except Exception:
-                    logging.info("🔧 Migracja: Dodawanie kolumny startup_test_enabled...")
+                    logging.info(get_log("db_mig_startup"))
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN startup_test_enabled BOOLEAN DEFAULT 1"))
                     connection.commit()
                 
-                logging.info("✅ Połączono z bazą danych.")
+                logging.info(get_log("db_connected"))
                 return
         except OperationalError:
-            logging.warning(f"⚠️ Baza niedostępna... ({i+1}/{max_retries})")
+            logging.warning(get_log("db_unavailable", i+1, max_retries))
             if i < max_retries - 1: time.sleep(delay)
             else: raise
 
@@ -232,7 +311,6 @@ def get_drive_service(settings):
         
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(GoogleRequest())
-            # Aktualizacja tokena w bazie jeśli został odświeżony
             db = app_state["SessionLocal"]()
             s = load_backup_settings(db)
             s.token_json = creds.to_json()
@@ -260,12 +338,12 @@ def get_or_create_folder(service, folder_name):
         return items[0].get('id')
 
 def perform_backup_task():
-    logging.info("📂 Rozpoczynanie zaplanowanego backupu do Google Drive...")
+    logging.info(get_log("backup_start"))
     db = app_state["SessionLocal"]()
     try:
         settings = load_backup_settings(db)
         if not settings.is_enabled or not settings.token_json:
-            logging.warning("Backup pominięty: Wyłączony lub brak tokena.")
+            logging.warning(get_log("backup_skipped"))
             return
 
         # 1. Generowanie zrzutu bazy
@@ -279,7 +357,7 @@ def perform_backup_task():
             proc = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, env=env)
         
         if proc.returncode != 0:
-            logging.error("Błąd mysqldump")
+            logging.error(get_log("backup_dump_err"))
             settings.last_status = "error"
             db.commit()
             return
@@ -287,7 +365,7 @@ def perform_backup_task():
         # 2. Upload do Drive
         service = get_drive_service(settings)
         if not service:
-            logging.error("Brak dostępu do API Drive")
+            logging.error(get_log("drive_api_err"))
             settings.last_status = "auth_error"
             db.commit()
             return
@@ -307,7 +385,7 @@ def perform_backup_task():
             for file in results.get('files', []):
                 try:
                     service.files().delete(fileId=file.get('id')).execute()
-                    logging.info(f"Usunięto stary backup: {file.get('name')}")
+                    logging.info(get_log("backup_old_removed", file.get('name')))
                 except: pass
 
         # Sprzątanie lokalne
@@ -316,10 +394,10 @@ def perform_backup_task():
         settings.last_run = datetime.now()
         settings.last_status = "success"
         db.commit()
-        logging.info("✅ Backup do Google Drive zakończony sukcesem.")
+        logging.info(get_log("backup_success"))
 
     except Exception as e:
-        logging.error(f"Backup critical error: {e}")
+        logging.error(get_log("backup_crit_err", e))
         settings.last_status = f"error: {str(e)}"
         db.commit()
     finally:
@@ -333,19 +411,17 @@ def setup_backup_schedule(settings):
         app_state["backup_job"] = None
 
     if settings.is_enabled and settings.schedule_days and settings.schedule_time:
-        # Schedule oczekuje integera dla 'every'
         days = int(settings.schedule_days)
         if days < 1: days = 1
         
-        # Konfiguracja harmonogramu
         app_state["backup_job"] = schedule.every(days).days.at(settings.schedule_time).do(
             lambda: threading.Thread(target=perform_backup_task, daemon=True).start()
         )
-        logging.info(f"🗓️ Zaplanowano backup co {days} dni o {settings.schedule_time}")
+        logging.info(get_log("backup_scheduled", days, settings.schedule_time))
 
 # --- Pozostałe funkcje (Watchdog, Speedtest) ---
 def run_ping_watchdog():
-    logging.info("🐶 Uruchamianie Ping Watchdog...")
+    logging.info(get_log("watchdog_start"))
     while True:
         db = app_state["SessionLocal"]()
         try:
@@ -388,7 +464,7 @@ def run_ping_watchdog():
             }
 
         except Exception as e:
-            logging.error(f"Watchdog error: {e}")
+            logging.error(get_log("watchdog_err", e))
         finally:
             db.close()
         
@@ -400,7 +476,7 @@ def get_closest_servers():
             subprocess.run(['speedtest', '--accept-license', '--accept-gdpr', '--servers', '--format=json'], check=True, stdout=subprocess.DEVNULL)
             res = subprocess.run(['speedtest', '--accept-license', '--accept-gdpr', '--servers', '--format=json'], capture_output=True, text=True)
             with open(SERVERS_FILE, 'w', encoding='utf-8') as f: f.write(res.stdout)
-        except Exception as e: logging.error(f"Błąd serwerów: {e}")
+        except Exception as e: logging.error(get_log("servers_err", e))
 
 def run_speed_test_and_save(server_id=None):
     if not test_lock.acquire(blocking=False): return None
@@ -414,22 +490,22 @@ def run_speed_test_and_save(server_id=None):
             proc = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
         except subprocess.CalledProcessError as e:
             if server_id:
-                logging.warning(f"⚠️ Błąd testu na serwerze ID {server_id}. Próba automatycznego wyboru serwera...")
+                logging.warning(get_log("test_err_fallback", server_id))
                 fallback_cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
                 try:
                     proc = subprocess.run(fallback_cmd, capture_output=True, text=True, check=True, timeout=600)
                 except subprocess.CalledProcessError as e2:
-                    logging.error(f"❌ Błąd Speedtestu (Auto Fallback): {e2.stderr}")
+                    logging.error(get_log("test_err_auto", e2.stderr))
                     return None
             else:
-                logging.error(f"❌ Błąd Speedtestu: {e.stderr}")
+                logging.error(get_log("test_err", e.stderr))
                 return None
 
         if not proc: return None
 
         data = json.loads(proc.stdout)
         if data.get('type') != 'result': 
-            logging.error(f"❌ Nieprawidłowy format wyniku: {proc.stdout}")
+            logging.error(get_log("result_format_err", proc.stdout))
             return None
         
         res = SpeedtestResult(
@@ -448,10 +524,10 @@ def run_speed_test_and_save(server_id=None):
         )
         db_session.add(res)
         db_session.commit()
-        logging.info(f"✅ Wynik Speedtestu: ↓ {res.download} Mbps")
+        logging.info(get_log("test_result", res.download))
         return res
     except Exception as e:
-        logging.error(f"❌ Krytyczny błąd Speedtestu: {e}")
+        logging.error(get_log("test_crit_err", e))
         return None
     finally:
         db_session.close()
@@ -482,7 +558,7 @@ async def lifespan(app: FastAPI):
     
     db = app_state["SessionLocal"]()
     s = load_settings_from_db(db)
-    bs = load_backup_settings(db) # Ładujemy ustawienia backupu
+    bs = load_backup_settings(db) 
     
     hours = s.schedule_hours
     run_on_startup = s.startup_test_enabled
@@ -491,10 +567,9 @@ async def lifespan(app: FastAPI):
         app_state["schedule_job"] = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
     
     if run_on_startup:
-        logging.info("🕒 Zaplanowano test startowy za 1 minutę.")
+        logging.info(get_log("startup_test_scheduled"))
         schedule.every(1).minutes.do(run_speed_test_and_save_threaded, job_tag='startup-test').tag('startup-test')
     
-    # Inicjalizacja harmonogramu backupu
     setup_backup_schedule(bs)
     db.close()
     
@@ -511,15 +586,10 @@ async def verify_session(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
     return True
 
-# --- Helpers do autoryzacji Google ---
 def get_redirect_uri(request: Request):
-    # ZMIANA: Obsługa wymuszenia HTTPS dla adresów publicznych
     base_url = str(request.base_url).rstrip('/')
-    
-    # Jeżeli adres to domena publiczna (nie localhost i nie IP 127.x.x.x) i jest http, zamień na https
     if "localhost" not in base_url and "127.0.0.1" not in base_url and base_url.startswith("http://"):
         base_url = base_url.replace("http://", "https://")
-        
     return f"{base_url}/api/backup/google/callback"
 
 # --- Endpoints ---
@@ -590,7 +660,7 @@ async def set_set(s: SettingsModel, db=Depends(get_db)):
     if s.startup_test_enabled is not None: rec.startup_test_enabled = s.startup_test_enabled
     
     db.commit()
-    logging.info(f"⚙️ Ustawienia zaktualizowane.")
+    logging.info(get_log("settings_updated"))
     return {"message": "Settings saved"}
 
 @app.get("/api/watchdog/status", dependencies=[Depends(verify_session)])
@@ -679,7 +749,7 @@ async def save_backup_settings(s: BackupSettingsModel, db=Depends(get_db)):
     rec.is_enabled = s.is_enabled
     
     db.commit()
-    setup_backup_schedule(rec) # Aktualizacja harmonogramu
+    setup_backup_schedule(rec) 
     return {"message": "Settings saved"}
 
 @app.get("/api/backup/google/authorize", dependencies=[Depends(verify_session)])
@@ -688,13 +758,11 @@ async def google_authorize(request: Request, db=Depends(get_db)):
     if not s.client_id or not s.client_secret:
         raise HTTPException(400, "Brak Client ID lub Client Secret")
     
-    # Użycie helpera do generowania URI z wymuszeniem HTTPS
     redirect_uri = get_redirect_uri(request)
     
-    logging.info(f"🔐 Generowanie URL autoryzacji z Redirect URI: {redirect_uri}")
-    logging.info("⚠️ UPEWNIJ SIĘ, ŻE TEN ADRES JEST DODANY W GOOGLE CLOUD CONSOLE!")
+    logging.info(get_log("auth_url_gen", redirect_uri))
+    logging.info(get_log("auth_url_warn"))
     
-    # Konfiguracja flow
     client_config = {
         "web": {
             "client_id": s.client_id,
@@ -713,29 +781,25 @@ async def google_authorize(request: Request, db=Depends(get_db)):
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
-        prompt='consent' # Wymusza consent screen by dostać refresh_token
+        prompt='consent'
     )
     
     return {"auth_url": authorization_url}
 
-# ZMIANA: Obsługa parametrów opcjonalnych code i error, aby uniknąć 422
 @app.get("/api/backup/google/callback")
 async def google_callback(request: Request, db=Depends(get_db), code: Optional[str] = None, error: Optional[str] = None):
-    # Logowanie parametrów dla debugowania
-    logging.info(f"Callback params - Code: {'Yes' if code else 'No'}, Error: {error}")
-    # Logowanie pełnych parametrów zapytania, aby zobaczyć co dokładnie zwraca Google
-    logging.info(f"Callback Full Params: {request.query_params}")
+    logging.info(get_log("callback_params", 'Yes' if code else 'No', error))
+    logging.info(get_log("callback_full", request.query_params))
 
     if error:
-        logging.error(f"Google zwróciło błąd: {error}")
+        logging.error(get_log("google_err", error))
         return RedirectResponse(url=f"/backup.html?auth=error&msg={error}")
     
     if not code:
-        logging.warning("Brak kodu autoryzacji w callbacku")
+        logging.warning(get_log("no_code"))
         return RedirectResponse(url="/backup.html?auth=error&msg=no_code")
 
     s = load_backup_settings(db)
-    # Użycie helpera do generowania URI z wymuszeniem HTTPS
     redirect_uri = get_redirect_uri(request)
     
     client_config = {
@@ -753,14 +817,13 @@ async def google_callback(request: Request, db=Depends(get_db), code: Optional[s
         creds = flow.credentials
         
         s.token_json = creds.to_json()
-        s.is_enabled = True # Automatycznie włączamy backup po autoryzacji
+        s.is_enabled = True 
         db.commit()
         setup_backup_schedule(s)
         
-        # Przekierowanie z powrotem do backup.html z komunikatem
         return RedirectResponse(url="/backup.html?auth=success")
     except Exception as e:
-        logging.error(f"Auth Callback Error: {e}")
+        logging.error(get_log("auth_callback_err", e))
         return RedirectResponse(url="/backup.html?auth=error")
 
 @app.post("/api/backup/google/revoke", dependencies=[Depends(verify_session)])
@@ -772,10 +835,8 @@ async def google_revoke(db=Depends(get_db)):
     setup_backup_schedule(s)
     return {"message": "Revoked"}
 
-# ZMIANA: Endpoint do ręcznego uruchamiania backupu w tle
 @app.post("/api/backup/google/trigger", dependencies=[Depends(verify_session)])
 async def trigger_google_backup(background_tasks: BackgroundTasks, db=Depends(get_db)):
-    # Zlecamy zadanie w tle, aby nie blokować requestu
     background_tasks.add_task(perform_backup_task)
     return {"message": "Backup started"}
 

@@ -1017,7 +1017,7 @@ async function handleManualTest() {
                     const nextRunEl = document.getElementById('nextRunTime');
                     if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
                     
-                    // Restartuj licznik po nowym teście
+                    // Restartuj licznik po nowym teście 
                     startNextRunCountdown();
                 }
                 

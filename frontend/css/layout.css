@@ -193,7 +193,7 @@ html, body {
 
 .backup-grid .backup-card {
     flex: 1;
-    /* Zapewnia równą wysokość  */
+    /* Zapewnia równą wysokość */
     display: flex;
     flex-direction: row; 
     /* Nadpisujemy ewentualne marginy z mobile */

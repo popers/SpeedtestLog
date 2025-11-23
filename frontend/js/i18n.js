@@ -369,4 +369,4 @@ export const translations = {
         'statusAuthError': 'Auth Error',
         'statusUnknown': 'Unknown'
     }
-}; 
+};

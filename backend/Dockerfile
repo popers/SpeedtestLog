@@ -35,7 +35,7 @@ COPY frontend/logo.png .
 COPY frontend/speedtest.png .
 COPY frontend/favicon.ico .
 
-# Make port 8000 available 
+# Make port 8000 available
 EXPOSE 8000
 
 # Run main.py

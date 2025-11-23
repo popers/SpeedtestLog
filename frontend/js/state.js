@@ -21,7 +21,7 @@ export const state = {
         upload: 0
     },
 
-    // Pagination 
+    // Pagination
     currentPage: 1,
     itemsPerPage: 10, 
     

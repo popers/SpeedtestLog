@@ -68,7 +68,7 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
         },
         options: {
             responsive: true, 
-            // ZMIANA: Ważne - maintainAspectRatio: false pozwala na dopasowanie do kontenera (który ma max-height)
+            // ZMIANA: Ważne - maintainAspectRatio: false pozwala na dopasowanie do kontenera (który ma max-height) 
             maintainAspectRatio: false, 
             animation: {}, 
             interaction: { mode: 'index', intersect: false },

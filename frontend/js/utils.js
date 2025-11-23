@@ -72,7 +72,7 @@ export function setNightMode(isNight) {
         const iconSpan = themeToggle.querySelector('.material-symbols-rounded');
         if (iconSpan) {
             // Jeśli jest ciemno (isNight=true), pokaż "light_mode" (słońce) jako opcję zmiany
-            // Jeśli jest jasno (isNight=false), pokaż "dark_mode" (księżyc)
+            // Jeśli jest jasno (isNight=false), pokaż "dark_mode" (księżyc) 
             iconSpan.textContent = isNight ? 'light_mode' : 'dark_mode';
         }
     }

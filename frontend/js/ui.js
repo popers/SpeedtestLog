@@ -367,7 +367,7 @@ export function updateTable(results) {
             // if(th.dataset.sort === 'download' || th.dataset.sort === 'upload') text += ` (${unitLabel})`;
             // if(th.dataset.sort === 'ping' || th.dataset.sort === 'jitter') text += ` (ms)`;
             
-            // ZMIANA: Dodanie wskaźnika sortowania
+            // ZMIANA: Dodanie wskaźnika sortowania 
             if (th.dataset.sort === state.currentSort.column) {
                 text += state.currentSort.direction === 'asc' ? ' ▲' : ' ▼';
             }
