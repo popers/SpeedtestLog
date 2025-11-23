@@ -40,12 +40,12 @@ export function renderCharts(results) {
 function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, serverData, label, unit, color, bgColor, gridColor, labelColor) {
     if (chartInstance) chartInstance.destroy(); 
     
-    // FIX: Resetowanie canvasa w sposób bezpieczny dla flexboxa 
     ctx.canvas.removeAttribute('style');
     ctx.canvas.removeAttribute('width');
     ctx.canvas.removeAttribute('height');
     
-    // Styl nadawany przez CSS components.css (width: 100%, height: 100%)
+    // ZMIANA: Zwiększamy próg wykrywania "małej ilości danych" do 15 punktów.
+    const isSmallData = data.length < 15;
 
     const newChart = new Chart(ctx, {
         type: 'line', 
@@ -57,8 +57,14 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                 borderColor: color,
                 borderWidth: 2,
                 backgroundColor: bgColor,
-                fill: true,
-                cubicInterpolationMode: 'monotone', 
+                // ZMIANA: Użycie 'start' zamiast 'true' - bardziej precyzyjne dla wykresów od osi X
+                fill: 'start',
+                // ZMIANA: Logika hybrydowa dla interpolacji
+                // 1. Jeśli mało danych: użyj 'default' (klasyczny Bezier), ale ze ZMNIEJSZONYM napięciem (0.15).
+                //    Daje to lekko zaokrąglone linie, które nie tworzą pętli (glitchy).
+                // 2. Jeśli dużo danych: użyj 'monotone' z pełnym napięciem (0.4) dla ładnych trendów.
+                cubicInterpolationMode: isSmallData ? 'default' : 'monotone',
+                tension: isSmallData ? 0.15 : 0.4, 
                 pointRadius: 3, 
                 pointHoverRadius: 6,
                 pointBackgroundColor: color,
@@ -68,9 +74,14 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
         },
         options: {
             responsive: true, 
-            // ZMIANA: Ważne - maintainAspectRatio: false pozwala na dopasowanie do kontenera (który ma max-height) 
             maintainAspectRatio: false, 
             animation: {}, 
+            // ZMIANA: Dodatkowe zabezpieczenie - ucinanie punktów kontrolnych
+            elements: {
+                line: {
+                    capBezierPoints: true
+                }
+            },
             interaction: { mode: 'index', intersect: false },
             scales: {
                 y: { type: 'linear', position: 'left', title: { display: true, text: unit, color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },
