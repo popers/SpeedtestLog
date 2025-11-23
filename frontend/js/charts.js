@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { translations } from './i18n.js';
-import { parseISOLocally, convertValue, getUnitLabel } from './utils.js';
+import { parseISOLocally, convertValue, getUnitLabel, hexToRgba } from './utils.js';
 
 let downloadChart, uploadChart, pingChart, jitterChart;
 
@@ -11,6 +11,7 @@ export function renderCharts(results) {
     const jitterCtx = document.getElementById('jitterChart').getContext('2d');
 
     const chartResults = results.slice().reverse();
+    
     const labels = chartResults.map(res => parseISOLocally(res.timestamp).toLocaleString(state.currentLang)); 
     const downloadData = chartResults.map(res => convertValue(res.download, state.currentUnit));
     const uploadData = chartResults.map(res => convertValue(res.upload, state.currentUnit));
@@ -21,31 +22,48 @@ export function renderCharts(results) {
     
     const isDark = !document.body.classList.contains('light-mode');
     
-    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    const labelColor = isDark ? '#999' : '#666';
+    // Subtelniejsza siatka
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+    const labelColor = isDark ? '#888' : '#777';
+    
     const style = getComputedStyle(document.body);
     const lang = translations[state.currentLang];
     
+    // Helper do pobierania koloru (fallback do HEX jeśli CSS var nie zadziała)
+    const getColor = (varName, fallback) => style.getPropertyValue(varName).trim() || fallback;
+
+    // Kolory podstawowe
+    const cDl = getColor('--color-download', '#4fc3f7');
+    const cUl = getColor('--color-upload', '#e57373');
+    const cPi = getColor('--color-ping', '#ffd54f');
+    const cJi = getColor('--color-jitter', '#81c784');
+
+    // Aktualizacja nagłówków
     document.querySelector('#downloadChart').closest('.chart-block').querySelector('h3').textContent = `${lang.downloadChartTitle.split('(')[0].trim()} (${unitLabel})`;
     document.querySelector('#uploadChart').closest('.chart-block').querySelector('h3').textContent = `${lang.uploadChartTitle.split('(')[0].trim()} (${unitLabel})`;
     document.querySelector('#pingChart').closest('.chart-block').querySelector('h3').textContent = `${lang.pingChartTitle.split('(')[0].trim()} (${lang.chartUnitMs})`;
     document.querySelector('#jitterChart').closest('.chart-block').querySelector('h3').textContent = `${lang.jitterChartTitle.split('(')[0].trim()} (${lang.chartUnitMs})`;
 
-    createAreaChart(downloadCtx, downloadChart, (chart) => { downloadChart = chart; }, labels, downloadData, chartResults, lang.chartLabelDownload, unitLabel, style.getPropertyValue('--color-download'), style.getPropertyValue('--color-download-bg'), gridColor, labelColor);
-    createAreaChart(uploadCtx, uploadChart, (chart) => { uploadChart = chart; }, labels, uploadData, chartResults, lang.chartLabelUpload, unitLabel, style.getPropertyValue('--color-upload'), style.getPropertyValue('--color-upload-bg'), gridColor, labelColor);
-    createAreaChart(pingCtx, pingChart, (chart) => { pingChart = chart; }, labels, pingData, chartResults, lang.chartLabelPing, lang.chartUnitMs, style.getPropertyValue('--color-ping'), style.getPropertyValue('--color-ping-bg'), gridColor, labelColor);
-    createAreaChart(jitterCtx, jitterChart, (chart) => { jitterChart = chart; }, labels, jitterData, chartResults, lang.chartLabelJitter, lang.chartUnitMs, style.getPropertyValue('--color-jitter'), style.getPropertyValue('--color-jitter-bg'), gridColor, labelColor);
+    // Tworzenie wykresów z użyciem nowej funkcji wspierającej gradienty
+    createAreaChart(downloadCtx, downloadChart, (chart) => { downloadChart = chart; }, labels, downloadData, chartResults, lang.chartLabelDownload, unitLabel, cDl, gridColor, labelColor);
+    createAreaChart(uploadCtx, uploadChart, (chart) => { uploadChart = chart; }, labels, uploadData, chartResults, lang.chartLabelUpload, unitLabel, cUl, gridColor, labelColor);
+    createAreaChart(pingCtx, pingChart, (chart) => { pingChart = chart; }, labels, pingData, chartResults, lang.chartLabelPing, lang.chartUnitMs, cPi, gridColor, labelColor);
+    createAreaChart(jitterCtx, jitterChart, (chart) => { jitterChart = chart; }, labels, jitterData, chartResults, lang.chartLabelJitter, lang.chartUnitMs, cJi, gridColor, labelColor);
 }
 
-function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, serverData, label, unit, color, bgColor, gridColor, labelColor) {
+function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, serverData, label, unit, color, gridColor, labelColor) {
     if (chartInstance) chartInstance.destroy(); 
     
     ctx.canvas.removeAttribute('style');
     ctx.canvas.removeAttribute('width');
     ctx.canvas.removeAttribute('height');
     
-    // ZMIANA: Zwiększamy próg wykrywania "małej ilości danych" do 15 punktów.
-    const isSmallData = data.length < 15;
+    // ZMIANA: Tworzenie gradientu dla tła wykresu (efekt speedtest-tracker)
+    // Gradient idzie od góry (większe krycie) do dołu (prawie przezroczysty)
+    const gradient = ctx.createLinearGradient(0, 0, 0, 350); // 350px to orientacyjna wysokość
+    gradient.addColorStop(0, hexToRgba(color, 0.4));  // Góra: 40% krycia
+    gradient.addColorStop(0.5, hexToRgba(color, 0.1)); // Środek: 10% krycia
+    gradient.addColorStop(1, hexToRgba(color, 0.0));   // Dół: 0% krycia
 
     const newChart = new Chart(ctx, {
         type: 'line', 
@@ -56,41 +74,91 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                 data: data,
                 borderColor: color,
                 borderWidth: 2,
-                backgroundColor: bgColor,
-                // ZMIANA: Użycie 'start' zamiast 'true' - bardziej precyzyjne dla wykresów od osi X
+                backgroundColor: gradient, // Użycie gradientu zamiast jednolitego koloru
                 fill: 'start',
-                // ZMIANA: Logika hybrydowa dla interpolacji
-                // 1. Jeśli mało danych: użyj 'default' (klasyczny Bezier), ale ze ZMNIEJSZONYM napięciem (0.15).
-                //    Daje to lekko zaokrąglone linie, które nie tworzą pętli (glitchy).
-                // 2. Jeśli dużo danych: użyj 'monotone' z pełnym napięciem (0.4) dla ładnych trendów.
-                cubicInterpolationMode: isSmallData ? 'default' : 'monotone',
-                tension: isSmallData ? 0.15 : 0.4, 
-                pointRadius: 3, 
+                
+                // ZMIANA: Wrócono do domyślnej interpolacji, ale ze zmniejszonym tension (0.35).
+                // 0.4 potrafi robić pętle przy dużych spadkach. 0.35 jest bezpieczniejsze a wciąż gładkie.
+                tension: 0.35, 
+                cubicInterpolationMode: 'default',
+                
+                borderJoinStyle: 'round',
+                borderCapStyle: 'round',
+                
+                pointRadius: 0, 
                 pointHoverRadius: 6,
                 pointBackgroundColor: color,
-                spanGaps: true,
-                normalized: true
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                
+                spanGaps: true
             }]
         },
         options: {
             responsive: true, 
             maintainAspectRatio: false, 
-            animation: {}, 
-            // ZMIANA: Dodatkowe zabezpieczenie - ucinanie punktów kontrolnych
-            elements: {
-                line: {
-                    capBezierPoints: true
-                }
+            animation: { duration: 0 }, 
+            layout: {
+                padding: { top: 10, left: 0, right: 0, bottom: 0 } // Lekki odstęp od góry, żeby nie ucinało tooltipów/punktów
             },
-            interaction: { mode: 'index', intersect: false },
+            interaction: { 
+                // ZMIANA: 'nearest' z osią 'x' jest bardziej intuicyjne dla wykresów czasowych
+                mode: 'nearest', 
+                axis: 'x',
+                intersect: false,
+            },
             scales: {
-                y: { type: 'linear', position: 'left', title: { display: true, text: unit, color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },
-                x: { ticks: { color: labelColor }, grid: { color: gridColor } }
+                y: { 
+                    type: 'linear', 
+                    position: 'left', 
+                    beginAtZero: true,
+                    title: { display: false }, 
+                    ticks: { 
+                        color: labelColor,
+                        font: { size: 11 },
+                        maxTicksLimit: 6,
+                        callback: function(value) {
+                            // Ładne formatowanie dużych liczb
+                            if (value >= 1000) return (value / 1000).toFixed(1) + 'k';
+                            return value;
+                        }
+                    }, 
+                    grid: { 
+                        color: gridColor,
+                        borderDash: [3, 3], 
+                        drawBorder: false
+                    } 
+                },
+                x: { 
+                    ticks: { 
+                        color: labelColor,
+                        maxRotation: 0,
+                        maxTicksLimit: 8,
+                        autoSkip: true,
+                        font: { size: 11 }
+                    }, 
+                    grid: { 
+                        display: false, 
+                        drawBorder: false
+                    } 
+                }
             },
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    mode: 'index', intersect: false,
+                    enabled: true,
+                    mode: 'index', 
+                    intersect: false,
+                    backgroundColor: 'rgba(28, 28, 30, 0.95)',
+                    titleColor: '#ffffff', 
+                    bodyColor: '#e0e0e0', 
+                    footerColor: '#a0a0a0',
+                    borderColor: 'rgba(255, 255, 255, 0.1)', 
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    boxPadding: 4,
                     callbacks: {
                         title: (tooltipItems) => tooltipItems[0].label,
                         label: (context) => {
@@ -106,13 +174,11 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                             const result = serverData[dataIndex];
                             if (result && result.server_name) {
                                 const serverLabel = translations[state.currentLang].tooltipServer || 'Serwer';
-                                return `\n${serverLabel}: (${result.server_id}) ${result.server_name} (${result.server_location})`;
+                                return `${serverLabel}: (${result.server_id}) ${result.server_name}\n${result.server_location}`;
                             }
                             return null;
                         },
-                    },
-                    backgroundColor: 'rgba(30, 30, 30, 0.9)', titleColor: '#fff', bodyColor: '#fff', footerColor: '#fff',
-                    footerSpacing: 10, padding: 10, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, displayColors: true
+                    }
                 }
             }
         }

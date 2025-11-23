@@ -92,7 +92,10 @@ async function applySavedColorsGlobal() {
 }
 
 function applyColorsToCSS(settings) {
-    const root = document.documentElement;
+    // ZMIANA: Używamy document.body zamiast document.documentElement.
+    // Dzięki temu style inline na body mają wyższy priorytet (specyficzność) niż klasy CSS (np. body.light-mode),
+    // co pozwala na skuteczne nadpisanie kolorów w trybie jasnym.
+    const root = document.body;
     
     if (settings.chart_color_download) {
         root.style.setProperty('--color-download', settings.chart_color_download);
