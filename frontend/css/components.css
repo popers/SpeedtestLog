@@ -62,18 +62,22 @@ button:active {
 }
 
 /* Loader Button - Kropki */
-button#triggerTestBtn { 
+button#triggerTestBtn, button#gdRunBtn { 
     display: flex; align-items: center; justify-content: center; gap: 0.5rem; 
     background-color: var(--primary-color); 
     min-width: 180px; position: relative; min-height: 48px; 
     border-radius: 24px;
 }
 button#triggerTestBtn img { height: 24px; width: 24px; filter: brightness(0) invert(1); transition: opacity 0.2s; }
-button#triggerTestBtn .btn-text { transition: opacity 0.2s; }
+button#triggerTestBtn .btn-text, button#gdRunBtn .btn-text { transition: opacity 0.2s; }
 
 button#triggerTestBtn.is-loading .btn-text,
-button#triggerTestBtn.is-loading img { opacity: 0; }
-button#triggerTestBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
+button#triggerTestBtn.is-loading img,
+button#gdRunBtn.is-loading .btn-text,
+button#gdRunBtn.is-loading .material-symbols-rounded { opacity: 0; }
+
+button#triggerTestBtn.is-loading .btn-dot-loader,
+button#gdRunBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
 
 .btn-dot-loader { 
     display: flex; gap: 6px; 
@@ -414,7 +418,7 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
     .controls-dashboard { flex-direction: column; align-items: stretch; }
     .control-group { width: 100%; }
     .info-group { margin-left: 0; }
-    button#triggerTestBtn { width: 100%; }
+    button#triggerTestBtn, button#gdRunBtn { width: 100%; }
     .pagination-container { justify-content: center; }
     .stat-card { padding: 1rem; }
     .stat-card h3 { font-size: 0.9rem; }

@@ -14,21 +14,29 @@ import secrets
 import shutil
 import re
 from logging.handlers import RotatingFileHandler
-from fastapi import FastAPI, HTTPException, Request, Depends, Response, status, UploadFile, File
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+# ZMIANA: Import BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, Depends, Response, status, UploadFile, File, BackgroundTasks
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
 # --- Importy SQLAlchemy i MariaDB ---
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, text
-from sqlalchemy.dialects.mysql import DATETIME
+from sqlalchemy.dialects.mysql import DATETIME, MEDIUMTEXT
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError
 import pymysql
+
+# --- Importy Google Drive ---
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+from google.auth.transport.requests import Request as GoogleRequest
 
 # --- Konfiguracja Logowania ---
 LOG_DIR = '/app/data/logs'
@@ -47,6 +55,7 @@ logging.basicConfig(level=logging.INFO, handlers=[stream_handler, file_handler],
 logging.getLogger("uvicorn").addHandler(stream_handler)
 logging.getLogger("schedule").setLevel(logging.WARNING)
 logging.getLogger("multipart").setLevel(logging.WARNING)
+logging.getLogger("googleapiclient").setLevel(logging.WARNING)
 
 # --- Konfiguracja ENV i DB ---
 DB_USER = os.getenv("DB_USERNAME")
@@ -61,6 +70,9 @@ APP_PASSWORD = os.getenv("APP_PASSWORD", "admin")
 SESSION_COOKIE_NAME = "speedtest_session"
 SESSION_SECRET = os.getenv("SESSION_SECRET") or secrets.token_hex(16)
 
+# ZMIANA: Pozwala na działanie OAuth2 przez HTTP (wymagane dla localhost/docker bez https)
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 Base = declarative_base()
 
@@ -73,6 +85,15 @@ class SettingsModel(BaseModel):
     declared_download: int | None = 0
     declared_upload: int | None = 0
     startup_test_enabled: bool | None = True
+
+class BackupSettingsModel(BaseModel):
+    client_id: str | None = None
+    client_secret: str | None = None
+    folder_name: str | None = "SpeedtestLog_Backup"
+    schedule_days: int | None = 1
+    schedule_time: str | None = "03:00"
+    retention_days: int | None = 30
+    is_enabled: bool | None = False
 
 class DeleteModel(BaseModel):
     ids: list[str]
@@ -122,12 +143,28 @@ class AppSettings(Base):
     declared_upload = Column(Integer, default=0)
     startup_test_enabled = Column(Boolean, default=True)
 
+class DriveBackupSettings(Base):
+    __tablename__ = "drive_backup_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(String(255), nullable=True)
+    client_secret = Column(String(255), nullable=True)
+    # ZMIANA: Użycie poprawnego typu MEDIUMTEXT z dialektu MySQL (naprawa błędu TextClause)
+    token_json = Column(MEDIUMTEXT, nullable=True) # Przechowuje tokeny OAuth
+    folder_name = Column(String(255), default="SpeedtestLog_Backup")
+    schedule_days = Column(Integer, default=1) # Co ile dni
+    schedule_time = Column(String(10), default="03:00") # O której godzinie
+    retention_days = Column(Integer, default=30)
+    is_enabled = Column(Boolean, default=False)
+    last_run = Column(DATETIME, nullable=True)
+    last_status = Column(String(50), nullable=True) # 'success', 'error'
+
 # --- Globalne Zmienne ---
 SERVERS_FILE = 'data/servers.json'
 os.makedirs('data', exist_ok=True)
 test_lock = threading.Lock()
 app_state = {
-    "schedule_job": None, 
+    "schedule_job": None,
+    "backup_job": None,
     "engine": None, 
     "SessionLocal": None,
     "watchdog_config": {"target": "8.8.8.8", "interval": 30},
@@ -174,6 +211,139 @@ def load_settings_from_db(db_session):
         db_session.commit()
     return settings
 
+def load_backup_settings(db_session):
+    settings = db_session.query(DriveBackupSettings).filter(DriveBackupSettings.id == 1).first()
+    if not settings:
+        settings = DriveBackupSettings(id=1)
+        db_session.add(settings)
+        db_session.commit()
+    return settings
+
+# --- Google Drive Functions ---
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+
+def get_drive_service(settings):
+    if not settings.token_json or not settings.client_id or not settings.client_secret:
+        return None
+    
+    try:
+        token_data = json.loads(settings.token_json)
+        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+        
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(GoogleRequest())
+            # Aktualizacja tokena w bazie jeśli został odświeżony
+            db = app_state["SessionLocal"]()
+            s = load_backup_settings(db)
+            s.token_json = creds.to_json()
+            db.commit()
+            db.close()
+            
+        return build('drive', 'v3', credentials=creds)
+    except Exception as e:
+        logging.error(f"Google Auth Error: {e}")
+        return None
+
+def get_or_create_folder(service, folder_name):
+    query = f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}' and trashed=false"
+    results = service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+    items = results.get('files', [])
+    
+    if not items:
+        file_metadata = {
+            'name': folder_name,
+            'mimeType': 'application/vnd.google-apps.folder'
+        }
+        file = service.files().create(body=file_metadata, fields='id').execute()
+        return file.get('id')
+    else:
+        return items[0].get('id')
+
+def perform_backup_task():
+    logging.info("📂 Rozpoczynanie zaplanowanego backupu do Google Drive...")
+    db = app_state["SessionLocal"]()
+    try:
+        settings = load_backup_settings(db)
+        if not settings.is_enabled or not settings.token_json:
+            logging.warning("Backup pominięty: Wyłączony lub brak tokena.")
+            return
+
+        # 1. Generowanie zrzutu bazy
+        env = os.environ.copy(); env["MYSQL_PWD"] = DB_PASSWORD
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"speedtest_backup_{timestamp}.sql"
+        temp_path = f"/tmp/{filename}"
+        
+        cmd = ["mysqldump", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, "--no-tablespaces", DB_NAME]
+        with open(temp_path, "w") as f:
+            proc = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, env=env)
+        
+        if proc.returncode != 0:
+            logging.error("Błąd mysqldump")
+            settings.last_status = "error"
+            db.commit()
+            return
+
+        # 2. Upload do Drive
+        service = get_drive_service(settings)
+        if not service:
+            logging.error("Brak dostępu do API Drive")
+            settings.last_status = "auth_error"
+            db.commit()
+            return
+
+        folder_id = get_or_create_folder(service, settings.folder_name or "SpeedtestLog_Backup")
+        
+        file_metadata = {'name': filename, 'parents': [folder_id]}
+        media = MediaIoBaseUpload(open(temp_path, 'rb'), mimetype='application/sql')
+        
+        service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        
+        # 3. Retencja (usuwanie starych)
+        if settings.retention_days and settings.retention_days > 0:
+            cutoff_date = (datetime.now() - timedelta(days=settings.retention_days)).isoformat()
+            query = f"'{folder_id}' in parents and createdTime < '{cutoff_date}' and trashed=false"
+            results = service.files().list(q=query, fields="files(id, name)").execute()
+            for file in results.get('files', []):
+                try:
+                    service.files().delete(fileId=file.get('id')).execute()
+                    logging.info(f"Usunięto stary backup: {file.get('name')}")
+                except: pass
+
+        # Sprzątanie lokalne
+        os.remove(temp_path)
+        
+        settings.last_run = datetime.now()
+        settings.last_status = "success"
+        db.commit()
+        logging.info("✅ Backup do Google Drive zakończony sukcesem.")
+
+    except Exception as e:
+        logging.error(f"Backup critical error: {e}")
+        settings.last_status = f"error: {str(e)}"
+        db.commit()
+    finally:
+        db.close()
+
+def setup_backup_schedule(settings):
+    if app_state["backup_job"]:
+        try:
+            schedule.cancel_job(app_state["backup_job"])
+        except: pass
+        app_state["backup_job"] = None
+
+    if settings.is_enabled and settings.schedule_days and settings.schedule_time:
+        # Schedule oczekuje integera dla 'every'
+        days = int(settings.schedule_days)
+        if days < 1: days = 1
+        
+        # Konfiguracja harmonogramu
+        app_state["backup_job"] = schedule.every(days).days.at(settings.schedule_time).do(
+            lambda: threading.Thread(target=perform_backup_task, daemon=True).start()
+        )
+        logging.info(f"🗓️ Zaplanowano backup co {days} dni o {settings.schedule_time}")
+
+# --- Pozostałe funkcje (Watchdog, Speedtest) ---
 def run_ping_watchdog():
     logging.info("🐶 Uruchamianie Ping Watchdog...")
     while True:
@@ -239,12 +409,10 @@ def run_speed_test_and_save(server_id=None):
         cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
         if server_id: cmd.extend(['--server-id', str(server_id)])
         
-        # ZMIANA: Obsługa błędów subprocess i mechanizm fallback (ponawiania bez ID)
         proc = None
         try:
             proc = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
         except subprocess.CalledProcessError as e:
-            # Jeśli błąd wystąpił przy konkretnym serwerze, spróbuj automatycznie
             if server_id:
                 logging.warning(f"⚠️ Błąd testu na serwerze ID {server_id}. Próba automatycznego wyboru serwera...")
                 fallback_cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
@@ -314,9 +482,10 @@ async def lifespan(app: FastAPI):
     
     db = app_state["SessionLocal"]()
     s = load_settings_from_db(db)
+    bs = load_backup_settings(db) # Ładujemy ustawienia backupu
+    
     hours = s.schedule_hours
     run_on_startup = s.startup_test_enabled
-    db.close()
     
     if hours and hours > 0:
         app_state["schedule_job"] = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
@@ -324,8 +493,10 @@ async def lifespan(app: FastAPI):
     if run_on_startup:
         logging.info("🕒 Zaplanowano test startowy za 1 minutę.")
         schedule.every(1).minutes.do(run_speed_test_and_save_threaded, job_tag='startup-test').tag('startup-test')
-    else:
-        logging.info("🚫 Test startowy jest wyłączony w ustawieniach.")
+    
+    # Inicjalizacja harmonogramu backupu
+    setup_backup_schedule(bs)
+    db.close()
     
     yield
     if app_state["engine"]: app_state["engine"].dispose()
@@ -339,6 +510,17 @@ async def verify_session(request: Request):
     if request.cookies.get(SESSION_COOKIE_NAME) != SESSION_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return True
+
+# --- Helpers do autoryzacji Google ---
+def get_redirect_uri(request: Request):
+    # ZMIANA: Obsługa wymuszenia HTTPS dla adresów publicznych
+    base_url = str(request.base_url).rstrip('/')
+    
+    # Jeżeli adres to domena publiczna (nie localhost i nie IP 127.x.x.x) i jest http, zamień na https
+    if "localhost" not in base_url and "127.0.0.1" not in base_url and base_url.startswith("http://"):
+        base_url = base_url.replace("http://", "https://")
+        
+    return f"{base_url}/api/backup/google/callback"
 
 # --- Endpoints ---
 @app.post("/api/login")
@@ -447,7 +629,6 @@ async def backup_db():
     stdout, stderr = proc.communicate()
     if proc.returncode != 0: raise HTTPException(500)
     
-    # ZMIANA: Generowanie nazwy pliku z datą i godziną
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"backup_{timestamp}.sql"
     
@@ -465,6 +646,138 @@ async def restore_db(file: UploadFile = File(...)):
     os.remove(temp)
     if proc.returncode != 0: raise HTTPException(500)
     return {"message": "Restored"}
+
+# --- Nowe Endpointy Google Drive Backup ---
+
+@app.get("/api/backup/settings", dependencies=[Depends(verify_session)])
+async def get_backup_settings(db=Depends(get_db)):
+    s = load_backup_settings(db)
+    has_token = True if s.token_json else False
+    return {
+        "client_id": s.client_id,
+        "client_secret": s.client_secret if s.client_secret else "",
+        "folder_name": s.folder_name,
+        "schedule_days": s.schedule_days,
+        "schedule_time": s.schedule_time,
+        "retention_days": s.retention_days,
+        "is_enabled": s.is_enabled,
+        "has_token": has_token,
+        "last_run": s.last_run,
+        "last_status": s.last_status
+    }
+
+@app.post("/api/backup/settings", dependencies=[Depends(verify_session)])
+async def save_backup_settings(s: BackupSettingsModel, db=Depends(get_db)):
+    rec = load_backup_settings(db)
+    
+    rec.client_id = s.client_id
+    rec.client_secret = s.client_secret
+    rec.folder_name = s.folder_name
+    rec.schedule_days = s.schedule_days
+    rec.schedule_time = s.schedule_time
+    rec.retention_days = s.retention_days
+    rec.is_enabled = s.is_enabled
+    
+    db.commit()
+    setup_backup_schedule(rec) # Aktualizacja harmonogramu
+    return {"message": "Settings saved"}
+
+@app.get("/api/backup/google/authorize", dependencies=[Depends(verify_session)])
+async def google_authorize(request: Request, db=Depends(get_db)):
+    s = load_backup_settings(db)
+    if not s.client_id or not s.client_secret:
+        raise HTTPException(400, "Brak Client ID lub Client Secret")
+    
+    # Użycie helpera do generowania URI z wymuszeniem HTTPS
+    redirect_uri = get_redirect_uri(request)
+    
+    logging.info(f"🔐 Generowanie URL autoryzacji z Redirect URI: {redirect_uri}")
+    logging.info("⚠️ UPEWNIJ SIĘ, ŻE TEN ADRES JEST DODANY W GOOGLE CLOUD CONSOLE!")
+    
+    # Konfiguracja flow
+    client_config = {
+        "web": {
+            "client_id": s.client_id,
+            "client_secret": s.client_secret,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token"
+        }
+    }
+    
+    flow = Flow.from_client_config(
+        client_config,
+        scopes=SCOPES,
+        redirect_uri=redirect_uri
+    )
+    
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent' # Wymusza consent screen by dostać refresh_token
+    )
+    
+    return {"auth_url": authorization_url}
+
+# ZMIANA: Obsługa parametrów opcjonalnych code i error, aby uniknąć 422
+@app.get("/api/backup/google/callback")
+async def google_callback(request: Request, db=Depends(get_db), code: Optional[str] = None, error: Optional[str] = None):
+    # Logowanie parametrów dla debugowania
+    logging.info(f"Callback params - Code: {'Yes' if code else 'No'}, Error: {error}")
+    # Logowanie pełnych parametrów zapytania, aby zobaczyć co dokładnie zwraca Google
+    logging.info(f"Callback Full Params: {request.query_params}")
+
+    if error:
+        logging.error(f"Google zwróciło błąd: {error}")
+        return RedirectResponse(url=f"/backup.html?auth=error&msg={error}")
+    
+    if not code:
+        logging.warning("Brak kodu autoryzacji w callbacku")
+        return RedirectResponse(url="/backup.html?auth=error&msg=no_code")
+
+    s = load_backup_settings(db)
+    # Użycie helpera do generowania URI z wymuszeniem HTTPS
+    redirect_uri = get_redirect_uri(request)
+    
+    client_config = {
+        "web": {
+            "client_id": s.client_id,
+            "client_secret": s.client_secret,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token"
+        }
+    }
+    
+    flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
+    try:
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+        
+        s.token_json = creds.to_json()
+        s.is_enabled = True # Automatycznie włączamy backup po autoryzacji
+        db.commit()
+        setup_backup_schedule(s)
+        
+        # Przekierowanie z powrotem do backup.html z komunikatem
+        return RedirectResponse(url="/backup.html?auth=success")
+    except Exception as e:
+        logging.error(f"Auth Callback Error: {e}")
+        return RedirectResponse(url="/backup.html?auth=error")
+
+@app.post("/api/backup/google/revoke", dependencies=[Depends(verify_session)])
+async def google_revoke(db=Depends(get_db)):
+    s = load_backup_settings(db)
+    s.token_json = None
+    s.is_enabled = False
+    db.commit()
+    setup_backup_schedule(s)
+    return {"message": "Revoked"}
+
+# ZMIANA: Endpoint do ręcznego uruchamiania backupu w tle
+@app.post("/api/backup/google/trigger", dependencies=[Depends(verify_session)])
+async def trigger_google_backup(background_tasks: BackgroundTasks, db=Depends(get_db)):
+    # Zlecamy zadanie w tle, aby nie blokować requestu
+    background_tasks.add_task(perform_backup_task)
+    return {"message": "Backup started"}
 
 @app.get("/")
 async def read_root(request: Request):

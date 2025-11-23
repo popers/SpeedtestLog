@@ -184,6 +184,22 @@ html, body {
     padding: 0 1.5rem; box-sizing: border-box; z-index: 1000;
 }
 
+/* NOWE: Grid layout dla strony backupu */
+.backup-grid {
+    display: flex;
+    gap: 2rem;
+    width: 100%;
+}
+
+.backup-grid .backup-card {
+    flex: 1;
+    /* Zapewnia równą wysokość */
+    display: flex;
+    flex-direction: row; 
+    /* Nadpisujemy ewentualne marginy z mobile */
+    margin-top: 0 !important; 
+}
+
 /* Responsive */
 @media (min-width: 993px) {
     /* ZMNIEJSZONO max-width do 1400px aby uniknąć problemów na mniejszych ekranach desktopowych i poprawiono centrowanie */
@@ -206,5 +222,10 @@ html, body {
     .sidebar-overlay.show { opacity: 1; visibility: visible; }
     .stats-container { grid-template-columns: 1fr 1fr; gap: 1rem; }
     .stat-card { padding: 1rem; } .stat-card .value { font-size: 1.5rem; }
-    .backup-card { flex-direction: column; align-items: center; text-align: center; }
+    /* ZMIANA: Na mobile backup-grid staje się kolumną */
+    .backup-grid { flex-direction: column; gap: 1.5rem; }
+    /* ZMIANA: Mniejszy padding na mobilkach dla backupu */
+    .backup-card { padding: 1rem; gap: 1rem; }
+    /* Reset marginesu, bo teraz grid obsługuje odstępy */
+    .backup-card + .backup-card { margin-top: 0; }
 }

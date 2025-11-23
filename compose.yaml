@@ -65,6 +65,7 @@ services:
       - --slow_query_log=1
       - --slow_query_log_file=/var/log/mysql/slow-query.log
       - --long_query_time=2
+      - --innodb-use-native-aio=0
 volumes:
   speedtest-db-data: null
 networks: {}

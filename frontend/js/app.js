@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { translations } from './i18n.js';
-import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser } from './api.js';
+// ZMIANA: Import triggerGoogleBackup
+import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser, fetchBackupSettings, saveBackupSettings, getGoogleAuthUrl, revokeGoogleAuth, triggerGoogleBackup } from './api.js';
 import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel, convertValue, formatCountdown } from './utils.js';
 import { renderCharts } from './charts.js';
 import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
@@ -63,6 +64,8 @@ async function initializeApp() {
     
     if (page === 'settings.html') {
         loadSettingsToForm();
+    } else if (page === 'backup.html') {
+        loadBackupPage();
     } else if (page === 'index.html' || page === '' || page === '/') {
         handleDashboardNavigation();
         window.addEventListener('hashchange', handleDashboardNavigation);
@@ -127,6 +130,217 @@ async function loadSettingsToForm() {
         
     } catch (e) {
         console.error("Error loading settings:", e);
+    }
+}
+
+// Funkcja pomocnicza do tłumaczenia statusów
+function getLocalizedStatus(status) {
+    const lang = translations[state.currentLang];
+    if (!status) return '-';
+    
+    if (status.includes('success')) return lang.statusSuccess || 'Sukces';
+    if (status.includes('auth_error')) return lang.statusAuthError || 'Błąd autoryzacji';
+    if (status.includes('error')) return lang.statusError || 'Błąd';
+    
+    return status;
+}
+
+// --- NOWE: Obsługa strony backup.html ---
+async function loadBackupPage() {
+    // Sprawdź czy wracamy z autoryzacji
+    const urlParams = new URLSearchParams(window.location.search);
+    const authStatus = urlParams.get('auth');
+    if(authStatus === 'success') {
+        showToast('toastDriveSaved', 'success');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (authStatus === 'error') {
+        showToast('toastTestError', 'error'); // Generic error
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Wyświetl redirect URI
+    const redirectSpan = document.getElementById('redirectUrlDisplay');
+    if(redirectSpan) {
+        redirectSpan.textContent = window.location.origin + '/api/backup/google/callback';
+    }
+
+    try {
+        const s = await fetchBackupSettings();
+        
+        const gdClientId = document.getElementById('gdClientId');
+        const gdClientSecret = document.getElementById('gdClientSecret');
+        const gdFolderName = document.getElementById('gdFolderName');
+        const gdRetention = document.getElementById('gdRetention');
+        const gdScheduleDays = document.getElementById('gdScheduleDays');
+        const gdScheduleTime = document.getElementById('gdScheduleTime');
+        
+        const gdStatus = document.getElementById('gDriveStatus');
+        const gdAuthBtn = document.getElementById('gdAuthBtn');
+        const gdRevokeBtn = document.getElementById('gdRevokeBtn');
+        const gdSaveBtn = document.getElementById('gdSaveBtn');
+        // NOWE: Przycisk ręcznego uruchamiania
+        const gdRunBtn = document.getElementById('gdRunBtn');
+
+        const lastRunVal = document.getElementById('lastRunVal');
+        const lastStatusVal = document.getElementById('lastStatusVal');
+
+        if(gdClientId) gdClientId.value = s.client_id || '';
+        if(gdClientSecret) gdClientSecret.value = s.client_secret || '';
+        if(gdFolderName) gdFolderName.value = s.folder_name || 'SpeedtestLog_Backup';
+        if(gdRetention) gdRetention.value = s.retention_days || 30;
+        if(gdScheduleDays) gdScheduleDays.value = s.schedule_days || 1;
+        if(gdScheduleTime) gdScheduleTime.value = s.schedule_time || '03:00';
+
+        // Status i przyciski
+        if (s.has_token && s.is_enabled) {
+            gdStatus.className = 'gdrive-status connected';
+            gdStatus.innerHTML = `<span class="material-symbols-rounded">link</span> <span data-i18n-key="authStatusConnected">${translations[state.currentLang].authStatusConnected}</span>`;
+            gdAuthBtn.style.display = 'none';
+            gdRevokeBtn.style.display = 'flex';
+            if(gdRunBtn) gdRunBtn.style.display = 'flex'; // Pokaż przycisk uruchamiania
+            
+            // Blokujemy edycję ID/Secret gdy połączono
+            gdClientId.disabled = true;
+            gdClientSecret.disabled = true;
+        } else {
+            gdStatus.className = 'gdrive-status disconnected';
+            gdStatus.innerHTML = `<span class="material-symbols-rounded">link_off</span> <span data-i18n-key="authStatusDisconnected">${translations[state.currentLang].authStatusDisconnected}</span>`;
+            gdAuthBtn.style.display = 'flex';
+            gdRevokeBtn.style.display = 'none';
+            if(gdRunBtn) gdRunBtn.style.display = 'none'; // Ukryj przycisk uruchamiania
+            
+            gdClientId.disabled = false;
+            gdClientSecret.disabled = false;
+        }
+
+        // Ostatnie uruchomienie - tłumaczenie statusu
+        if(lastRunVal) lastRunVal.textContent = s.last_run ? new Date(s.last_run).toLocaleString() : '-';
+        if(lastStatusVal) lastStatusVal.textContent = getLocalizedStatus(s.last_status);
+
+        // Obsługa przycisków
+        if(gdSaveBtn) {
+            const newBtn = gdSaveBtn.cloneNode(true);
+            gdSaveBtn.parentNode.replaceChild(newBtn, gdSaveBtn);
+            newBtn.addEventListener('click', async () => {
+                await saveBackupConfig(s.has_token); 
+            });
+        }
+
+        if(gdAuthBtn) {
+            const newAuth = gdAuthBtn.cloneNode(true);
+            gdAuthBtn.parentNode.replaceChild(newAuth, gdAuthBtn);
+            newAuth.addEventListener('click', async () => {
+                const ok = await saveBackupConfig(s.has_token); 
+                if(ok) {
+                    try {
+                        const url = await getGoogleAuthUrl();
+                        window.location.href = url; 
+                    } catch(e) { showToast('toastTestError', 'error'); }
+                }
+            });
+        }
+
+        if(gdRevokeBtn) {
+            const newRevoke = gdRevokeBtn.cloneNode(true);
+            gdRevokeBtn.parentNode.replaceChild(newRevoke, gdRevokeBtn);
+            newRevoke.addEventListener('click', async () => {
+                try {
+                    await revokeGoogleAuth();
+                    showToast('toastAuthRevoked', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } catch(e) { showToast('toastTestError', 'error'); }
+            });
+        }
+
+        // NOWE: Listener dla przycisku ręcznego uruchamiania backupu
+        if(gdRunBtn) {
+            const newRun = gdRunBtn.cloneNode(true);
+            gdRunBtn.parentNode.replaceChild(newRun, gdRunBtn);
+            newRun.addEventListener('click', async () => {
+                newRun.disabled = true;
+                newRun.classList.add('is-loading'); // Dodaj klasę animacji
+                showToast('toastBackupStarted', 'info');
+                
+                const initialLastRun = s.last_run; // Zapamiętaj czas ostatniego backupu
+                
+                try {
+                    await triggerGoogleBackup();
+                    
+                    // Rozpocznij polling (odpytywanie) o status backupu
+                    let attempts = 0;
+                    const maxAttempts = 20; // np. 20 * 3s = 60s timeout
+                    
+                    const checkInterval = setInterval(async () => {
+                        attempts++;
+                        try {
+                            const freshSettings = await fetchBackupSettings();
+                            
+                            // Sprawdź czy data ostatniego uruchomienia się zmieniła
+                            const isNewRun = freshSettings.last_run && (!initialLastRun || new Date(freshSettings.last_run) > new Date(initialLastRun));
+                            
+                            if (isNewRun || attempts >= maxAttempts) {
+                                clearInterval(checkInterval);
+                                newRun.disabled = false;
+                                newRun.classList.remove('is-loading');
+                                
+                                if (isNewRun) {
+                                    // Zaktualizuj UI
+                                    if(lastRunVal) lastRunVal.textContent = new Date(freshSettings.last_run).toLocaleString();
+                                    if(lastStatusVal) lastStatusVal.textContent = getLocalizedStatus(freshSettings.last_status);
+                                    
+                                    if (freshSettings.last_status === 'success') {
+                                        showToast('toastBackupSuccess', 'success');
+                                    } else {
+                                        showToast('toastBackupFailed', 'error');
+                                    }
+                                } else {
+                                    // Timeout
+                                    showToast('toastTestTimeout', 'error');
+                                }
+                            }
+                        } catch(err) {
+                            console.error("Polling error", err);
+                        }
+                    }, 3000); // Sprawdzaj co 3 sekundy
+                    
+                } catch(e) {
+                    showToast('toastTestError', 'error');
+                    newRun.disabled = false;
+                    newRun.classList.remove('is-loading');
+                }
+            });
+        }
+
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+async function saveBackupConfig(wasConnected) {
+    try {
+        const gdClientId = document.getElementById('gdClientId').value;
+        const gdClientSecret = document.getElementById('gdClientSecret').value;
+        const gdFolderName = document.getElementById('gdFolderName').value;
+        const gdRetention = parseInt(document.getElementById('gdRetention').value);
+        const gdScheduleDays = parseInt(document.getElementById('gdScheduleDays').value);
+        const gdScheduleTime = document.getElementById('gdScheduleTime').value;
+
+        const payload = {
+            client_id: gdClientId,
+            client_secret: gdClientSecret,
+            folder_name: gdFolderName,
+            schedule_days: gdScheduleDays,
+            schedule_time: gdScheduleTime,
+            retention_days: gdRetention,
+            is_enabled: wasConnected // Zachowaj status włączenia jeśli był włączony
+        };
+
+        await saveBackupSettings(payload);
+        showToast('toastDriveSaved', 'success');
+        return true;
+    } catch(e) {
+        showToast('toastSettingsError', 'error');
+        return false;
     }
 }
 

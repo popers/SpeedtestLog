@@ -81,3 +81,43 @@ export async function logoutUser() {
     await fetch('/api/logout', { method: 'POST' });
     window.location.reload();
 }
+
+// --- NOWE: Google Drive API Calls ---
+export async function fetchBackupSettings() {
+    const response = await fetch('/api/backup/settings');
+    if (!response.ok) throw new Error('Failed to fetch backup settings');
+    return await response.json();
+}
+
+export async function saveBackupSettings(payload) {
+    const response = await fetch('/api/backup/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('Failed to save settings');
+    return await response.json();
+}
+
+export async function revokeGoogleAuth() {
+    const response = await fetch('/api/backup/google/revoke', {
+        method: 'POST'
+    });
+    if (!response.ok) throw new Error('Revoke failed');
+    return await response.json();
+}
+
+export async function getGoogleAuthUrl() {
+    const response = await fetch('/api/backup/google/authorize');
+    if (!response.ok) throw new Error('Auth failed');
+    const data = await response.json();
+    return data.auth_url;
+}
+
+export async function triggerGoogleBackup() {
+    const response = await fetch('/api/backup/google/trigger', {
+        method: 'POST'
+    });
+    if (!response.ok) throw new Error('Failed to trigger backup');
+    return await response.json();
+}
