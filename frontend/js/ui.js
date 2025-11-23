@@ -149,19 +149,43 @@ export function showDetailsModal(resultId) {
     const downloadValue = convertValue(result.download, state.currentUnit).toFixed(2);
     const uploadValue = convertValue(result.upload, state.currentUnit).toFixed(2);
     const unitLabel = getUnitLabel(state.currentUnit);
-    
+
+    // Helper do formatowania danych latency (które mogą być null)
+    const formatLatency = (low, high) => {
+        if (low === null && high === null) return lang.detailsNoData;
+        const lowVal = low !== null ? `${low.toFixed(2)} ms` : '-';
+        const highVal = high !== null ? `${high.toFixed(2)} ms` : '-';
+        return `Min: ${lowVal} / Max: ${highVal}`;
+    };
+
+    // Dane z Ookla (wcześniej jako "Utrata Pakietów" w kontekście PING Watchdog)
+    // Zostają zamienione na metryki opóźnień Ookla (ping_low, download/upload latency high/low)
     const content = `
         <p style="text-align: center;"><strong>${lang.detailsTime}</strong> ${timestamp}</p>
         <hr style="border-color: var(--border-color); margin: 10px 0;">
+        
         <p style="font-weight: 600; color: var(--primary-color); margin-top: 20px;">${lang.detailsSectionPerformance}</p>
         <div style="padding-left: 15px; margin-bottom: 15px;">
             <p style="color: var(--color-download); margin: 5px 0;"><strong>${lang.detailsDownload}</strong> ${downloadValue} ${unitLabel}</p>
             <p style="color: var(--color-upload); margin: 5px 0;"><strong>${lang.detailsUpload}</strong> ${uploadValue} ${unitLabel}</p>
         </div>
+        
         <p style="font-weight: 600; color: var(--primary-color); margin-top: 20px;">${lang.detailsSectionLatency}</p>
         <div style="padding-left: 15px; margin-bottom: 15px;">
-            <p style="color: var(--color-ping); margin: 5px 0;"><strong>${lang.detailsPing}</strong> ${result.ping} ms (Jitter: ${result.jitter} ms)</p>
+            <p style="color: var(--color-ping); margin: 5px 0;"><strong>${lang.detailsPing}</strong> ${result.ping.toFixed(2)} ms (Jitter: ${result.jitter.toFixed(2)} ms)</p>
+            ${result.ping_low !== null ? `<p style="color: var(--color-ping); margin: 5px 0;"><strong>${lang.detailsLatencyLow}</strong> ${result.ping_low.toFixed(2)} ms</p>` : ''}
+            
+            <p style="margin: 10px 0; border-top: 1px dashed var(--border-color); padding-top: 5px;">
+                <strong>${lang.detailsDownloadLatency}</strong> 
+                <span style="font-size: 0.9em; display: block; margin-top: 2px;">${formatLatency(result.download_latency_low, result.download_latency_high)}</span>
+            </p>
+
+            <p style="margin: 5px 0;">
+                <strong>${lang.detailsUploadLatency}</strong> 
+                <span style="font-size: 0.9em; display: block; margin-top: 2px;">${formatLatency(result.upload_latency_low, result.upload_latency_high)}</span>
+            </p>
         </div>
+        
         <p style="font-weight: 600; color: var(--primary-color); margin-top: 20px;">${lang.detailsSectionServerClient}</p>
         <div style="padding-left: 15px; margin-bottom: 15px;">
             <p style="margin: 5px 0;"><strong>${lang.detailsServer}</strong> (${result.server_id}) ${result.server_name} (${result.server_location})</p>
@@ -342,8 +366,8 @@ export function updateTable(results) {
             <td data-label="${lang.tableTime}">${timestamp.toLocaleString(state.currentLang)}</td>
             <td data-label="${lang.tableDownload}"><strong class="${downloadClass}">${convertValue(res.download, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
             <td data-label="${lang.tableUpload}"><strong class="${uploadClass}">${convertValue(res.upload, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
-            <td data-label="${lang.tablePing}"><strong class="${pingClass}">${res.ping}</strong> ms</td>
-            <td data-label="${lang.tableJitter}"><strong class="${jitterClass}">${res.jitter}</strong> ms</td>
+            <td data-label="${lang.tablePing}"><strong class="${pingClass}">${res.ping.toFixed(2)}</strong> ms</td>
+            <td data-label="${lang.tableJitter}"><strong class="${jitterClass}">${res.jitter.toFixed(2)}</strong> ms</td>
             <td data-label="${lang.tableServer}">(${res.server_id}) ${res.server_name} (${res.server_location})</td>
             <td data-label="${lang.tableResultLink}" class="link-cell">${resultLinkHtml}</td>
         `;

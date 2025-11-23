@@ -54,6 +54,8 @@ export const translations = {
         'detailsISP': 'Dostawca (ISP): ',
         'detailsLatencyLow': 'Min. opóźnienie (Low): ',
         'detailsLatencyHigh': 'Maks. opóźnienie (High): ',
+        'detailsDownloadLatency': 'Opóźnienie pobierania (Low/High): ', // NOWY KLUCZ
+        'detailsUploadLatency': 'Opóźnienie wysyłania (Low/High): ',   // NOWY KLUCZ
         'detailsSectionPerformance': 'Wydajność Transferu',
         'detailsSectionLatency': 'Parametry Opóźnień',
         'detailsSectionServerClient': 'Lokalizacja i ISP',
@@ -265,6 +267,8 @@ export const translations = {
         'detailsISP': 'ISP: ',
         'detailsLatencyLow': 'Min Latency (Low): ',
         'detailsLatencyHigh': 'Max Latency (High): ',
+        'detailsDownloadLatency': 'Download Latency (Low/High): ', // NOWY KLUCZ
+        'detailsUploadLatency': 'Upload Latency (Low/High): ',     // NOWY KLUCZ
         'detailsSectionPerformance': 'Transfer Performance',
         'detailsSectionLatency': 'Latency Parameters',
         'detailsSectionServerClient': 'Location & ISP',
