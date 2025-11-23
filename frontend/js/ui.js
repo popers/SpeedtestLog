@@ -114,7 +114,16 @@ function updateSingleStatCard(compareEl, latestVal, prevVal, positiveTrend) {
         const prefix = isGoodChange ? lang.statsFaster : lang.statsSlower;
         
         // ZMIANA: Ikony strzałek z Material Symbols
-        const iconName = (percent > 0) ? 'arrow_upward' : 'arrow_downward';
+        // Logika odwrócenia strzałek dla Pingu/Jittera (positiveTrend === 'negative')
+        let iconName;
+        
+        if (positiveTrend === 'negative') {
+            // Dla Ping/Jitter: wzrost wartości (>0) to strzałka w dół, spadek (<0) to w górę
+            iconName = (percent > 0) ? 'arrow_downward' : 'arrow_upward';
+        } else {
+            // Standardowo: wzrost (>0) to w górę, spadek (<0) to w dół
+            iconName = (percent > 0) ? 'arrow_upward' : 'arrow_downward';
+        }
         
         trendClass = isGoodChange ? 'positive' : 'negative';
         
@@ -361,10 +370,6 @@ export function updateTable(results) {
         const key = th.dataset.i18nKey;
         if(key && lang[key]) {
             let text = lang[key];
-            
-            // ZMIANA: Usunięcie dopisywania jednostek do nagłówków tabeli zgodnie z życzeniem
-            // if(th.dataset.sort === 'download' || th.dataset.sort === 'upload') text += ` (${unitLabel})`;
-            // if(th.dataset.sort === 'ping' || th.dataset.sort === 'jitter') text += ` (ms)`;
             
             // ZMIANA: Dodanie wskaźnika sortowania 
             if (th.dataset.sort === state.currentSort.column) {

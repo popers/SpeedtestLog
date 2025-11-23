@@ -1,0 +1,212 @@
+import { state } from './state.js';
+import { fetchSettings, updateSettings, fetchNotificationSettings, saveNotificationSettings, testNotification } from './api.js';
+import { showToast, hexToRgba } from './utils.js';
+import { initNotificationSystem } from './notifications.js';
+import { stopWatchdogPolling, startWatchdogPolling } from './watchdog.js';
+
+export async function loadSettingsToForm() {
+    try {
+        const s = await fetchSettings();
+        
+        const targetInput = document.getElementById('pingTargetInput');
+        if(targetInput) targetInput.value = s.ping_target || '8.8.8.8';
+        
+        const intervalInput = document.getElementById('pingIntervalInput');
+        if(intervalInput) intervalInput.value = s.ping_interval || 30;
+
+        const dlInput = document.getElementById('declaredDownloadInput');
+        if(dlInput) dlInput.value = s.declared_download || '';
+
+        const ulInput = document.getElementById('declaredUploadInput');
+        if(ulInput) ulInput.value = s.declared_upload || '';
+
+        const startupInput = document.getElementById('startupTestInput');
+        if(startupInput) {
+            startupInput.checked = (s.startup_test_enabled !== false); 
+            startupInput.addEventListener('change', () => {
+                if (startupInput.checked) {
+                    showToast('toastStartupTestOn', 'success');
+                } else {
+                    showToast('toastStartupTestOff', 'info');
+                }
+            });
+        }
+
+        const cDl = document.getElementById('colorDownloadInput');
+        const cUl = document.getElementById('colorUploadInput');
+        const cPi = document.getElementById('colorPingInput');
+        const cJi = document.getElementById('colorJitterInput');
+
+        const style = getComputedStyle(document.body);
+        if(cDl) cDl.value = s.chart_color_download || style.getPropertyValue('--color-download').trim() || '#4fc3f7';
+        if(cUl) cUl.value = s.chart_color_upload || style.getPropertyValue('--color-upload').trim() || '#e57373';
+        if(cPi) cPi.value = s.chart_color_ping || style.getPropertyValue('--color-ping').trim() || '#ffd54f';
+        if(cJi) cJi.value = s.chart_color_jitter || style.getPropertyValue('--color-jitter').trim() || '#81c784';
+        
+    } catch (e) {
+        console.error("Error loading settings:", e);
+    }
+}
+
+export async function loadNotificationSettingsToForm() {
+    try {
+        const ns = await fetchNotificationSettings();
+        
+        const enableCheck = document.getElementById('notifEnabled');
+        const providerSelect = document.getElementById('notifProvider');
+        const urlInput = document.getElementById('notifWebhookUrl');
+        const topicInput = document.getElementById('notifNtfyTopic');
+        const serverInput = document.getElementById('notifNtfyServer');
+        const registerBtn = document.getElementById('notifRegisterBtn');
+
+        if(enableCheck) enableCheck.checked = ns.enabled;
+        if(providerSelect) providerSelect.value = ns.provider || 'browser';
+        if(urlInput) urlInput.value = ns.webhook_url || '';
+        if(topicInput) topicInput.value = ns.ntfy_topic || '';
+        if(serverInput) serverInput.value = ns.ntfy_server || 'https://ntfy.sh';
+
+        const updateVisibility = () => {
+            const val = providerSelect.value;
+            document.getElementById('fieldWebhook').style.display = val === 'webhook' ? 'block' : 'none';
+            document.getElementById('fieldNtfy').style.display = val === 'ntfy' ? 'block' : 'none';
+            
+            if (val === 'browser') {
+                registerBtn.style.display = 'flex';
+            } else {
+                registerBtn.style.display = 'none';
+            }
+        };
+
+        providerSelect.addEventListener('change', updateVisibility);
+        updateVisibility();
+
+    } catch(e) {
+        console.error("Error loading notification settings", e);
+    }
+}
+
+export async function saveSettingsFromPage() {
+    try {
+        // 1. Główne ustawienia
+        const currentSettings = await fetchSettings();
+        
+        const target = document.getElementById('pingTargetInput').value;
+        const interval = parseInt(document.getElementById('pingIntervalInput').value);
+        const dl = parseInt(document.getElementById('declaredDownloadInput').value) || 0;
+        const ul = parseInt(document.getElementById('declaredUploadInput').value) || 0;
+        
+        const startupInput = document.getElementById('startupTestInput');
+        const startupEnabled = startupInput ? startupInput.checked : true;
+
+        const cDl = document.getElementById('colorDownloadInput').value;
+        const cUl = document.getElementById('colorUploadInput').value;
+        const cPi = document.getElementById('colorPingInput').value;
+        const cJi = document.getElementById('colorJitterInput').value;
+
+        const payload = {
+            server_id: currentSettings.selected_server_id, 
+            schedule_hours: currentSettings.schedule_hours, 
+            ping_target: target,
+            ping_interval: interval,
+            declared_download: dl,
+            declared_upload: ul,
+            startup_test_enabled: startupEnabled,
+            chart_color_download: cDl,
+            chart_color_upload: cUl,
+            chart_color_ping: cPi,
+            chart_color_jitter: cJi,
+            app_language: state.currentLang 
+        };
+
+        await updateSettings(payload);
+        
+        // Zastosuj kolory (funkcja helpera inline lub importowana, tutaj duplikujemy logikę applyColorsToCSS)
+        const root = document.body;
+        root.style.setProperty('--color-download', cDl);
+        root.style.setProperty('--color-download-bg', hexToRgba(cDl, 0.15));
+        root.style.setProperty('--color-upload', cUl);
+        root.style.setProperty('--color-upload-bg', hexToRgba(cUl, 0.15));
+        root.style.setProperty('--color-ping', cPi);
+        root.style.setProperty('--color-ping-bg', hexToRgba(cPi, 0.15));
+        root.style.setProperty('--color-jitter', cJi);
+        root.style.setProperty('--color-jitter-bg', hexToRgba(cJi, 0.15));
+
+        // 2. Ustawienia Powiadomień
+        const notifEnabled = document.getElementById('notifEnabled').checked;
+        const notifProvider = document.getElementById('notifProvider').value;
+        const webhookUrl = document.getElementById('notifWebhookUrl').value;
+        const ntfyTopic = document.getElementById('notifNtfyTopic').value;
+        const ntfyServer = document.getElementById('notifNtfyServer').value;
+
+        const notifPayload = {
+            enabled: notifEnabled,
+            provider: notifProvider,
+            webhook_url: webhookUrl,
+            ntfy_topic: ntfyTopic,
+            ntfy_server: ntfyServer
+        };
+
+        await saveNotificationSettings(notifPayload);
+        
+        // Aktualizuj stan powiadomień przeglądarkowych
+        initNotificationSystem();
+
+        showToast('toastSettingsSaved', 'success');
+        
+        // Restart Watchdoga (bo mógł zmienić się target/interwał)
+        stopWatchdogPolling();
+        startWatchdogPolling();
+        
+    } catch (e) {
+        console.error(e);
+        showToast('toastSettingsError', 'error');
+    }
+}
+
+export function initSettingsListeners() {
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    if(saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromPage);
+
+    // Obsługa przycisku testu powiadomień
+    const testNotifBtn = document.getElementById('notifTestBtn');
+    if(testNotifBtn) {
+        testNotifBtn.addEventListener('click', async () => {
+            const provider = document.getElementById('notifProvider').value;
+            const url = document.getElementById('notifWebhookUrl').value;
+            const topic = document.getElementById('notifNtfyTopic').value;
+            const server = document.getElementById('notifNtfyServer').value;
+            
+            try {
+                await testNotification({ 
+                    provider, 
+                    webhook_url: url, 
+                    ntfy_topic: topic, 
+                    ntfy_server: server,
+                    language: state.currentLang 
+                });
+                showToast('toastNotifSent', 'success');
+            } catch (e) {
+                showToast('toastNotifError', 'error');
+            }
+        });
+    }
+
+    // Obsługa przycisku rejestracji przeglądarki
+    const regBrowserBtn = document.getElementById('notifRegisterBtn');
+    if(regBrowserBtn) {
+        regBrowserBtn.addEventListener('click', () => {
+            if (!("Notification" in window)) {
+                alert("Ta przeglądarka nie obsługuje powiadomień.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    showToast('toastBrowserReg', 'success');
+                    new Notification("SpeedtestLog", { body: "Powiadomienia aktywne!", icon: 'logo.png' });
+                } else {
+                    showToast('toastBrowserDenied', 'error');
+                }
+            });
+        });
+    }
+}
