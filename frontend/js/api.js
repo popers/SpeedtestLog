@@ -1,4 +1,4 @@
-// --- API Calls ---
+// --- API Calls  ---
 
 export async function fetchResults() {
     const response = await fetch('/api/results');

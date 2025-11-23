@@ -23,7 +23,7 @@ export function setLogoutButtonVisibility(enabled) {
     }
 }
 
-// --- Stats Cards ---
+// --- Stats Cards --- 
 export function updateStatsCards(results) {
     const lang = translations[state.currentLang];
     const latestDownloadValue = document.getElementById('latestDownloadValue');

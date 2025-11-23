@@ -28,7 +28,7 @@ export function parseISOLocally(isoString) {
     return new Date(year, month, day, hour, minute, second); 
 }
 
-// NOWE: Funkcja formatująca czas do odliczania
+// NOWE: Funkcja formatująca czas do odliczania 
 export function formatCountdown(ms) {
     if (ms < 0) return "00:00:00";
     const seconds = Math.floor((ms / 1000) % 60);

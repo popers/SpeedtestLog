@@ -40,7 +40,7 @@ export function renderCharts(results) {
 function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, serverData, label, unit, color, bgColor, gridColor, labelColor) {
     if (chartInstance) chartInstance.destroy(); 
     
-    // FIX: Resetowanie canvasa w sposób bezpieczny dla flexboxa
+    // FIX: Resetowanie canvasa w sposób bezpieczny dla flexboxa 
     ctx.canvas.removeAttribute('style');
     ctx.canvas.removeAttribute('width');
     ctx.canvas.removeAttribute('height');

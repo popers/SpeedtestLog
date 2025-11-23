@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { translations } from './i18n.js';
-// ZMIANA: Import triggerGoogleBackup
+// ZMIANA: Import triggerGoogleBackup 
 import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser, fetchBackupSettings, saveBackupSettings, getGoogleAuthUrl, revokeGoogleAuth, triggerGoogleBackup } from './api.js';
 import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel, convertValue, formatCountdown } from './utils.js';
 import { renderCharts } from './charts.js';
