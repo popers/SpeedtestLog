@@ -157,6 +157,24 @@ export const translations = {
         'chartColorPing': 'Ping',
         'chartColorJitter': 'Jitter',
 
+        // Notifications
+        'notificationsTitle': 'Powiadomienia',
+        'notificationsDesc': 'Otrzymuj powiadomienia o zakończonym teście lub zmianie statusu Ping Watchdog.',
+        'notifEnable': 'Włącz powiadomienia',
+        'notifProvider': 'Rodzaj powiadomienia:',
+        'notifBrowser': 'Przeglądarkowe (Wymaga otwartego dashboardu)',
+        'notifWebhook': 'Webhook (POST JSON)',
+        'notifNtfy': 'Ntfy.sh',
+        'notifUrl': 'Webhook URL:',
+        'notifTopic': 'Ntfy Temat (Topic):',
+        'notifServer': 'Ntfy Serwer:',
+        'notifTestBtn': 'Test Powiadomienia',
+        'notifRegisterBtn': 'Zarejestruj przeglądarkę',
+        'toastNotifSent': 'Wysłano testowe powiadomienie!',
+        'toastNotifError': 'Błąd wysyłania testu.',
+        'toastBrowserReg': 'Przeglądarka zarejestrowana!',
+        'toastBrowserDenied': 'Brak uprawnień do powiadomień.',
+
         // Google Drive
         'gDriveTitle': 'Google Drive Backup',
         'gDriveDesc': 'Automatycznie wysyłaj kopie zapasowe do folderu na Google Drive.',
@@ -349,6 +367,24 @@ export const translations = {
         'chartColorUpload': 'Upload',
         'chartColorPing': 'Ping',
         'chartColorJitter': 'Jitter',
+
+        // Notifications
+        'notificationsTitle': 'Notifications',
+        'notificationsDesc': 'Receive notifications about finished tests or Ping Watchdog status changes.',
+        'notifEnable': 'Enable Notifications',
+        'notifProvider': 'Notification Type:',
+        'notifBrowser': 'Browser (Dashboard must be open)',
+        'notifWebhook': 'Webhook (POST JSON)',
+        'notifNtfy': 'Ntfy.sh',
+        'notifUrl': 'Webhook URL:',
+        'notifTopic': 'Ntfy Topic:',
+        'notifServer': 'Ntfy Server:',
+        'notifTestBtn': 'Test Notification',
+        'notifRegisterBtn': 'Register Browser',
+        'toastNotifSent': 'Test notification sent!',
+        'toastNotifError': 'Error sending test.',
+        'toastBrowserReg': 'Browser registered!',
+        'toastBrowserDenied': 'Notification permission denied.',
 
         // Google Drive
         'gDriveTitle': 'Google Drive Backup',

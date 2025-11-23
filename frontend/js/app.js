@@ -1,7 +1,6 @@
 import { state } from './state.js';
 import { translations } from './i18n.js';
-// ZMIANA: Import triggerGoogleBackup 
-import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser, fetchBackupSettings, saveBackupSettings, getGoogleAuthUrl, revokeGoogleAuth, triggerGoogleBackup } from './api.js';
+import { fetchResults, fetchServers, fetchSettings, updateSettings, triggerTest, deleteEntries, getLatestResult, getAuthStatus, logoutUser, loginUser, fetchBackupSettings, saveBackupSettings, getGoogleAuthUrl, revokeGoogleAuth, triggerGoogleBackup, fetchNotificationSettings, saveNotificationSettings, testNotification } from './api.js';
 import { setLanguage, setNightMode, showToast, parseISOLocally, getNextRunTimeText, getUnitLabel, convertValue, formatCountdown, hexToRgba } from './utils.js';
 import { renderCharts } from './charts.js';
 import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
@@ -10,8 +9,13 @@ import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, se
 let watchdogInterval = null;
 let wdChart = null;
 let resizeTimer = null;
-let countdownInterval = null; // Zmienna dla interwału licznika głównego (dashboard)
-let backupCountdownInterval = null; // NOWE: Zmienna dla licznika backupu
+let countdownInterval = null; 
+let backupCountdownInterval = null; 
+
+// Zmienne do śledzenia zmian dla powiadomień przeglądarkowych
+let lastSeenResultId = null;
+let lastWatchdogStatus = null; // true/false
+let browserNotifEnabled = false;
 
 // --- Main Logic & Event Listeners ---
 
@@ -33,12 +37,15 @@ async function initializeApp() {
         try {
             const authStatus = await getAuthStatus();
             setLogoutButtonVisibility(authStatus.enabled);
+            
+            // Załaduj wstępne ustawienia powiadomień do stanu przeglądarki
+            checkBrowserNotificationSettings();
+            
         } catch (e) {
             setLogoutButtonVisibility(false);
         }
     }
     
-    // Ładowanie zapisanej ilości wierszy
     const savedPerPage = localStorage.getItem('itemsPerPage');
     if(savedPerPage) {
         state.itemsPerPage = savedPerPage === 'all' ? 'all' : parseInt(savedPerPage);
@@ -61,14 +68,16 @@ async function initializeApp() {
     
     setupEventListeners();
     
-    // NOWE: Aplikuj kolory zaraz po inicjalizacji, jeśli są zapisane na serwerze (lub fetchowane przy okazji innej logiki)
-    // Tutaj możemy wykonać wstępne pobranie ustawień nawet na Dashboardzie, aby kolory były poprawne
-    applySavedColorsGlobal();
+    // ZMIANA: Nowa funkcja synchronizująca ustawienia (kolory + język) z bazy
+    if (!document.getElementById('loginForm')) {
+        syncGlobalSettings();
+    }
 
     const page = window.location.pathname.split("/").pop();
     
     if (page === 'settings.html') {
         loadSettingsToForm();
+        loadNotificationSettingsToForm();
     } else if (page === 'backup.html') {
         loadBackupPage();
     } else if (page === 'index.html' || page === '' || page === '/') {
@@ -78,26 +87,82 @@ async function initializeApp() {
 
     if (!document.getElementById('loginForm')) {
         startWatchdogPolling();
+        // Uruchom polling sprawdzający nowe wyniki dla powiadomień przeglądarkowych
+        startResultPollingForNotifications();
     }
 }
 
-// NOWE: Funkcja pobierająca i aplikująca kolory globalnie
-async function applySavedColorsGlobal() {
+// --- Powiadomienia Przeglądarkowe ---
+async function checkBrowserNotificationSettings() {
     try {
-        // Nie blokujemy ładowania strony, robimy to w tle
+        const s = await fetchNotificationSettings();
+        if (s.enabled && s.provider === 'browser') {
+            browserNotifEnabled = true;
+            // Zainicjuj stan ostatniego wyniku, aby nie powiadamiać o starych przy odświeżeniu
+            const latest = await getLatestResult();
+            if(latest) lastSeenResultId = latest.id;
+        } else {
+            browserNotifEnabled = false;
+        }
+    } catch(e) {}
+}
+
+function showBrowserNotification(title, body, tag) {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+        new Notification(title, { body, tag, icon: 'logo.png' });
+    }
+}
+
+function startResultPollingForNotifications() {
+    // Polling co 10 sekund w celu wykrycia nowego wyniku (gdy dashboard otwarty)
+    setInterval(async () => {
+        if (!browserNotifEnabled) return;
+        
+        try {
+            const latest = await getLatestResult();
+            if (latest && lastSeenResultId && latest.id !== lastSeenResultId) {
+                lastSeenResultId = latest.id;
+                showBrowserNotification(
+                    "SpeedtestLog: Nowy wynik", 
+                    `Download: ${latest.download} Mbps, Upload: ${latest.upload} Mbps`,
+                    "speedtest-result"
+                );
+                
+                // Jeśli jesteśmy na dashboardzie, odśwież dane
+                if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+                    loadDashboardData();
+                }
+            } else if (latest && !lastSeenResultId) {
+                lastSeenResultId = latest.id;
+            }
+        } catch(e) {}
+    }, 10000);
+}
+
+// --- END Powiadomienia Przeglądarkowe ---
+
+// ZMIANA: Funkcja ładuje kolory ORAZ język z bazy danych przy starcie
+async function syncGlobalSettings() {
+    try {
         const s = await fetchSettings();
         applyColorsToCSS(s);
+        
+        // Zastosuj język z bazy danych, jeśli jest inny niż obecny
+        if (s.app_language && s.app_language !== state.currentLang) {
+            setLanguage(s.app_language);
+            updateLangButtonUI(s.app_language);
+            // Odśwież interfejs, jeśli jesteśmy na stronie backupu lub ustawień
+            if (window.location.pathname.includes('backup.html')) loadBackupPage();
+            if (window.location.pathname.includes('settings.html')) loadSettingsToForm();
+        }
     } catch (e) {
-        console.log("Could not load color settings");
+        console.log("Could not load global settings");
     }
 }
 
 function applyColorsToCSS(settings) {
-    // ZMIANA: Używamy document.body zamiast document.documentElement.
-    // Dzięki temu style inline na body mają wyższy priorytet (specyficzność) niż klasy CSS (np. body.light-mode),
-    // co pozwala na skuteczne nadpisanie kolorów w trybie jasnym.
     const root = document.body;
-    
     if (settings.chart_color_download) {
         root.style.setProperty('--color-download', settings.chart_color_download);
         root.style.setProperty('--color-download-bg', hexToRgba(settings.chart_color_download, 0.15));
@@ -124,7 +189,6 @@ function handleDashboardNavigation() {
     const hash = window.location.hash || '#dashboard';
     loadDashboardData();
     
-    // Clear existing countdown when navigating away or refreshing dashboard
     if (countdownInterval) clearInterval(countdownInterval);
     
     document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
@@ -152,13 +216,9 @@ async function loadSettingsToForm() {
         const ulInput = document.getElementById('declaredUploadInput');
         if(ulInput) ulInput.value = s.declared_upload || '';
 
-        // Ładowanie stanu checkboxa testu startowego
         const startupInput = document.getElementById('startupTestInput');
         if(startupInput) {
-            // API zwraca startup_test_enabled, domyślnie true jeśli undefined
             startupInput.checked = (s.startup_test_enabled !== false); 
-            
-            // Add immediate listener for feedback
             startupInput.addEventListener('change', () => {
                 if (startupInput.checked) {
                     showToast('toastStartupTestOn', 'success');
@@ -168,13 +228,11 @@ async function loadSettingsToForm() {
             });
         }
 
-        // NOWE: Ładowanie kolorów do inputów
         const cDl = document.getElementById('colorDownloadInput');
         const cUl = document.getElementById('colorUploadInput');
         const cPi = document.getElementById('colorPingInput');
         const cJi = document.getElementById('colorJitterInput');
 
-        // Pobieramy domyślne z CSS jeśli brak w bazie (fallback)
         const style = getComputedStyle(document.body);
         if(cDl) cDl.value = s.chart_color_download || style.getPropertyValue('--color-download').trim() || '#4fc3f7';
         if(cUl) cUl.value = s.chart_color_upload || style.getPropertyValue('--color-upload').trim() || '#e57373';
@@ -186,7 +244,44 @@ async function loadSettingsToForm() {
     }
 }
 
-// Funkcja pomocnicza do tłumaczenia statusów
+async function loadNotificationSettingsToForm() {
+    try {
+        const ns = await fetchNotificationSettings();
+        
+        const enableCheck = document.getElementById('notifEnabled');
+        const providerSelect = document.getElementById('notifProvider');
+        const urlInput = document.getElementById('notifWebhookUrl');
+        const topicInput = document.getElementById('notifNtfyTopic');
+        const serverInput = document.getElementById('notifNtfyServer');
+        const fieldsContainer = document.getElementById('notifFields');
+        const registerBtn = document.getElementById('notifRegisterBtn');
+
+        if(enableCheck) enableCheck.checked = ns.enabled;
+        if(providerSelect) providerSelect.value = ns.provider || 'browser';
+        if(urlInput) urlInput.value = ns.webhook_url || '';
+        if(topicInput) topicInput.value = ns.ntfy_topic || '';
+        if(serverInput) serverInput.value = ns.ntfy_server || 'https://ntfy.sh';
+
+        const updateVisibility = () => {
+            const val = providerSelect.value;
+            document.getElementById('fieldWebhook').style.display = val === 'webhook' ? 'block' : 'none';
+            document.getElementById('fieldNtfy').style.display = val === 'ntfy' ? 'block' : 'none';
+            
+            if (val === 'browser') {
+                registerBtn.style.display = 'flex';
+            } else {
+                registerBtn.style.display = 'none';
+            }
+        };
+
+        providerSelect.addEventListener('change', updateVisibility);
+        updateVisibility();
+
+    } catch(e) {
+        console.error("Error loading notification settings", e);
+    }
+}
+
 function getLocalizedStatus(status) {
     const lang = translations[state.currentLang];
     if (!status) return '-';
@@ -198,7 +293,6 @@ function getLocalizedStatus(status) {
     return status;
 }
 
-// --- NOWE: Funkcja aktualizująca tekst statusu w UI ---
 function updateBackupStatusUI() {
     const lastStatusVal = document.getElementById('lastStatusVal');
     if (lastStatusVal && state.backupRawStatus) {
@@ -206,7 +300,6 @@ function updateBackupStatusUI() {
     }
 }
 
-// NOWE: Helper do obliczania daty następnego backupu
 function calculateNextBackup(settings) {
     if (!settings.is_enabled || !settings.schedule_time) return null;
 
@@ -218,15 +311,10 @@ function calculateNextBackup(settings) {
 
     if (settings.last_run) {
         const lastRun = new Date(settings.last_run);
-        // Dodaj interwał dni
         nextDate = new Date(lastRun);
         nextDate.setDate(lastRun.getDate() + daysInterval);
-        // Ustaw precyzyjną godzinę z ustawień (unikając driftu)
         nextDate.setHours(h, m, 0, 0);
 
-        // Jeśli wyliczona data jest w przeszłości (np. aplikacja była wyłączona),
-        // zakładamy, że biblioteka 'schedule' uruchomi zadanie przy najbliższej okazji (Dziś lub Jutro o zadanej godzinie),
-        // ponieważ stan harmonogramu resetuje się przy restarcie kontenera.
         if (nextDate <= now) {
              const candidateToday = new Date();
              candidateToday.setHours(h, m, 0, 0);
@@ -240,8 +328,6 @@ function calculateNextBackup(settings) {
              }
         }
     } else {
-        // Brak ostatniego uruchomienia - harmonogram wystartował "na czysto".
-        // Uruchomi się przy najbliższym wystąpieniu godziny.
         const candidateToday = new Date();
         candidateToday.setHours(h, m, 0, 0);
         if (candidateToday > now) {
@@ -256,7 +342,6 @@ function calculateNextBackup(settings) {
     return nextDate;
 }
 
-// --- NOWE: Funkcja uruchamiająca licznik dla backupu ---
 function startBackupCountdown(nextDate) {
     const countdownEl = document.getElementById('backupCountdown');
     if (!countdownEl || !nextDate) return;
@@ -281,20 +366,17 @@ function startBackupCountdown(nextDate) {
     backupCountdownInterval = setInterval(updateTimer, 1000);
 }
 
-// --- NOWE: Obsługa strony backup.html ---
 async function loadBackupPage() {
-    // Sprawdź czy wracamy z autoryzacji
     const urlParams = new URLSearchParams(window.location.search);
     const authStatus = urlParams.get('auth');
     if(authStatus === 'success') {
         showToast('toastDriveSaved', 'success');
         window.history.replaceState({}, document.title, window.location.pathname);
     } else if (authStatus === 'error') {
-        showToast('toastTestError', 'error'); // Generic error
+        showToast('toastTestError', 'error'); 
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // Wyświetl redirect URI
     const redirectSpan = document.getElementById('redirectUrlDisplay');
     if(redirectSpan) {
         redirectSpan.textContent = window.location.origin + '/api/backup/google/callback';
@@ -314,14 +396,11 @@ async function loadBackupPage() {
         const gdAuthBtn = document.getElementById('gdAuthBtn');
         const gdRevokeBtn = document.getElementById('gdRevokeBtn');
         const gdSaveBtn = document.getElementById('gdSaveBtn');
-        // NOWE: Przycisk ręcznego uruchamiania
         const gdRunBtn = document.getElementById('gdRunBtn');
 
         const lastRunVal = document.getElementById('lastRunVal');
-        // ZMIANA: Zapisz surowy status w stanie
         state.backupRawStatus = s.last_status;
 
-        // NOWE: Elementy następnego backupu
         const nextBackupInfo = document.getElementById('nextBackupInfo');
         const nextBackupVal = document.getElementById('nextBackupVal');
 
@@ -332,19 +411,16 @@ async function loadBackupPage() {
         if(gdScheduleDays) gdScheduleDays.value = s.schedule_days || 1;
         if(gdScheduleTime) gdScheduleTime.value = s.schedule_time || '03:00';
 
-        // Status i przyciski
         if (s.has_token && s.is_enabled) {
             gdStatus.className = 'gdrive-status connected';
             gdStatus.innerHTML = `<span class="material-symbols-rounded">link</span> <span data-i18n-key="authStatusConnected">${translations[state.currentLang].authStatusConnected}</span>`;
             gdAuthBtn.style.display = 'none';
             gdRevokeBtn.style.display = 'flex';
-            if(gdRunBtn) gdRunBtn.style.display = 'flex'; // Pokaż przycisk uruchamiania
+            if(gdRunBtn) gdRunBtn.style.display = 'flex'; 
             
-            // Blokujemy edycję ID/Secret gdy połączono
             gdClientId.disabled = true;
             gdClientSecret.disabled = true;
 
-            // NOWE: Oblicz i wyświetl następny backup
             const nextDate = calculateNextBackup(s);
             if (nextDate && nextBackupInfo) {
                 nextBackupInfo.style.display = 'block';
@@ -359,7 +435,7 @@ async function loadBackupPage() {
             gdStatus.innerHTML = `<span class="material-symbols-rounded">link_off</span> <span data-i18n-key="authStatusDisconnected">${translations[state.currentLang].authStatusDisconnected}</span>`;
             gdAuthBtn.style.display = 'flex';
             gdRevokeBtn.style.display = 'none';
-            if(gdRunBtn) gdRunBtn.style.display = 'none'; // Ukryj przycisk uruchamiania
+            if(gdRunBtn) gdRunBtn.style.display = 'none'; 
             
             gdClientId.disabled = false;
             gdClientSecret.disabled = false;
@@ -367,12 +443,9 @@ async function loadBackupPage() {
             if (nextBackupInfo) nextBackupInfo.style.display = 'none';
         }
 
-        // Ostatnie uruchomienie - tłumaczenie statusu
         if(lastRunVal) lastRunVal.textContent = s.last_run ? new Date(s.last_run).toLocaleString() : '-';
-        // Wywołaj helper do wyświetlenia statusu
         updateBackupStatusUI();
 
-        // Obsługa przycisków
         if(gdSaveBtn) {
             const newBtn = gdSaveBtn.cloneNode(true);
             gdSaveBtn.parentNode.replaceChild(newBtn, gdSaveBtn);
@@ -407,30 +480,27 @@ async function loadBackupPage() {
             });
         }
 
-        // NOWE: Listener dla przycisku ręcznego uruchamiania backupu
         if(gdRunBtn) {
             const newRun = gdRunBtn.cloneNode(true);
             gdRunBtn.parentNode.replaceChild(newRun, gdRunBtn);
             newRun.addEventListener('click', async () => {
                 newRun.disabled = true;
-                newRun.classList.add('is-loading'); // Dodaj klasę animacji
+                newRun.classList.add('is-loading'); 
                 showToast('toastBackupStarted', 'info');
                 
-                const initialLastRun = s.last_run; // Zapamiętaj czas ostatniego backupu
+                const initialLastRun = s.last_run; 
                 
                 try {
                     await triggerGoogleBackup();
                     
-                    // Rozpocznij polling (odpytywanie) o status backupu
                     let attempts = 0;
-                    const maxAttempts = 20; // np. 20 * 3s = 60s timeout
+                    const maxAttempts = 20; 
                     
                     const checkInterval = setInterval(async () => {
                         attempts++;
                         try {
                             const freshSettings = await fetchBackupSettings();
                             
-                            // Sprawdź czy data ostatniego uruchomienia się zmieniła
                             const isNewRun = freshSettings.last_run && (!initialLastRun || new Date(freshSettings.last_run) > new Date(initialLastRun));
                             
                             if (isNewRun || attempts >= maxAttempts) {
@@ -439,14 +509,11 @@ async function loadBackupPage() {
                                 newRun.classList.remove('is-loading');
                                 
                                 if (isNewRun) {
-                                    // Zaktualizuj UI
                                     if(lastRunVal) lastRunVal.textContent = new Date(freshSettings.last_run).toLocaleString();
                                     
-                                    // ZMIANA: Aktualizuj stan i UI statusu
                                     state.backupRawStatus = freshSettings.last_status;
                                     updateBackupStatusUI();
                                     
-                                    // NOWE: Odśwież datę następnego backupu po wykonaniu ręcznym
                                     const nextDate = calculateNextBackup(freshSettings);
                                     if (nextDate && nextBackupVal) {
                                         nextBackupVal.textContent = nextDate.toLocaleString(state.currentLang);
@@ -459,14 +526,13 @@ async function loadBackupPage() {
                                         showToast('toastBackupFailed', 'error');
                                     }
                                 } else {
-                                    // Timeout
                                     showToast('toastTestTimeout', 'error');
                                 }
                             }
                         } catch(err) {
                             console.error("Polling error", err);
                         }
-                    }, 3000); // Sprawdzaj co 3 sekundy
+                    }, 3000); 
                     
                 } catch(e) {
                     showToast('toastTestError', 'error');
@@ -497,12 +563,11 @@ async function saveBackupConfig(wasConnected) {
             schedule_days: gdScheduleDays,
             schedule_time: gdScheduleTime,
             retention_days: gdRetention,
-            is_enabled: wasConnected // Zachowaj status włączenia jeśli był włączony
+            is_enabled: wasConnected 
         };
 
         await saveBackupSettings(payload);
         showToast('toastDriveSaved', 'success');
-        // NOWE: Odśwież widok po zapisie (aby przeliczyć next backup jeśli zmieniono czas)
         loadBackupPage();
         return true;
     } catch(e) {
@@ -511,8 +576,10 @@ async function saveBackupConfig(wasConnected) {
     }
 }
 
+// --- Funkcja zapisująca WSZYSTKIE ustawienia na stronie settings.html ---
 async function saveSettingsFromPage() {
     try {
+        // 1. Główne ustawienia
         const currentSettings = await fetchSettings();
         
         const target = document.getElementById('pingTargetInput').value;
@@ -520,11 +587,9 @@ async function saveSettingsFromPage() {
         const dl = parseInt(document.getElementById('declaredDownloadInput').value) || 0;
         const ul = parseInt(document.getElementById('declaredUploadInput').value) || 0;
         
-        // Odczyt checkboxa
         const startupInput = document.getElementById('startupTestInput');
         const startupEnabled = startupInput ? startupInput.checked : true;
 
-        // NOWE: Odczyt kolorów
         const cDl = document.getElementById('colorDownloadInput').value;
         const cUl = document.getElementById('colorUploadInput').value;
         const cPi = document.getElementById('colorPingInput').value;
@@ -541,18 +606,38 @@ async function saveSettingsFromPage() {
             chart_color_download: cDl,
             chart_color_upload: cUl,
             chart_color_ping: cPi,
-            chart_color_jitter: cJi
+            chart_color_jitter: cJi,
+            app_language: state.currentLang // NOWE: Zapisujemy wybrany język
         };
 
         await updateSettings(payload);
-        
-        // Aplikuj zmiany natychmiastowo
         applyColorsToCSS(payload);
+
+        // 2. Ustawienia Powiadomień (dodane)
+        const notifEnabled = document.getElementById('notifEnabled').checked;
+        const notifProvider = document.getElementById('notifProvider').value;
+        const webhookUrl = document.getElementById('notifWebhookUrl').value;
+        const ntfyTopic = document.getElementById('notifNtfyTopic').value;
+        const ntfyServer = document.getElementById('notifNtfyServer').value;
+
+        const notifPayload = {
+            enabled: notifEnabled,
+            provider: notifProvider,
+            webhook_url: webhookUrl,
+            ntfy_topic: ntfyTopic,
+            ntfy_server: ntfyServer
+        };
+
+        await saveNotificationSettings(notifPayload);
+        
+        // Aktualizuj stan powiadomień przeglądarkowych
+        checkBrowserNotificationSettings();
 
         showToast('toastSettingsSaved', 'success');
         stopWatchdogPolling();
         startWatchdogPolling();
     } catch (e) {
+        console.error(e);
         showToast('toastSettingsError', 'error');
     }
 }
@@ -576,7 +661,6 @@ async function handleQuickSettingsChange(e) {
             declared_download: currentSettings.declared_download, 
             declared_upload: currentSettings.declared_upload,
             startup_test_enabled: currentSettings.startup_test_enabled,
-            // Zachowaj kolory przy szybkiej zmianie
             chart_color_download: currentSettings.chart_color_download,
             chart_color_upload: currentSettings.chart_color_upload,
             chart_color_ping: currentSettings.chart_color_ping,
@@ -588,7 +672,6 @@ async function handleQuickSettingsChange(e) {
             showToast('toastServerChanged', 'success', ` ${serverText}`);
         } else if (sourceId === 'scheduleSelect') {
             state.currentScheduleHours = newScheduleHours;
-            // Powiadomienie o wyłączeniu
             if (newScheduleHours === 0) {
                 showToast('toastScheduleDisabled', 'info');
             } else {
@@ -599,7 +682,6 @@ async function handleQuickSettingsChange(e) {
             const nextRunEl = document.getElementById('nextRunTime');
             if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
             
-            // Restartuj licznik po zmianie harmonogramu
             startNextRunCountdown();
 
             if (newScheduleHours > 0) {
@@ -623,15 +705,12 @@ function stopWatchdogPolling() {
     if (watchdogInterval) clearInterval(watchdogInterval);
 }
 
-// Funkcja uruchamiająca licznik (ZMIANA: Dynamiczne tłumaczenie)
 function startNextRunCountdown() {
     const countdownEl = document.getElementById('nextRunCountdown');
     if (!countdownEl) return;
 
-    // Wyczyść poprzedni interwał
     if (countdownInterval) clearInterval(countdownInterval);
 
-    // Jeśli harmonogram wyłączony lub brak danych o ostatnim teście, ukryj licznik
     if (state.currentScheduleHours === 0 || !state.lastTestTimestamp) {
         countdownEl.style.display = 'none';
         countdownEl.textContent = '';
@@ -640,11 +719,8 @@ function startNextRunCountdown() {
 
     countdownEl.style.display = 'block';
     
-    // ZMIANA: Usunięto pobieranie stałego 'prefix' tutaj.
-    
     const updateTimer = () => {
         try {
-            // ZMIANA: Pobierz aktualny język i prefiks wewnątrz pętli
             const lang = translations[state.currentLang];
             const prefix = lang.countdownPrefix || 'za';
 
@@ -657,7 +733,6 @@ function startNextRunCountdown() {
             const diff = nextRunDate - now;
 
             if (diff <= 0) {
-                // Czas minął, teoretycznie test powinien biec lub zaraz pobiegnie
                 countdownEl.textContent = ""; 
             } else {
                 countdownEl.textContent = `${prefix} ${formatCountdown(diff)}`;
@@ -667,7 +742,7 @@ function startNextRunCountdown() {
         }
     };
 
-    updateTimer(); // Wywołaj raz natychmiast
+    updateTimer(); 
     countdownInterval = setInterval(updateTimer, 1000);
 }
 
@@ -686,6 +761,17 @@ async function updateWatchdogUI() {
         } else {
             icon.className = 'watchdog-indicator offline';
         }
+
+        // ZMIANA: Obsługa powiadomień przeglądarkowych dla watchdoga
+        if (browserNotifEnabled && lastWatchdogStatus !== null && current.online !== lastWatchdogStatus) {
+            const statusStr = current.online ? "ONLINE" : "OFFLINE";
+            showBrowserNotification(
+                "Ping Watchdog",
+                `Cel ${current.target} jest teraz ${statusStr}.`,
+                "watchdog-status"
+            );
+        }
+        lastWatchdogStatus = current.online;
 
         const popover = document.getElementById('watchdogPopover');
         if (popover && popover.classList.contains('show')) {
@@ -717,9 +803,7 @@ function renderSparkline(history) {
     const labels = history.map(h => h.time);
     const dataPoints = history.map(h => h.latency || 0);
     
-    // Pobieramy kolory z CSS, aby siatka pasowała do motywu
     const style = getComputedStyle(document.body);
-    // Kolor siatki: delikatny biały w ciemnym trybie, delikatny czarny w jasnym
     const isDark = !document.body.classList.contains('light-mode');
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
     const tickColor = isDark ? '#888' : '#666';
@@ -727,7 +811,6 @@ function renderSparkline(history) {
     if (wdChart) {
         wdChart.data.labels = labels;
         wdChart.data.datasets[0].data = dataPoints;
-        // Aktualizacja kolorów siatki przy zmianie motywu (jeśli wykres już istnieje)
         wdChart.options.scales.x.grid.color = gridColor;
         wdChart.options.scales.y.grid.color = gridColor;
         wdChart.options.scales.x.ticks.color = tickColor;
@@ -742,7 +825,7 @@ function renderSparkline(history) {
                 datasets: [{
                     data: dataPoints,
                     borderColor: '#17a2b8',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)', // Lekkie wypełnienie pod wykresem
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)', 
                     borderWidth: 2,
                     pointRadius: 0,
                     fill: true,
@@ -756,25 +839,25 @@ function renderSparkline(history) {
                 plugins: { 
                     legend: { display: false }, 
                     tooltip: { 
-                        enabled: true, // Włączamy tooltipy, żeby siatka miała sens przy najeżdżaniu
+                        enabled: true, 
                         mode: 'index',
                         intersect: false
                     } 
                 },
                 scales: { 
                     x: { 
-                        display: true, // Pokaż oś X
+                        display: true, 
                         grid: {
                             color: gridColor,
                             drawBorder: false,
-                            display: false // Ukrywamy pionowe linie siatki dla czystości (częste w sparkline'ach)
+                            display: false 
                         },
                         ticks: {
-                            display: false // Ukrywamy etykiety czasu, bo mało miejsca
+                            display: false 
                         }
                     }, 
                     y: { 
-                        display: true, // Pokaż oś Y
+                        display: true, 
                         grid: {
                             color: gridColor,
                             drawBorder: false
@@ -782,9 +865,9 @@ function renderSparkline(history) {
                         ticks: {
                             color: tickColor,
                             font: {
-                                size: 9 // Mała czcionka
+                                size: 9 
                             },
-                            stepSize: 0.5 // ZMIANA: Krok siatki co 0.5
+                            stepSize: 0.5 
                         },
                         suggestedMin: 0
                     } 
@@ -842,15 +925,45 @@ function setupEventListeners() {
         if (langMenu) langMenu.classList.remove('show');
     });
     document.querySelectorAll('.lang-menu li').forEach(li => {
-        li.addEventListener('click', () => {
-            setLanguage(li.dataset.lang);            
-            updateLangButtonUI(li.dataset.lang);     
+        li.addEventListener('click', async () => {
+            const newLang = li.dataset.lang;
+            
+            // 1. Zmiana lokalna (natychmiastowa)
+            setLanguage(newLang);            
+            updateLangButtonUI(newLang);     
             showToast('toastLangChanged', 'success');
             
-            // ZMIANA: Odśwież status backupu jeśli jesteśmy na tej stronie
+            // 2. Zapis do bazy danych (jeśli użytkownik zalogowany)
+            if (!document.getElementById('loginForm')) {
+                try {
+                    // Pobierz aktualne ustawienia, aby nie nadpisać innych wartości null'ami
+                    // Backend oczekuje pełnego obiektu lub poprawnego mapowania,
+                    // ale bezpieczniej jest pobrać obecny stan i podmienić tylko język.
+                    const currentSettings = await fetchSettings();
+                    
+                    const payload = {
+                        server_id: currentSettings.selected_server_id,
+                        schedule_hours: currentSettings.schedule_hours,
+                        ping_target: currentSettings.ping_target,
+                        ping_interval: currentSettings.ping_interval,
+                        declared_download: currentSettings.declared_download,
+                        declared_upload: currentSettings.declared_upload,
+                        startup_test_enabled: currentSettings.startup_test_enabled,
+                        chart_color_download: currentSettings.chart_color_download,
+                        chart_color_upload: currentSettings.chart_color_upload,
+                        chart_color_ping: currentSettings.chart_color_ping,
+                        chart_color_jitter: currentSettings.chart_color_jitter,
+                        app_language: newLang // Zmiana języka
+                    };
+
+                    await updateSettings(payload);
+                } catch (e) {
+                    console.error("Błąd zapisu języka do bazy:", e);
+                }
+            }
+            
             if (window.location.pathname.includes('backup.html')) {
                 updateBackupStatusUI();
-                // I przelicz backup next date, żeby etykieta się zmieniła
                 loadBackupPage();
             }
 
@@ -868,11 +981,9 @@ function setupEventListeners() {
         if (isCurrentlyLight) showToast('toastThemeDark', 'info');
         else showToast('toastThemeLight', 'info');
         
-        // Odśwież wykresy (Chart.js), aby pobrały nowe kolory
         if (document.getElementById('downloadChart') && state.currentFilteredResults) {
             renderCharts(state.currentFilteredResults);
         }
-        // Odśwież wykres watchdoga jeśli jest widoczny
         if (wdChart) {
             wdChart.destroy();
             wdChart = null;
@@ -960,7 +1071,6 @@ function setupEventListeners() {
             const del = document.getElementById('deleteSelectedBtn');
             if(del) { 
                 del.style.display = c > 0 ? 'flex' : 'none'; 
-                // ZMIANA: Użycie ikony Material Symbols zamiast emoji
                 del.innerHTML=`<span class="material-symbols-rounded">delete</span> ${translations[state.currentLang].deleteSelected} (${c})`; 
             }
         });
@@ -984,6 +1094,49 @@ function setupEventListeners() {
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     if(saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromPage);
 
+    // Obsługa przycisku testu powiadomień (dodane)
+    const testNotifBtn = document.getElementById('notifTestBtn');
+    if(testNotifBtn) {
+        testNotifBtn.addEventListener('click', async () => {
+            const provider = document.getElementById('notifProvider').value;
+            const url = document.getElementById('notifWebhookUrl').value;
+            const topic = document.getElementById('notifNtfyTopic').value;
+            const server = document.getElementById('notifNtfyServer').value;
+            
+            try {
+                await testNotification({ 
+                    provider, 
+                    webhook_url: url, 
+                    ntfy_topic: topic, 
+                    ntfy_server: server,
+                    language: state.currentLang // NOWE: Przekazujemy język
+                });
+                showToast('toastNotifSent', 'success');
+            } catch (e) {
+                showToast('toastNotifError', 'error');
+            }
+        });
+    }
+
+    // Obsługa przycisku rejestracji przeglądarki (dodane)
+    const regBrowserBtn = document.getElementById('notifRegisterBtn');
+    if(regBrowserBtn) {
+        regBrowserBtn.addEventListener('click', () => {
+            if (!("Notification" in window)) {
+                alert("Ta przeglądarka nie obsługuje powiadomień.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    showToast('toastBrowserReg', 'success');
+                    new Notification("SpeedtestLog", { body: "Powiadomienia aktywne!", icon: 'logo.png' });
+                } else {
+                    showToast('toastBrowserDenied', 'error');
+                }
+            });
+        });
+    }
+
     const downBtn = document.getElementById('downloadBackupBtn');
     if(downBtn) {
         downBtn.addEventListener('click', async () => {
@@ -994,7 +1147,6 @@ function setupEventListeners() {
                     const blob = await res.blob();
                     const url = window.URL.createObjectURL(blob);
                     
-                    // ZMIANA: Generowanie nazwy pliku z datą i godziną po stronie klienta
                     const date = new Date();
                     const year = date.getFullYear();
                     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -1097,7 +1249,6 @@ async function loadDashboardData() {
 
         const scheduleSelect = document.getElementById('scheduleSelect');
         if (scheduleSelect) {
-            // Jeśli 0, to wyłączony, jeśli 1..24 to godziny
             scheduleSelect.value = (settingsData.schedule_hours !== null) ? settingsData.schedule_hours : 1;
             state.currentScheduleHours = (settingsData.schedule_hours !== null) ? settingsData.schedule_hours : 1;
         }
@@ -1111,10 +1262,15 @@ async function loadDashboardData() {
         const nextRunEl = document.getElementById('nextRunTime');
         if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
         
-        // Uruchom licznik
         startNextRunCountdown();
 
         state.allResults = await fetchResults();
+        
+        // Zainicjuj lastSeenResultId dla powiadomień, aby nie triggerować przy starcie
+        if(state.allResults.length > 0) {
+            lastSeenResultId = state.allResults[0].id;
+        }
+
         renderData();
     } catch (e) {
         console.error("Error loading dashboard data:", e);
@@ -1189,6 +1345,7 @@ function renderData() {
     updateTable(filtered);
 }
 
+// ZMIANA: Przekazanie state.currentLang przy ręcznym uruchamianiu testu
 async function handleManualTest() {
     const btn = document.getElementById('triggerTestBtn');
     const serverSelect = document.getElementById('serverSelect');
@@ -1196,7 +1353,8 @@ async function handleManualTest() {
     btn.disabled = true; btn.classList.add('is-loading'); showToast('toastTestInProgress', 'info');
     const prevTimestamp = state.allResults[0]?.timestamp;
     try {
-        await triggerTest(serverId);
+        // ZMIANA: Dodanie state.currentLang
+        await triggerTest(serverId, state.currentLang);
         let attempts = 0;
         state.pollingInterval = setInterval(async () => {
             attempts++;
@@ -1206,13 +1364,11 @@ async function handleManualTest() {
                 clearInterval(state.pollingInterval); showToast('toastTestComplete', 'success');
                 state.allResults = await fetchResults(); 
                 
-                // ZMIANA: Aktualizacja timestampa ostatniego testu po udanym teście
                 if (state.allResults.length > 0) {
                     state.lastTestTimestamp = state.allResults[0].timestamp;
                     const nextRunEl = document.getElementById('nextRunTime');
                     if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
                     
-                    // Restartuj licznik po nowym teście 
                     startNextRunCountdown();
                 }
                 

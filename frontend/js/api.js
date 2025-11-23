@@ -30,11 +30,12 @@ export async function updateSettings(payload) {
     return await response.json();
 }
 
-export async function triggerTest(serverId) {
+// ZMIANA: Dodanie parametru language
+export async function triggerTest(serverId, language) {
     const response = await fetch('/api/trigger-test', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ server_id: serverId })
+        body: JSON.stringify({ server_id: serverId, app_language: language })
     });
     if (!response.ok) throw new Error('Trigger error');
     return response;
@@ -66,7 +67,6 @@ export async function getAuthStatus() {
     }
 }
 
-// --- NOWE: Funkcja logowania ---
 export async function loginUser(username, password) {
     const response = await fetch('/api/login', {
         method: 'POST',
@@ -82,7 +82,32 @@ export async function logoutUser() {
     window.location.reload();
 }
 
-// --- NOWE: Google Drive API Calls --- 
+export async function fetchNotificationSettings() {
+    const response = await fetch('/api/notifications/settings');
+    if (!response.ok) throw new Error('Failed to fetch notification settings');
+    return await response.json();
+}
+
+export async function saveNotificationSettings(payload) {
+    const response = await fetch('/api/notifications/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('Failed to save settings');
+    return await response.json();
+}
+
+export async function testNotification(payload) {
+    const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('Test failed');
+    return await response.json();
+}
+
 export async function fetchBackupSettings() {
     const response = await fetch('/api/backup/settings');
     if (!response.ok) throw new Error('Failed to fetch backup settings');

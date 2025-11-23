@@ -13,6 +13,7 @@ import io
 import secrets
 import shutil
 import re
+import requests
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, HTTPException, Request, Depends, Response, status, UploadFile, File, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, RedirectResponse, HTMLResponse
@@ -58,6 +59,32 @@ logging.getLogger("uvicorn").addHandler(stream_handler)
 logging.getLogger("schedule").setLevel(logging.WARNING)
 logging.getLogger("multipart").setLevel(logging.WARNING)
 logging.getLogger("googleapiclient").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+# --- Słownik Tłumaczeń Powiadomień ---
+NOTIF_TRANS = {
+    "pl": {
+        "speedtest_title": "🚀 Nowy wynik Speedtest",
+        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms.",
+        "watchdog_up_title": "🟢 Watchdog ONLINE",
+        "watchdog_up_body": "Ping Watchdog: Cel {target} jest teraz ONLINE.",
+        "watchdog_down_title": "🔴 Watchdog OFFLINE",
+        "watchdog_down_body": "Ping Watchdog: Cel {target} jest teraz OFFLINE.",
+        "test_title": "Test Powiadomienia",
+        "test_body": "To jest testowe powiadomienie ze SpeedtestLog. 🚀"
+    },
+    "en": {
+        "speedtest_title": "🚀 New Speedtest Result",
+        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms.",
+        "watchdog_up_title": "🟢 Watchdog ONLINE",
+        "watchdog_up_body": "Ping Watchdog: Target {target} is now ONLINE.",
+        "watchdog_down_title": "🔴 Watchdog OFFLINE",
+        "watchdog_down_body": "Ping Watchdog: Target {target} is now OFFLINE.",
+        "test_title": "Notification Test",
+        "test_body": "This is a test notification from SpeedtestLog. 🚀"
+    }
+}
 
 # --- Słownik Tłumaczeń Logów ---
 LOG_TRANS = {
@@ -65,6 +92,8 @@ LOG_TRANS = {
         "db_init": "⏳ Initializing database...",
         "db_mig_startup": "🔧 Migration: Adding startup_test_enabled column...",
         "db_mig_colors": "🔧 Migration: Adding chart color columns...",
+        "db_mig_notify": "🔧 Migration: Adding notification settings...",
+        "db_mig_lang": "🔧 Migration: Adding app_language column...",
         "db_connected": "✅ Connected to database.",
         "db_unavailable": "⚠️ Database unavailable... ({}/{})",
         "backup_start": "📂 Starting scheduled Google Drive backup...",
@@ -92,12 +121,15 @@ LOG_TRANS = {
         "google_err": "Google returned error: {}",
         "no_code": "No auth code in callback",
         "auth_callback_err": "Auth Callback Error: {}",
-        "watchdog_err": "Watchdog error: {}"
+        "watchdog_err": "Watchdog error: {}",
+        "notify_sent": "🔔 Notification sent via {}"
     },
     "pl": {
         "db_init": "⏳ Inicjalizacja bazy danych...",
         "db_mig_startup": "🔧 Migracja: Dodawanie kolumny startup_test_enabled...",
         "db_mig_colors": "🔧 Migracja: Dodawanie kolumn kolorów wykresów...",
+        "db_mig_notify": "🔧 Migracja: Dodawanie ustawień powiadomień...",
+        "db_mig_lang": "🔧 Migracja: Dodawanie kolumny app_language...",
         "db_connected": "✅ Połączono z bazą danych.",
         "db_unavailable": "⚠️ Baza niedostępna... ({}/{})",
         "backup_start": "📂 Rozpoczynanie zaplanowanego backupu do Google Drive...",
@@ -125,7 +157,8 @@ LOG_TRANS = {
         "google_err": "Google zwróciło błąd: {}",
         "no_code": "Brak kodu autoryzacji w callbacku",
         "auth_callback_err": "Auth Callback Error: {}",
-        "watchdog_err": "Watchdog error: {}"
+        "watchdog_err": "Watchdog error: {}",
+        "notify_sent": "🔔 Wysłano powiadomienie przez {}"
     }
 }
 
@@ -167,11 +200,26 @@ class SettingsModel(BaseModel):
     declared_download: int | None = 0
     declared_upload: int | None = 0
     startup_test_enabled: bool | None = True
-    # Nowe pola kolorów
+    app_language: str | None = "pl" 
+    # Kolory
     chart_color_download: str | None = None
     chart_color_upload: str | None = None
     chart_color_ping: str | None = None
     chart_color_jitter: str | None = None
+
+class NotificationSettingsModel(BaseModel):
+    enabled: bool | None = False
+    provider: str | None = "browser" # browser, webhook, ntfy
+    webhook_url: str | None = ""
+    ntfy_topic: str | None = ""
+    ntfy_server: str | None = "https://ntfy.sh"
+
+class NotificationTestModel(BaseModel):
+    provider: str
+    webhook_url: str | None = None
+    ntfy_topic: str | None = None
+    ntfy_server: str | None = None
+    language: str | None = "pl" 
 
 class BackupSettingsModel(BaseModel):
     client_id: str | None = None
@@ -229,11 +277,21 @@ class AppSettings(Base):
     declared_download = Column(Integer, default=0)
     declared_upload = Column(Integer, default=0)
     startup_test_enabled = Column(Boolean, default=True)
-    # Nowe kolumny na kolory
+    app_language = Column(String(5), default="pl")
+    # Kolory
     chart_color_download = Column(String(20), nullable=True)
     chart_color_upload = Column(String(20), nullable=True)
     chart_color_ping = Column(String(20), nullable=True)
     chart_color_jitter = Column(String(20), nullable=True)
+
+class NotificationSettings(Base):
+    __tablename__ = "notification_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    enabled = Column(Boolean, default=False)
+    provider = Column(String(50), default="browser") # browser, webhook, ntfy
+    webhook_url = Column(String(500), nullable=True)
+    ntfy_topic = Column(String(255), nullable=True)
+    ntfy_server = Column(String(255), default="https://ntfy.sh")
 
 class DriveBackupSettings(Base):
     __tablename__ = "drive_backup_settings"
@@ -259,7 +317,7 @@ app_state = {
     "engine": None, 
     "SessionLocal": None,
     "watchdog_config": {"target": "8.8.8.8", "interval": 30},
-    "latest_ping_status": {"online": False, "latency": 0, "loss": 0, "target": "init"}
+    "latest_ping_status": {"online": None, "latency": 0, "loss": 0, "target": "init"} # Init state to None
 }
 
 # --- Inicjalizacja DB ---
@@ -275,7 +333,7 @@ def initialize_db(max_retries=10, delay=5):
             with engine.connect() as connection:
                 Base.metadata.create_all(bind=engine)
                 
-                # Migracja: startup_test_enabled
+                # Migracje
                 try:
                     connection.execute(text("SELECT startup_test_enabled FROM app_settings LIMIT 1"))
                 except Exception:
@@ -283,7 +341,6 @@ def initialize_db(max_retries=10, delay=5):
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN startup_test_enabled BOOLEAN DEFAULT 1"))
                     connection.commit()
                 
-                # Migracja: kolory wykresów
                 try:
                     connection.execute(text("SELECT chart_color_download FROM app_settings LIMIT 1"))
                 except Exception:
@@ -293,6 +350,25 @@ def initialize_db(max_retries=10, delay=5):
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_ping VARCHAR(20) DEFAULT NULL"))
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_jitter VARCHAR(20) DEFAULT NULL"))
                     connection.commit()
+
+                # Migracja Języka
+                try:
+                    connection.execute(text("SELECT app_language FROM app_settings LIMIT 1"))
+                except Exception:
+                    logging.info(get_log("db_mig_lang"))
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN app_language VARCHAR(5) DEFAULT 'pl'"))
+                    connection.commit()
+
+                # Tabela NotificationSettings
+                try:
+                    with SessionLocal() as session:
+                        ns = session.query(NotificationSettings).filter(NotificationSettings.id == 1).first()
+                        if not ns:
+                            session.add(NotificationSettings(id=1, enabled=False, provider="browser"))
+                            session.commit()
+                            logging.info(get_log("db_mig_notify"))
+                except Exception as e:
+                    logging.warning(f"Notification init warning: {e}")
 
                 logging.info(get_log("db_connected"))
                 return
@@ -322,6 +398,62 @@ def load_backup_settings(db_session):
         db_session.add(settings)
         db_session.commit()
     return settings
+
+def load_notification_settings(db_session):
+    settings = db_session.query(NotificationSettings).filter(NotificationSettings.id == 1).first()
+    if not settings:
+        settings = NotificationSettings(id=1, enabled=False, provider="browser")
+        db_session.add(settings)
+        db_session.commit()
+    return settings
+
+# --- Notification Logic ---
+def send_system_notification(title: str, message: str, type: str = "info"):
+    """
+    Wysyła powiadomienie używając skonfigurowanego providera.
+    """
+    db = app_state["SessionLocal"]()
+    try:
+        ns = load_notification_settings(db)
+        if not ns.enabled:
+            return
+
+        if ns.provider == "browser":
+            return 
+
+        try:
+            if ns.provider == "webhook" and ns.webhook_url:
+                payload = {
+                    "title": title,
+                    "message": message,
+                    "type": type,
+                    "timestamp": datetime.now().isoformat()
+                }
+                resp = requests.post(ns.webhook_url, json=payload, timeout=5)
+                resp.raise_for_status()
+                logging.info(get_log("notify_sent", "Webhook"))
+
+            elif ns.provider == "ntfy" and ns.ntfy_topic:
+                server = ns.ntfy_server.rstrip('/') if ns.ntfy_server else "https://ntfy.sh"
+                url = f"{server}/{ns.ntfy_topic}"
+                
+                headers = {
+                    "Title": title.encode('utf-8'),
+                    "Priority": "high" if "down" in type or "error" in type else "default",
+                    "Tags": "warning" if "down" in type else "white_check_mark"
+                }
+                
+                resp = requests.post(url, data=message.encode('utf-8'), headers=headers, timeout=5)
+                resp.raise_for_status()
+                logging.info(get_log("notify_sent", "Ntfy"))
+
+        except Exception as e:
+            logging.error(f"Notification send error: {e}")
+            if isinstance(e, requests.exceptions.HTTPError):
+                logging.error(f"HTTP Response: {e.response.text}")
+
+    finally:
+        db.close()
 
 # --- Google Drive Functions ---
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -371,7 +503,6 @@ def perform_backup_task():
             logging.warning(get_log("backup_skipped"))
             return
 
-        # 1. Generowanie zrzutu bazy
         env = os.environ.copy(); env["MYSQL_PWD"] = DB_PASSWORD
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"speedtest_backup_{timestamp}.sql"
@@ -387,7 +518,6 @@ def perform_backup_task():
             db.commit()
             return
 
-        # 2. Upload do Drive
         service = get_drive_service(settings)
         if not service:
             logging.error(get_log("drive_api_err"))
@@ -402,7 +532,6 @@ def perform_backup_task():
         
         service.files().create(body=file_metadata, media_body=media, fields='id').execute()
         
-        # 3. Retencja (usuwanie starych)
         if settings.retention_days and settings.retention_days > 0:
             cutoff_date = (datetime.now() - timedelta(days=settings.retention_days)).isoformat()
             query = f"'{folder_id}' in parents and createdTime < '{cutoff_date}' and trashed=false"
@@ -413,7 +542,6 @@ def perform_backup_task():
                     logging.info(get_log("backup_old_removed", file.get('name')))
                 except: pass
 
-        # Sprzątanie lokalne
         os.remove(temp_path)
         
         settings.last_run = datetime.now()
@@ -447,12 +575,17 @@ def setup_backup_schedule(settings):
 # --- Pozostałe funkcje (Watchdog, Speedtest) ---
 def run_ping_watchdog():
     logging.info(get_log("watchdog_start"))
+    
+    # Inicjalny stan w pamięci
+    last_online_status = None 
+
     while True:
         db = app_state["SessionLocal"]()
         try:
             s = load_settings_from_db(db)
             target = s.ping_target
             interval = s.ping_interval if s.ping_interval and s.ping_interval >= 5 else 30
+            app_lang = s.app_language or "pl" # Pobierz preferowany język
             
             app_state["watchdog_config"] = {"target": target, "interval": interval}
 
@@ -480,6 +613,29 @@ def run_ping_watchdog():
             db.query(PingLog).filter(PingLog.timestamp < cutoff).delete()
             db.commit()
             
+            # Logika powiadomień o zmianie stanu
+            current_online_status = is_online
+            
+            if app_state["latest_ping_status"]["online"] is None:
+                 app_state["latest_ping_status"]["online"] = current_online_status
+            else:
+                prev_status = app_state["latest_ping_status"]["online"]
+                
+                if prev_status is not None and current_online_status != prev_status:
+                    # Zmiana stanu!
+                    trans = NOTIF_TRANS.get(app_lang, NOTIF_TRANS["pl"])
+                    
+                    if current_online_status:
+                        title = trans["watchdog_up_title"]
+                        msg = trans["watchdog_up_body"].format(target=target)
+                        type_str = "watchdog_up"
+                    else:
+                        title = trans["watchdog_down_title"]
+                        msg = trans["watchdog_down_body"].format(target=target)
+                        type_str = "watchdog_down"
+                    
+                    send_system_notification(title, msg, type_str)
+
             app_state["latest_ping_status"] = {
                 "online": is_online,
                 "latency": round(latency, 1) if latency else None,
@@ -503,10 +659,15 @@ def get_closest_servers():
             with open(SERVERS_FILE, 'w', encoding='utf-8') as f: f.write(res.stdout)
         except Exception as e: logging.error(get_log("servers_err", e))
 
-def run_speed_test_and_save(server_id=None):
+# ZMIANA: Dodanie parametru forced_lang do funkcji
+def run_speed_test_and_save(server_id=None, forced_lang=None):
     if not test_lock.acquire(blocking=False): return None
     db_session = app_state["SessionLocal"]()
     try:
+        s = load_settings_from_db(db_session)
+        # ZMIANA: Użycie wymuszonego języka jeśli istnieje, w przeciwnym razie z bazy
+        app_lang = forced_lang if forced_lang else (s.app_language or "pl")
+
         cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
         if server_id: cmd.extend(['--server-id', str(server_id)])
         
@@ -533,11 +694,15 @@ def run_speed_test_and_save(server_id=None):
             logging.error(get_log("result_format_err", proc.stdout))
             return None
         
+        down_mbps = round(data.get("download", {}).get("bandwidth", 0) * 8 / 1_000_000, 2)
+        up_mbps = round(data.get("upload", {}).get("bandwidth", 0) * 8 / 1_000_000, 2)
+        ping_ms = data.get("ping", {}).get("latency", 0)
+        
         res = SpeedtestResult(
             id=str(uuid.uuid4()), timestamp=datetime.now(),
-            ping=data.get("ping", {}).get("latency", 0), jitter=data.get("ping", {}).get("jitter", 0),
-            download=round(data.get("download", {}).get("bandwidth", 0) * 8 / 1_000_000, 2),
-            upload=round(data.get("upload", {}).get("bandwidth", 0) * 8 / 1_000_000, 2),
+            ping=ping_ms, jitter=data.get("ping", {}).get("jitter", 0),
+            download=down_mbps,
+            upload=up_mbps,
             server_id=data.get("server", {}).get("id"), server_name=data.get("server", {}).get("name"),
             server_location=data.get("server", {}).get("location"), result_url=data.get("result", {}).get("url"),
             isp=data.get("isp"), client_ip=data.get("interface", {}).get("externalIp"),
@@ -550,6 +715,14 @@ def run_speed_test_and_save(server_id=None):
         db_session.add(res)
         db_session.commit()
         logging.info(get_log("test_result", res.download))
+        
+        # Powiadomienie z tłumaczeniem
+        trans = NOTIF_TRANS.get(app_lang, NOTIF_TRANS["pl"])
+        msg = trans["speedtest_body"].format(dl=down_mbps, ul=up_mbps, ping=ping_ms)
+        title = trans["speedtest_title"]
+        
+        send_system_notification(title, msg, "speedtest")
+        
         return res
     except Exception as e:
         logging.error(get_log("test_crit_err", e))
@@ -622,7 +795,6 @@ def get_redirect_uri(request: Request):
 async def login(creds: LoginModel, response: Response):
     if not AUTH_ENABLED: return {"message": "Auth disabled"}
     if creds.username == APP_USERNAME and creds.password == APP_PASSWORD:
-        # Zmiana: Dodano max_age=2592000 (30 dni), aby ciasteczko przetrwało zamknięcie przeglądarki/restart aplikacji
         response.set_cookie(
             key=SESSION_COOKIE_NAME, 
             value=SESSION_SECRET, 
@@ -695,15 +867,77 @@ async def set_set(s: SettingsModel, db=Depends(get_db)):
     if s.declared_upload is not None: rec.declared_upload = s.declared_upload
     if s.startup_test_enabled is not None: rec.startup_test_enabled = s.startup_test_enabled
     
-    # Zapis kolorów
     if s.chart_color_download: rec.chart_color_download = s.chart_color_download
     if s.chart_color_upload: rec.chart_color_upload = s.chart_color_upload
     if s.chart_color_ping: rec.chart_color_ping = s.chart_color_ping
     if s.chart_color_jitter: rec.chart_color_jitter = s.chart_color_jitter
     
+    if s.app_language: rec.app_language = s.app_language
+
     db.commit()
     logging.info(get_log("settings_updated"))
     return {"message": "Settings saved"}
+
+# --- Notification Settings Endpoints ---
+@app.get("/api/notifications/settings", dependencies=[Depends(verify_session)])
+async def get_notif_settings(db=Depends(get_db)):
+    ns = load_notification_settings(db)
+    return {
+        "enabled": ns.enabled,
+        "provider": ns.provider,
+        "webhook_url": ns.webhook_url,
+        "ntfy_topic": ns.ntfy_topic,
+        "ntfy_server": ns.ntfy_server
+    }
+
+@app.post("/api/notifications/settings", dependencies=[Depends(verify_session)])
+async def save_notif_settings(s: NotificationSettingsModel, db=Depends(get_db)):
+    ns = load_notification_settings(db)
+    ns.enabled = s.enabled
+    ns.provider = s.provider
+    ns.webhook_url = s.webhook_url
+    ns.ntfy_topic = s.ntfy_topic
+    ns.ntfy_server = s.ntfy_server
+    db.commit()
+    return {"message": "Notification settings saved"}
+
+@app.post("/api/notifications/test", dependencies=[Depends(verify_session)])
+async def test_notif(s: NotificationTestModel):
+    lang = s.language or "pl"
+    trans = NOTIF_TRANS.get(lang, NOTIF_TRANS["pl"])
+    msg = trans["test_body"]
+    title = trans["test_title"]
+
+    try:
+        if s.provider == "webhook":
+            if not s.webhook_url: raise ValueError("Missing Webhook URL")
+            payload = {
+                "title": title,
+                "message": msg,
+                "type": "test",
+                "timestamp": datetime.now().isoformat()
+            }
+            resp = requests.post(s.webhook_url, json=payload, timeout=5)
+            resp.raise_for_status()
+        elif s.provider == "ntfy":
+            if not s.ntfy_topic: raise ValueError("Missing Ntfy Topic")
+            server = s.ntfy_server.rstrip('/') if s.ntfy_server else "https://ntfy.sh"
+            url = f"{server}/{s.ntfy_topic}"
+            
+            headers = {
+                "Title": title.encode('utf-8'),
+                "Tags": "tada"
+            }
+            
+            resp = requests.post(url, data=msg.encode('utf-8'), headers=headers, timeout=5)
+            resp.raise_for_status()
+            
+        return {"message": "Sent"}
+    except Exception as e:
+        logging.error(f"Test notification failed: {e}")
+        if isinstance(e, requests.exceptions.HTTPError):
+             raise HTTPException(status_code=400, detail=f"Provider returned error: {e.response.status_code} {e.response.text}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/watchdog/status", dependencies=[Depends(verify_session)])
 async def watchdog_status(db=Depends(get_db)):
@@ -711,10 +945,11 @@ async def watchdog_status(db=Depends(get_db)):
     history_data = [{"time": log.timestamp.strftime("%H:%M:%S"), "latency": log.latency} for log in reversed(history)]
     return {"current": app_state["latest_ping_status"], "history": history_data}
 
+# ZMIANA: Przekazanie app_language do run_speed_test_and_save
 @app.post("/api/trigger-test", dependencies=[Depends(verify_session)])
 async def trig_test(s: SettingsModel):
     if test_lock.locked(): raise HTTPException(status_code=429)
-    threading.Thread(target=run_speed_test_and_save, args=(s.server_id,), daemon=True).start()
+    threading.Thread(target=run_speed_test_and_save, args=(s.server_id, s.app_language), daemon=True).start()
     return {"message": "Started"}
 
 @app.delete("/api/results", dependencies=[Depends(verify_session)])
@@ -871,7 +1106,6 @@ async def google_callback(request: Request, db=Depends(get_db), code: Optional[s
             logging.error(get_log("auth_callback_err", e))
             target_url = "/backup.html?auth=error"
 
-    # Fix for cookie lost issue on redirect: Return HTML with JS redirect instead of 302
     return HTMLResponse(content=f"""
         <!DOCTYPE html>
         <html>

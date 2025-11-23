@@ -22,7 +22,6 @@
             </div>
             <nav class="sidebar-nav">
                 <ul>
-                    <!-- ZMIANA: Nowe ikony Material Symbols  -->
                     <li><a href="index.html#dashboard" class="nav-link"><span class="material-symbols-rounded icon">dashboard</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
                     <li><a href="index.html#charts" class="nav-link"><span class="material-symbols-rounded icon">analytics</span> <span data-i18n-key="historyCharts">Wykresy Historii</span></a></li>
                     <li><a href="index.html#history" class="nav-link"><span class="material-symbols-rounded icon">history</span> <span data-i18n-key="historyTable">Historia Pomiarów</span></a></li>
@@ -55,7 +54,6 @@
                     </div>
 
                     <div class="lang-dropdown-wrapper">
-                        <!-- ZMIANA: Usunięto flagę i dodano ikonę języka -->
                         <button id="langBtn" class="lang-btn">
                             <span class="material-symbols-rounded">language</span>
                             <span id="currentLangText">PL</span>
@@ -65,7 +63,6 @@
                             <li data-lang="en">English</li>
                         </ul>
                     </div>
-                    <!-- ZMIANA: Ikonka zmiany motywu na Material Symbol -->
                     <button id="themeToggle" title="Zmień motyw" class="theme-btn">
                         <span class="material-symbols-rounded">dark_mode</span>
                     </button>
@@ -73,7 +70,6 @@
             </header>
 
             <div class="content-scroll">
-                <!-- ZMIANA: Usunięto style max-width: 800px, teraz korzysta z domyślnego layout.css (max 1400px) -->
                 <section class="section-block">
                     <h2 data-i18n-key="navSettings">Ustawienia</h2>
                     
@@ -90,7 +86,6 @@
                         </div>
                     </div>
 
-                    <!-- NOWE: Sekcja Automatycznego Testu  -->
                     <div class="settings-card" style="margin-bottom: 2rem;">
                         <h3 data-i18n-key="startupTestTitle">Automatyczny test przy starcie</h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="startupTestDesc">Jeśli włączone, test prędkości zostanie wykonany automatycznie 1 minutę po uruchomieniu aplikacji.</p>
@@ -104,9 +99,60 @@
                         </div>
                     </div>
 
-                    <!-- NOWE: Sekcja Kolorów Wykresów -->
+                    <!-- NOWE: Sekcja Powiadomień -->
                     <div class="settings-card" style="margin-bottom: 2rem;">
-                        <!-- ZMIANA: Nowy klucz tłumaczenia -->
+                        <h3 data-i18n-key="notificationsTitle">Powiadomienia</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="notificationsDesc">Otrzymuj powiadomienia o zakończonym teście lub zmianie statusu Ping Watchdog.</p>
+                        
+                        <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                            <label for="notifEnabled" style="margin: 0; cursor: pointer; font-weight: 600; color: var(--text-color);" data-i18n-key="notifEnable">Włącz powiadomienia</label>
+                            <label class="switch">
+                                <input type="checkbox" id="notifEnabled">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+
+                        <div class="control-group">
+                            <label data-i18n-key="notifProvider">Rodzaj powiadomienia:</label>
+                            <select id="notifProvider">
+                                <option value="browser" data-i18n-key="notifBrowser">Przeglądarkowe</option>
+                                <option value="webhook" data-i18n-key="notifWebhook">Webhook</option>
+                                <option value="ntfy" data-i18n-key="notifNtfy">Ntfy.sh</option>
+                            </select>
+                        </div>
+
+                        <div id="notifFields">
+                            <div id="fieldWebhook" style="display: none;">
+                                <div class="control-group">
+                                    <label data-i18n-key="notifUrl">Webhook URL:</label>
+                                    <input type="text" id="notifWebhookUrl" placeholder="https://example.com/webhook">
+                                </div>
+                            </div>
+                            <div id="fieldNtfy" style="display: none;">
+                                <div class="control-group">
+                                    <label data-i18n-key="notifServer">Ntfy Serwer:</label>
+                                    <input type="text" id="notifNtfyServer" value="https://ntfy.sh">
+                                </div>
+                                <div class="control-group">
+                                    <label data-i18n-key="notifTopic">Ntfy Temat (Topic):</label>
+                                    <input type="text" id="notifNtfyTopic" placeholder="moj_temat_speedtest">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button id="notifTestBtn" class="action-btn" style="background-color: var(--info-color); border: none;">
+                                <span class="material-symbols-rounded">send</span>
+                                <span data-i18n-key="notifTestBtn">Test Powiadomienia</span>
+                            </button>
+                            <button id="notifRegisterBtn" class="action-btn" style="background-color: #34a853; border: none; display: none;">
+                                <span class="material-symbols-rounded">notifications_active</span>
+                                <span data-i18n-key="notifRegisterBtn">Zarejestruj przeglądarkę</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="settings-card" style="margin-bottom: 2rem;">
                         <h3 data-i18n-key="chartColorsTitle">Kolory Wykresów</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
                             <div class="control-group">
