@@ -156,6 +156,12 @@
                                 <span style="margin: 0 5px;">|</span>
                                 <span data-i18n-key="lastBackupStatus">Status:</span> <span id="lastStatusVal">-</span>
                             </div>
+                            <!-- NOWE: Sekcja następnego backupu i licznika -->
+                            <div class="run-info" id="nextBackupInfo" style="display: none;">
+                                <span data-i18n-key="nextBackupLabel">Następny backup:</span> <span id="nextBackupVal">-</span>
+                                <br>
+                                <span id="backupCountdown" class="countdown-timer"></span>
+                            </div>
 
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
                                 <div class="control-group">

@@ -622,8 +622,14 @@ def get_redirect_uri(request: Request):
 async def login(creds: LoginModel, response: Response):
     if not AUTH_ENABLED: return {"message": "Auth disabled"}
     if creds.username == APP_USERNAME and creds.password == APP_PASSWORD:
-        # Zmiana: Lax pozwala na cross-site redirect (OAuth) przy zachowaniu bezpieczeństwa
-        response.set_cookie(key=SESSION_COOKIE_NAME, value=SESSION_SECRET, httponly=True, samesite='lax')
+        # Zmiana: Dodano max_age=2592000 (30 dni), aby ciasteczko przetrwało zamknięcie przeglądarki/restart aplikacji
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME, 
+            value=SESSION_SECRET, 
+            httponly=True, 
+            samesite='lax',
+            max_age=2592000 
+        )
         return {"message": "Logged in"}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 

@@ -153,7 +153,6 @@ button#gdRunBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
     cursor: pointer; 
     color: var(--text-color); 
     padding: 0; 
-    /* ZMIANA: Usunięcie stałego font-size, aby Material Icon decydował */
     transition: background-color 0.2s; 
     box-shadow: none;
 }
@@ -167,7 +166,7 @@ button#gdRunBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
     font-weight: 500; font-size: 0.9rem; box-shadow: none; text-transform: none;
 }
 .lang-btn:hover { background-color: rgba(128,128,128, 0.1); transform: none; box-shadow: none; }
-.lang-btn img { width: 20px; height: auto; border-radius: 2px; } /* Zachowane dla wstecznej kompatybilności, jeśli jakiś img zostanie */
+.lang-btn img { width: 20px; height: auto; border-radius: 2px; } 
 
 .lang-menu { 
     position: absolute; top: 110%; right: 0; 
@@ -193,9 +192,12 @@ button#gdRunBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
 .info-group { margin-left: auto; }
 
 .stats-container { 
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
-    gap: 1.5rem; margin-bottom: 2.5rem; 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+    gap: 1.5rem; 
+    margin-bottom: 2.5rem; 
 }
+
 .stat-card { 
     background-color: var(--card-bg-color); 
     border-radius: var(--border-radius-base); 
@@ -207,14 +209,20 @@ button#gdRunBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
 .stat-card .value-container { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.25rem; }
 .stat-card .value { font-size: 2.5rem; font-weight: 400; color: var(--text-color); line-height: 1; }
 .stat-card .unit { font-size: 1rem; font-weight: 500; color: var(--text-color-secondary); }
+
 .stat-card .comparison { 
     font-size: 0.9rem; 
     font-weight: 500; 
-    /* ZMIANA: Flexbox dla wyrównania ikony i tekstu */
     display: flex; 
     align-items: center; 
     gap: 4px; 
 }
+.stat-card .comparison .material-symbols-rounded {
+    font-size: 1.1em; 
+    font-weight: bold;
+    line-height: 1;
+}
+
 .stat-card .comparison.positive { color: var(--success-text); }
 .stat-card .comparison.negative { color: var(--danger-text); }
 .stat-card .comparison.neutral { color: var(--text-color-secondary); }
@@ -233,7 +241,6 @@ button#gdRunBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
 }
 .chart-block h3 { margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--text-color); font-weight: 500; }
 
-/* ZMIANA: Naprawa wykresów. */
 .chart-block canvas { 
     width: 100% !important; 
     height: 100% !important;
@@ -259,7 +266,6 @@ tbody tr { transition: background-color 0.1s; }
 tbody tr:hover { background-color: rgba(255,255,255, 0.03); }
 body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
 
-/* ZMIANA: position relative dla kontenera nagłówka tabeli (umożliwia absolutne pozycjonowanie przycisku usuwania na mobile) */
 .table-header { 
     display: flex; 
     justify-content: space-between; 
@@ -272,12 +278,11 @@ body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
 .table-header h2 { margin: 0; font-size: 1.5rem; color: var(--text-color); font-weight: 400; }
 .table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* ZMIANA: Style dla pola wyszukiwania */
 .search-input {
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
     border: 1px solid var(--border-color);
-    border-radius: 20px; /* Bardziej zaokrąglone */
+    border-radius: 20px; 
     background-color: var(--card-bg-color);
     color: var(--text-color);
     width: 200px;
@@ -289,12 +294,10 @@ body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
     outline: none;
 }
 
-/* ZMIANA: Kolory pomocnicze dla wartości tabeli */
 .text-success { color: var(--success-color); font-weight: 700; }
 .text-warning { color: var(--color-ping); font-weight: 700; }
 .text-danger { color: var(--danger-color); font-weight: 700; }
 
-/* ZMIANA: Stylowanie ikonki linku w tabeli */
 .result-link-icon {
     text-decoration: none;
     color: var(--text-color-secondary);
@@ -362,13 +365,12 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
     display: flex; 
     align-items: flex-start; 
     gap: 1.5rem; 
-    /* ZMIANA: Zabezpieczenie przed wyciekaniem zawartości */
     max-width: 100%;
     box-sizing: border-box;
     overflow: hidden;
 }
 .backup-icon { font-size: 3rem; opacity: 0.8; flex-shrink: 0; }
-.backup-content { flex: 1; min-width: 0; /* Kluczowe dla flexboxa i długich tekstów */ }
+.backup-content { flex: 1; min-width: 0; }
 .backup-content h3 { margin-top: 0; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 500; }
 .backup-content p { color: var(--text-color-secondary); margin-bottom: 1.5rem; }
 
@@ -398,7 +400,7 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
 #fileNameDisplay {
     font-size: 0.9rem; 
     color: var(--text-color-secondary); 
-    word-break: break-all; /* Łamanie długich nazw plików */
+    word-break: break-all; 
 }
 
 /* Watchdog Styles */
@@ -420,41 +422,58 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
     .info-group { margin-left: 0; }
     button#triggerTestBtn, button#gdRunBtn { width: 100%; }
     .pagination-container { justify-content: center; }
-    .stat-card { padding: 1rem; }
-    .stat-card h3 { font-size: 0.9rem; }
-    .stat-card .value { font-size: 1.4rem; }
+    
+    /* ZMIANA: Zmniejszenie rozmiarów stat-card dla mobile, aby zmieścić 2 kolumny */
+    .stat-card { 
+        padding: 0.75rem 0.5rem; 
+        /* ZMIANA: Pozwala kafelkowi się skurczyć poniżej domyślnej szerokości zawartości */
+        min-width: 0; 
+    }
+    .stat-card h3 { 
+        font-size: 0.75rem; 
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .stat-card .value { 
+        font-size: 1.25rem; 
+    }
+    .stat-card .unit {
+        font-size: 0.75rem;
+    }
+    .stat-card .comparison {
+        font-size: 0.75rem;
+    }
+    
     .watchdog-popover { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); right: auto; width: 90%; max-width: 300px; }
-    /* ZMIANA: Mniejszy padding na mobilkach dla backupu */
     .backup-card { padding: 1rem; gap: 1rem; }
 
-    /* NOWE: Reguły dla table-actions na mobilkach (szukanie w jednej linii z eksportem) */
     .table-actions {
         width: 100%;
-        justify-content: space-between; /* Rozsuwa elementy */
+        justify-content: space-between;
         gap: 10px;
-        flex-wrap: nowrap; /* Wymusza jedną linię */
+        flex-wrap: nowrap; 
     }
     .search-input {
         width: auto;
-        flex: 1; /* Input zajmuje resztę miejsca */
-        min-width: 0; /* Pozwala na zmniejszanie się inputa */
+        flex: 1;
+        min-width: 0;
     }
     .action-btn {
         white-space: nowrap;
     }
 
-    /* ZMIANA: Pozycjonowanie przycisku usuwania w jednej linii z nagłówkiem na mobile */
     #deleteSelectedBtn {
         position: absolute;
         top: 0;
         right: 0;
         margin-top: 0;
-        height: 32px; /* Dopasowana wysokość */
+        height: 32px; 
         font-size: 0.75rem;
         padding: 0 0.8rem;
         min-height: 32px;
     }
-    /* Zabezpieczenie, żeby długi nagłówek nie wjechał na przycisk */
     .table-header h2 {
         max-width: calc(100% - 140px);
     }

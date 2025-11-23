@@ -151,7 +151,7 @@ export const translations = {
         'toastStartupTestOff': 'Test startowy: Wyłączony',
         
         // Settings - Chart Colors
-        'chartAppearanceTitle': 'Wygląd Wykresów',
+        'chartColorsTitle': 'Kolory Wykresów',
         'chartColorDownload': 'Pobieranie',
         'chartColorUpload': 'Wysyłanie',
         'chartColorPing': 'Ping',
@@ -177,7 +177,7 @@ export const translations = {
         'howToStep2': 'Włącz API "Google Drive API" w bibliotece.',
         'howToStepTestUser': 'W zakładce "OAuth consent screen", w sekcji "Test users", dodaj swój adres e-mail (np. gmail). Bez tego autoryzacja się nie uda!',
         'howToStepCredentials': 'W zakładce "Credentials" utwórz "OAuth client ID" (typ: Web application).',
-        'howToStep4': 'W sekcji "Authorized redirect URIs" dodaj DOKŁADNIE ten adres:',
+        'howToStep4': 'Dodaj DOKŁADNIE ten adres w "Authorized redirect URIs":',
         'howToStepCopy': 'Skopiuj Client ID i Secret i wklej je do formularza powyżej.',
         'toastAuthRevoked': 'Odłączono konto Google.',
         'toastDriveSaved': 'Zapisano ustawienia Google Drive.',
@@ -185,6 +185,7 @@ export const translations = {
         'toastBackupSuccess': 'Backup wysłany pomyślnie!',
         'toastBackupFailed': 'Wysyłanie backupu nie powiodło się.',
         'lastBackupRun': 'Ostatni backup:',
+        'nextBackupLabel': 'Następny backup:',
         'lastBackupStatus': 'Status:',
         'statusSuccess': 'Sukces',
         'statusError': 'Błąd',
@@ -343,7 +344,7 @@ export const translations = {
         'toastStartupTestOff': 'Startup Test: Disabled',
         
         // Settings - Chart Colors
-        'chartAppearanceTitle': 'Chart Appearance',
+        'chartColorsTitle': 'Chart Colors',
         'chartColorDownload': 'Download',
         'chartColorUpload': 'Upload',
         'chartColorPing': 'Ping',
@@ -377,6 +378,7 @@ export const translations = {
         'toastBackupSuccess': 'Backup uploaded successfully!',
         'toastBackupFailed': 'Backup upload failed.',
         'lastBackupRun': 'Last run:',
+        'nextBackupLabel': 'Next backup:',
         'lastBackupStatus': 'Status:',
         'statusSuccess': 'Success',
         'statusError': 'Error',

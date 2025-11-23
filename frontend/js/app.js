@@ -10,7 +10,8 @@ import { updateStatsCards, updateTable, showDetailsModal, updateLangButtonUI, se
 let watchdogInterval = null;
 let wdChart = null;
 let resizeTimer = null;
-let countdownInterval = null; // Zmienna dla interwału licznika
+let countdownInterval = null; // Zmienna dla interwału licznika głównego (dashboard)
+let backupCountdownInterval = null; // NOWE: Zmienna dla licznika backupu
 
 // --- Main Logic & Event Listeners ---
 
@@ -205,6 +206,81 @@ function updateBackupStatusUI() {
     }
 }
 
+// NOWE: Helper do obliczania daty następnego backupu
+function calculateNextBackup(settings) {
+    if (!settings.is_enabled || !settings.schedule_time) return null;
+
+    const [h, m] = settings.schedule_time.split(':').map(Number);
+    const daysInterval = settings.schedule_days || 1;
+    const now = new Date();
+
+    let nextDate;
+
+    if (settings.last_run) {
+        const lastRun = new Date(settings.last_run);
+        // Dodaj interwał dni
+        nextDate = new Date(lastRun);
+        nextDate.setDate(lastRun.getDate() + daysInterval);
+        // Ustaw precyzyjną godzinę z ustawień (unikając driftu)
+        nextDate.setHours(h, m, 0, 0);
+
+        // Jeśli wyliczona data jest w przeszłości (np. aplikacja była wyłączona),
+        // zakładamy, że biblioteka 'schedule' uruchomi zadanie przy najbliższej okazji (Dziś lub Jutro o zadanej godzinie),
+        // ponieważ stan harmonogramu resetuje się przy restarcie kontenera.
+        if (nextDate <= now) {
+             const candidateToday = new Date();
+             candidateToday.setHours(h, m, 0, 0);
+             if (candidateToday > now) {
+                 nextDate = candidateToday;
+             } else {
+                 const candidateTomorrow = new Date();
+                 candidateTomorrow.setDate(candidateTomorrow.getDate() + 1);
+                 candidateTomorrow.setHours(h, m, 0, 0);
+                 nextDate = candidateTomorrow;
+             }
+        }
+    } else {
+        // Brak ostatniego uruchomienia - harmonogram wystartował "na czysto".
+        // Uruchomi się przy najbliższym wystąpieniu godziny.
+        const candidateToday = new Date();
+        candidateToday.setHours(h, m, 0, 0);
+        if (candidateToday > now) {
+            nextDate = candidateToday;
+        } else {
+            const candidateTomorrow = new Date();
+            candidateTomorrow.setDate(candidateTomorrow.getDate() + 1);
+            candidateTomorrow.setHours(h, m, 0, 0);
+            nextDate = candidateTomorrow;
+        }
+    }
+    return nextDate;
+}
+
+// --- NOWE: Funkcja uruchamiająca licznik dla backupu ---
+function startBackupCountdown(nextDate) {
+    const countdownEl = document.getElementById('backupCountdown');
+    if (!countdownEl || !nextDate) return;
+
+    if (backupCountdownInterval) clearInterval(backupCountdownInterval);
+
+    const updateTimer = () => {
+        const now = new Date();
+        const diff = nextDate - now;
+        const lang = translations[state.currentLang];
+        const prefix = lang.countdownPrefix || 'za';
+
+        if (diff <= 0) {
+            countdownEl.textContent = "";
+            if (backupCountdownInterval) clearInterval(backupCountdownInterval);
+        } else {
+            countdownEl.textContent = `${prefix} ${formatCountdown(diff)}`;
+        }
+    };
+
+    updateTimer();
+    backupCountdownInterval = setInterval(updateTimer, 1000);
+}
+
 // --- NOWE: Obsługa strony backup.html ---
 async function loadBackupPage() {
     // Sprawdź czy wracamy z autoryzacji
@@ -245,6 +321,10 @@ async function loadBackupPage() {
         // ZMIANA: Zapisz surowy status w stanie
         state.backupRawStatus = s.last_status;
 
+        // NOWE: Elementy następnego backupu
+        const nextBackupInfo = document.getElementById('nextBackupInfo');
+        const nextBackupVal = document.getElementById('nextBackupVal');
+
         if(gdClientId) gdClientId.value = s.client_id || '';
         if(gdClientSecret) gdClientSecret.value = s.client_secret || '';
         if(gdFolderName) gdFolderName.value = s.folder_name || 'SpeedtestLog_Backup';
@@ -263,6 +343,17 @@ async function loadBackupPage() {
             // Blokujemy edycję ID/Secret gdy połączono
             gdClientId.disabled = true;
             gdClientSecret.disabled = true;
+
+            // NOWE: Oblicz i wyświetl następny backup
+            const nextDate = calculateNextBackup(s);
+            if (nextDate && nextBackupInfo) {
+                nextBackupInfo.style.display = 'block';
+                nextBackupVal.textContent = nextDate.toLocaleString(state.currentLang);
+                startBackupCountdown(nextDate);
+            } else if (nextBackupInfo) {
+                nextBackupInfo.style.display = 'none';
+            }
+
         } else {
             gdStatus.className = 'gdrive-status disconnected';
             gdStatus.innerHTML = `<span class="material-symbols-rounded">link_off</span> <span data-i18n-key="authStatusDisconnected">${translations[state.currentLang].authStatusDisconnected}</span>`;
@@ -272,6 +363,8 @@ async function loadBackupPage() {
             
             gdClientId.disabled = false;
             gdClientSecret.disabled = false;
+            
+            if (nextBackupInfo) nextBackupInfo.style.display = 'none';
         }
 
         // Ostatnie uruchomienie - tłumaczenie statusu
@@ -353,6 +446,13 @@ async function loadBackupPage() {
                                     state.backupRawStatus = freshSettings.last_status;
                                     updateBackupStatusUI();
                                     
+                                    // NOWE: Odśwież datę następnego backupu po wykonaniu ręcznym
+                                    const nextDate = calculateNextBackup(freshSettings);
+                                    if (nextDate && nextBackupVal) {
+                                        nextBackupVal.textContent = nextDate.toLocaleString(state.currentLang);
+                                        startBackupCountdown(nextDate);
+                                    }
+
                                     if (freshSettings.last_status === 'success') {
                                         showToast('toastBackupSuccess', 'success');
                                     } else {
@@ -402,6 +502,8 @@ async function saveBackupConfig(wasConnected) {
 
         await saveBackupSettings(payload);
         showToast('toastDriveSaved', 'success');
+        // NOWE: Odśwież widok po zapisie (aby przeliczyć next backup jeśli zmieniono czas)
+        loadBackupPage();
         return true;
     } catch(e) {
         showToast('toastSettingsError', 'error');
@@ -748,6 +850,8 @@ function setupEventListeners() {
             // ZMIANA: Odśwież status backupu jeśli jesteśmy na tej stronie
             if (window.location.pathname.includes('backup.html')) {
                 updateBackupStatusUI();
+                // I przelicz backup next date, żeby etykieta się zmieniła
+                loadBackupPage();
             }
 
             if (state.allResults.length > 0) renderData();

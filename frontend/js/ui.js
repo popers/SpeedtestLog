@@ -104,8 +104,8 @@ function updateSingleStatCard(compareEl, latestVal, prevVal, positiveTrend) {
     let trendClass = 'neutral';
     
     if (Math.abs(percent) < 0.01) {
-        // ZMIANA: Ikona Material Symbols dla braku zmian (kreska)
-        compareEl.innerHTML = `<span class="material-symbols-rounded" style="font-size: 18px;">remove</span> ${lang.statsNoChange}`;
+        // ZMIANA: Usunięto inline style font-size, teraz steruje tym CSS
+        compareEl.innerHTML = `<span class="material-symbols-rounded">remove</span> ${lang.statsNoChange}`;
     } else {
         let isGoodChange = false;
         if (positiveTrend === 'positive') isGoodChange = (percent > 0);
@@ -114,14 +114,13 @@ function updateSingleStatCard(compareEl, latestVal, prevVal, positiveTrend) {
         const prefix = isGoodChange ? lang.statsFaster : lang.statsSlower;
         
         // ZMIANA: Ikony strzałek z Material Symbols
-        // Używamy arrow_upward (wzrost) lub arrow_downward (spadek)
         const iconName = (percent > 0) ? 'arrow_upward' : 'arrow_downward';
         
         trendClass = isGoodChange ? 'positive' : 'negative';
         
-        // Konstrukcja HTML z ikoną po lewej stronie
+        // ZMIANA: Usunięto inline style font-size, aby CSS (components.css) zarządzał wielkością
         compareEl.innerHTML = `
-            <span class="material-symbols-rounded" style="font-size: 18px; font-weight: bold;">${iconName}</span>
+            <span class="material-symbols-rounded">${iconName}</span>
             <span>${Math.abs(percent).toFixed(2)}% ${prefix}</span>
         `;
     }
