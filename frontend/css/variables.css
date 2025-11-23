@@ -1,5 +1,8 @@
 /* DOMYŚLNY TRYB CIEMNY (:root) - Material Design Dark Theme */
 :root {
+    /* Ustawienie systemowego schematu kolorów (naprawia biały zegar/kalendarz) */
+    color-scheme: dark;
+
     /* Tło główne - bardzo ciemne, ale nie czarne */
     --bg-color: #121212;
     
@@ -53,6 +56,9 @@
 
 /* TRYB JASNY - Material Design Light Theme */
 body.light-mode {
+    /* Przywrócenie jasnego schematu systemowego */
+    color-scheme: light;
+
     --bg-color: #f5f5f5; /* Jasnoszary, typowy dla MD background  */
     --card-bg-color: #ffffff; /* Białe karty */
     
