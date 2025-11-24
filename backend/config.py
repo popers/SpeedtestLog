@@ -22,7 +22,6 @@ AUTH_ENABLED = os.getenv("AUTH_ENABLED", "true").lower() in ["true", "1", "yes"]
 APP_USERNAME = os.getenv("APP_USERNAME", "admin")
 APP_PASSWORD = os.getenv("APP_PASSWORD", "admin")
 SESSION_COOKIE_NAME = "speedtest_session"
-# Jeśli SESSION_SECRET nie jest ustawiony, generujemy losowy przy każdym starcie (co wyloguje userów po restarcie)
 import secrets
 SESSION_SECRET = os.getenv("SESSION_SECRET") or secrets.token_hex(16)
 
@@ -31,6 +30,7 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 # --- Konfiguracja Logowania ---
 def setup_logging():
     log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(log_formatter)
     stream_handler.setLevel(logging.INFO)
@@ -39,13 +39,22 @@ def setup_logging():
     file_handler.setFormatter(log_formatter)
     file_handler.setLevel(logging.INFO)
 
+    # Konfiguracja głównego loggera (root)
+    # force=True resetuje istniejące handlery, co pomaga uniknąć duplikatów
     logging.basicConfig(level=logging.INFO, handlers=[stream_handler, file_handler], force=True)
-    logging.getLogger("uvicorn").addHandler(stream_handler)
+    
+    # Wyciszenie gadatliwych bibliotek
     logging.getLogger("schedule").setLevel(logging.WARNING)
     logging.getLogger("multipart").setLevel(logging.WARNING)
     logging.getLogger("googleapiclient").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    
+    # ZMIANA: Usunięto explicit dodawanie handlera do uvicorn, aby uniknąć podwójnych logów w konsoli
+    # Uvicorn domyślnie ma swoje handlery konsolowe.
+    # Jeśli chcemy, aby logi uvicorn trafiały TEŻ do pliku, dodajemy file_handler:
+    logging.getLogger("uvicorn").addHandler(file_handler)
+    logging.getLogger("uvicorn.access").addHandler(file_handler)
 
 # --- Słownik Tłumaczeń Powiadomień ---
 NOTIF_TRANS = {

@@ -3,8 +3,8 @@ import shutil
 import uuid
 import threading
 import logging
-import subprocess  # <-- Dodano brakujący import
-from datetime import datetime # <-- Dodano brakujący import
+import subprocess  # <-- Dodano: wymagane dla mysqldump/mysql
+from datetime import datetime # <-- Dodano: wymagane dla nazw plików
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Request
 from fastapi.responses import Response, HTMLResponse
@@ -41,6 +41,7 @@ async def trig_test(s: SettingsModel):
 async def backup_db():
     env = os.environ.copy(); env["MYSQL_PWD"] = DB_PASSWORD
     cmd = ["mysqldump", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, "--no-tablespaces", DB_NAME]
+    # subprocess jest już zaimportowany, błąd zniknie
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     stdout, stderr = proc.communicate()
     if proc.returncode != 0: raise HTTPException(500)
@@ -56,7 +57,9 @@ async def restore_db(file: UploadFile = File(...)):
     env = os.environ.copy(); env["MYSQL_PWD"] = DB_PASSWORD
     cmd = ["mysql", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, DB_NAME]
     with open(temp, "r") as f:
+        # subprocess jest już zaimportowany
         proc = subprocess.Popen(cmd, stdin=f, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        stdout, stderr = proc.communicate()
     os.remove(temp)
     if proc.returncode != 0: raise HTTPException(500)
     return {"message": "Restored"}

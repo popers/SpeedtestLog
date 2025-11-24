@@ -5,14 +5,14 @@ import re
 import requests
 from datetime import datetime, timedelta
 from config import get_log, NOTIF_TRANS
-import database # ZMIANA: Import modułu
+import database 
 from models import PingLog, AppSettings, NotificationSettings
 
 # Global status do odczytu przez API
+# Inne pliki importują ten obiekt, więc musimy go modyfikować w miejscu (update), a nie nadpisywać.
 latest_ping_status = {"online": None, "latency": 0, "loss": 0, "target": "init", "updated": None}
 
 def send_watchdog_notification(title, message, type_str):
-    # ZMIANA: Użycie database.SessionLocal()
     db = database.SessionLocal()
     try:
         ns = db.query(NotificationSettings).filter(NotificationSettings.id == 1).first()
@@ -31,10 +31,10 @@ def send_watchdog_notification(title, message, type_str):
 
 def run_ping_watchdog():
     logging.info(get_log("watchdog_start"))
+    # Używamy global, aby mieć dostęp do słownika zdefiniowanego wyżej
     global latest_ping_status
     
     while True:
-        # ZMIANA: Użycie database.SessionLocal()
         db = database.SessionLocal()
         try:
             s = db.query(AppSettings).filter(AppSettings.id == 1).first()
@@ -44,6 +44,7 @@ def run_ping_watchdog():
             interval = s.ping_interval if s.ping_interval and s.ping_interval >= 5 else 30
             app_lang = s.app_language or "pl"
 
+            # Uruchomienie pinga systemowego
             cmd = ["ping", "-c", "3", "-W", "2", target]
             proc = subprocess.run(cmd, capture_output=True, text=True)
             
@@ -51,19 +52,23 @@ def run_ping_watchdog():
             packet_loss = 100.0
             is_online = False
             
+            # Parsowanie wyników (Linux format)
             loss_match = re.search(r"(\d+)% packet loss", proc.stdout)
             if loss_match: packet_loss = float(loss_match.group(1))
             
             rtt_match = re.search(r"rtt min/avg/max/mdev = ([\d\.]+)/([\d\.]+)", proc.stdout)
             if rtt_match: latency = float(rtt_match.group(2)); is_online = True
             
+            # Zapis do historii w bazie
             log_entry = PingLog(target=target, latency=latency, packet_loss=packet_loss, is_online=is_online)
             db.add(log_entry)
             
+            # Czyszczenie starych logów (>24h)
             cutoff = datetime.now() - timedelta(hours=24)
             db.query(PingLog).filter(PingLog.timestamp < cutoff).delete()
             db.commit()
             
+            # Powiadomienia o zmianie stanu
             prev_status = latest_ping_status["online"]
             if prev_status is not None and is_online != prev_status:
                 trans = NOTIF_TRANS.get(app_lang, NOTIF_TRANS["pl"])
@@ -77,13 +82,15 @@ def run_ping_watchdog():
                     type_str = "watchdog_down"
                 send_watchdog_notification(title, msg, type_str)
 
-            latest_ping_status = {
+            # ZMIANA KLUCZOWA: Aktualizujemy słownik w miejscu używając .update()
+            # Zamiast tworzyć nowy słownik (co zrywało referencję w system.py), modyfikujemy obecny.
+            latest_ping_status.update({
                 "online": is_online,
                 "latency": round(latency, 1) if latency else None,
                 "loss": packet_loss,
                 "target": target,
                 "updated": datetime.now().isoformat()
-            }
+            })
 
         except Exception as e:
             logging.error(get_log("watchdog_err", e))
