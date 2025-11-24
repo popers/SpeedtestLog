@@ -111,7 +111,9 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                 y: { 
                     type: 'linear', 
                     position: 'left', 
-                    beginAtZero: true,
+                    // ZMIANA: beginAtZero: false sprawia, że oś Y dopasowuje się do danych (efekt zoom)
+                    // Zamiast od 0 do 1000, pokaże np. 500 do 1000
+                    beginAtZero: false,
                     title: { display: false }, 
                     ticks: { 
                         color: labelColor,

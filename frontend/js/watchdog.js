@@ -5,6 +5,7 @@ import { showBrowserNotification, isBrowserNotifEnabled } from './notifications.
 let watchdogInterval = null;
 let wdChart = null;
 let lastWatchdogStatus = null; // true/false
+let cachedData = null; // Cache ostatnich danych
 
 export function startWatchdogPolling() {
     if (watchdogInterval) clearInterval(watchdogInterval);
@@ -16,12 +17,27 @@ export function stopWatchdogPolling() {
     if (watchdogInterval) clearInterval(watchdogInterval);
 }
 
-// Wywoływane z app.js przy zmianie motywu, aby przerysować wykres
+// Wywoływane z app.js przy zmianie motywu
 export function resetWatchdogChart() {
     if (wdChart) {
         wdChart.destroy();
         wdChart = null;
-        updateWatchdogUI();
+        // Jeśli mamy dane w cache, przerysuj od razu
+        if (cachedData) refreshWatchdogPopover();
+        else updateWatchdogUI();
+    }
+}
+
+// Nowa funkcja wywoływana przy kliknięciu ikony (z app.js)
+// Służy do natychmiastowego narysowania wykresu i tekstów z pamięci podręcznej
+export function refreshWatchdogPopover() {
+    if (cachedData) {
+        updatePopoverTexts(cachedData.current);
+        
+        const popover = document.getElementById('watchdogPopover');
+        if (popover && popover.classList.contains('show')) {
+            renderSparkline(cachedData.history);
+        }
     }
 }
 
@@ -33,15 +49,19 @@ async function updateWatchdogUI() {
         const res = await fetch('/api/watchdog/status');
         if(!res.ok) return;
         const data = await res.json();
+        
+        // Zapisujemy dane do cache, aby były dostępne przy kliknięciu
+        cachedData = data;
         const current = data.current;
         
+        // 1. Aktualizacja Ikony (Zawsze)
         if (current.online) {
             icon.className = 'watchdog-indicator online';
         } else {
             icon.className = 'watchdog-indicator offline';
         }
 
-        // Obsługa powiadomień przeglądarkowych dla watchdoga
+        // Obsługa powiadomień
         if (isBrowserNotifEnabled() && lastWatchdogStatus !== null && current.online !== lastWatchdogStatus) {
             const statusStr = current.online ? "ONLINE" : "OFFLINE";
             showBrowserNotification(
@@ -52,31 +72,39 @@ async function updateWatchdogUI() {
         }
         lastWatchdogStatus = current.online;
 
+        // 2. Aktualizacja Tekstów w dymku (ZMIANA: Zawsze, nawet jak ukryty)
+        // Dzięki temu po kliknięciu tekst jest już gotowy
+        updatePopoverTexts(current);
+
+        // 3. Aktualizacja Wykresu (Tylko jak widoczny, bo Chart.js wariuje na ukrytych canvasach)
         const popover = document.getElementById('watchdogPopover');
         if (popover && popover.classList.contains('show')) {
-            const statusText = document.getElementById('wdStatus');
-            const targetText = document.getElementById('wdTarget');
-            const pingText = document.getElementById('wdLatency');
-            const lossText = document.getElementById('wdLoss');
-            const lang = translations[state.currentLang];
-            
-            if(statusText) {
-                statusText.textContent = current.online ? 
-                    (lang.wdStatusOnline || "ONLINE") : 
-                    (lang.wdStatusOffline || "OFFLINE");
-                statusText.style.color = current.online ? "#28a745" : "#dc3545";
-            }
-            if(targetText) targetText.textContent = current.target;
-            if(pingText) pingText.textContent = current.latency ? `${current.latency} ms` : '-';
-            if(lossText) lossText.textContent = `${current.loss}%`;
-            
             renderSparkline(data.history);
         }
-    } catch (e) { }
+    } catch (e) { console.error(e); }
+}
+
+function updatePopoverTexts(current) {
+    const statusText = document.getElementById('wdStatus');
+    const targetText = document.getElementById('wdTarget');
+    const pingText = document.getElementById('wdLatency');
+    const lossText = document.getElementById('wdLoss');
+    const lang = translations[state.currentLang];
+    
+    if(statusText) {
+        statusText.textContent = current.online ? 
+            (lang.wdStatusOnline || "ONLINE") : 
+            (lang.wdStatusOffline || "OFFLINE");
+        statusText.style.color = current.online ? "#28a745" : "#dc3545";
+    }
+    if(targetText) targetText.textContent = current.target;
+    if(pingText) pingText.textContent = current.latency ? `${current.latency} ms` : '-';
+    if(lossText) lossText.textContent = `${current.loss}%`;
 }
 
 function renderSparkline(history) {
     const canvas = document.getElementById('wdChart');
+    // Sprawdzenie offsetParent to standardowy sposób sprawdzenia widoczności elementu
     if(!canvas || canvas.offsetParent === null) return;
 
     const ctx = canvas.getContext('2d');

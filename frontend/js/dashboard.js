@@ -13,6 +13,9 @@ export async function loadDashboardData() {
         const serversData = await fetchServers();
         const settingsData = await fetchSettings();
         
+        // ZMIANA: Pobieramy wyniki wcześniej, aby mieć pewny timestamp ostatniego testu
+        state.allResults = await fetchResults();
+
         state.declaredSpeeds = {
             download: settingsData.declared_download || 0,
             upload: settingsData.declared_upload || 0
@@ -42,13 +45,19 @@ export async function loadDashboardData() {
         if (document.getElementById('filterSelect')) document.getElementById('filterSelect').value = savedFilter;
         if (document.getElementById('unitSelect')) document.getElementById('unitSelect').value = savedUnit;
 
-        state.lastTestTimestamp = settingsData.latest_test_timestamp;
+        // ZMIANA: Ustawiamy datę ostatniego testu na podstawie faktycznej listy wyników.
+        // Eliminuje to problem cachowania endpointu /api/settings przez przeglądarkę.
+        if (state.allResults.length > 0) {
+            state.lastTestTimestamp = state.allResults[0].timestamp;
+        } else {
+            state.lastTestTimestamp = settingsData.latest_test_timestamp;
+        }
+
         const nextRunEl = document.getElementById('nextRunTime');
         if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
         
         startNextRunCountdown();
 
-        state.allResults = await fetchResults();
         renderData();
     } catch (e) {
         console.error("Error loading dashboard data:", e);
@@ -304,12 +313,25 @@ function startNextRunCountdown() {
             if (!lastRunDate) return;
 
             const scheduleIntervalMs = state.currentScheduleHours * 60 * 60 * 1000;
-            const nextRunDate = new Date(lastRunDate.getTime() + scheduleIntervalMs);
             const now = new Date();
+            
+            // ZMIANA: Obliczanie celu na podstawie cykli, a nie tylko prostego dodawania
+            // Naprawia błąd znikającego licznika, gdy "lastRunDate + interval" jest lekko w przeszłości
+            // w momencie przeładowania danych po teście automatycznym.
+            const timeElapsed = now.getTime() - lastRunDate.getTime();
+            
+            // Obliczamy ile pełnych cykli minęło i celujemy w następny
+            // Math.floor(timeElapsed / scheduleIntervalMs) + 1 daje nam następny mnożnik interwału
+            const cyclesPassed = Math.floor(timeElapsed / scheduleIntervalMs);
+            const nextTargetTime = lastRunDate.getTime() + ((cyclesPassed + 1) * scheduleIntervalMs);
+            
+            const nextRunDate = new Date(nextTargetTime);
             const diff = nextRunDate - now;
 
             if (diff <= 0) {
-                countdownEl.textContent = ""; 
+                // Zamiast czyścić tekst (""), pokazujemy 00:00:00, aby licznik nie "mrugał"
+                // w momentach granicznych.
+                countdownEl.textContent = `${prefix} 00:00:00`;
             } else {
                 countdownEl.textContent = `${prefix} ${formatCountdown(diff)}`;
             }

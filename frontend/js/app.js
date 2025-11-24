@@ -6,7 +6,8 @@ import { updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
 // Importy nowych modułów
 import { initNotificationSystem } from './notifications.js';
-import { startWatchdogPolling, stopWatchdogPolling, resetWatchdogChart } from './watchdog.js';
+// ZMIANA: Import refreshWatchdogPopover
+import { startWatchdogPolling, stopWatchdogPolling, resetWatchdogChart, refreshWatchdogPopover } from './watchdog.js';
 import { loadDashboardData, renderData, initDashboardListeners } from './dashboard.js';
 import { loadSettingsToForm, loadNotificationSettingsToForm, initSettingsListeners } from './settings-page.js';
 import { loadBackupPage, initBackupListeners, updateBackupStatusUI } from './backup-page.js';
@@ -292,7 +293,10 @@ function setupGlobalEventListeners() {
         wdIcon.addEventListener('click', (e) => {
             e.stopPropagation();
             wdPopover.classList.toggle('show');
-            // Update wywołuje się z interwału, ale można wymusić
+            
+            // ZMIANA: Natychmiastowe odświeżenie widoku przy kliknięciu
+            // Dzięki temu, jeśli dane zostały już pobrane w tle, pojawią się od razu
+            refreshWatchdogPopover();
         });
     }
     window.addEventListener('click', (e) => {
