@@ -20,8 +20,9 @@ RUN apt-get update && apt-get install -y speedtest
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopiuj pliki aplikacji backendowej
-COPY backend/main.py .
+# --- ZMIANA: Kopiuj WSZYSTKIE pliki aplikacji backendowej (.py) ---
+# Wcześniej było tylko: COPY backend/main.py .
+COPY backend/*.py .
 
 # --- Kopiowanie plików frontendu ---
 COPY frontend/css ./css

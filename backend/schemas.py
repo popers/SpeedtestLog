@@ -1,0 +1,48 @@
+from pydantic import BaseModel
+from typing import Optional, List
+
+# --- Modele Pydantic (Walidacja danych API) ---
+
+class SettingsModel(BaseModel):
+    server_id: int | None = None
+    schedule_hours: int | None = 1
+    ping_target: str | None = "8.8.8.8"
+    ping_interval: int | None = 30
+    declared_download: int | None = 0
+    declared_upload: int | None = 0
+    startup_test_enabled: bool | None = True
+    app_language: str | None = None 
+    chart_color_download: str | None = None
+    chart_color_upload: str | None = None
+    chart_color_ping: str | None = None
+    chart_color_jitter: str | None = None
+
+class NotificationSettingsModel(BaseModel):
+    enabled: bool | None = False
+    provider: str | None = "browser" # browser, webhook, ntfy
+    webhook_url: str | None = ""
+    ntfy_topic: str | None = ""
+    ntfy_server: str | None = "https://ntfy.sh"
+
+class NotificationTestModel(BaseModel):
+    provider: str
+    webhook_url: str | None = None
+    ntfy_topic: str | None = None
+    ntfy_server: str | None = None
+    language: str | None = "pl" 
+
+class BackupSettingsModel(BaseModel):
+    client_id: str | None = None
+    client_secret: str | None = None
+    folder_name: str | None = "SpeedtestLog_Backup"
+    schedule_days: int | None = 1
+    schedule_time: str | None = "03:00"
+    retention_days: int | None = 30
+    is_enabled: bool | None = False
+
+class DeleteModel(BaseModel):
+    ids: list[str]
+
+class LoginModel(BaseModel):
+    username: str
+    password: str
