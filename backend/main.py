@@ -200,7 +200,8 @@ class SettingsModel(BaseModel):
     declared_download: int | None = 0
     declared_upload: int | None = 0
     startup_test_enabled: bool | None = True
-    app_language: str | None = "pl" 
+    # ZMIANA: Domyślnie None, aby nie nadpisywać języka "pl" przy częściowych update'ach
+    app_language: str | None = None 
     # Kolory
     chart_color_download: str | None = None
     chart_color_upload: str | None = None
@@ -844,7 +845,8 @@ async def get_set(db=Depends(get_db)):
         "chart_color_upload": s.chart_color_upload,
         "chart_color_ping": s.chart_color_ping,
         "chart_color_jitter": s.chart_color_jitter,
-        "latest_test_timestamp": l.timestamp if l else None
+        "latest_test_timestamp": l.timestamp if l else None,
+        "app_language": s.app_language
     }
 
 @app.post("/api/settings", dependencies=[Depends(verify_session)])
@@ -872,6 +874,7 @@ async def set_set(s: SettingsModel, db=Depends(get_db)):
     if s.chart_color_ping: rec.chart_color_ping = s.chart_color_ping
     if s.chart_color_jitter: rec.chart_color_jitter = s.chart_color_jitter
     
+    # ZMIANA: Aktualizuj tylko jeśli wartość jest przesyłana (nie None)
     if s.app_language: rec.app_language = s.app_language
 
     db.commit()

@@ -197,9 +197,17 @@ function setupGlobalEventListeners() {
             if (!document.getElementById('loginForm')) {
                 try {
                     const currentSettings = await fetchSettings();
+                    
+                    // ZMIANA: Pobieramy aktualną wartość z selecta, jeśli istnieje
+                    let scheduleHours = currentSettings.schedule_hours;
+                    const scheduleSelect = document.getElementById('scheduleSelect');
+                    if (scheduleSelect) {
+                        scheduleHours = parseInt(scheduleSelect.value);
+                    }
+
                     const payload = {
                         server_id: currentSettings.selected_server_id,
-                        schedule_hours: currentSettings.schedule_hours,
+                        schedule_hours: scheduleHours, // Użyj z UI lub DB
                         ping_target: currentSettings.ping_target,
                         ping_interval: currentSettings.ping_interval,
                         declared_download: currentSettings.declared_download,
@@ -212,6 +220,10 @@ function setupGlobalEventListeners() {
                         app_language: newLang
                     };
                     await updateSettings(payload);
+                    
+                    // Aktualizuj stan frontendu
+                    state.currentScheduleHours = scheduleHours;
+
                 } catch (e) { console.error("Błąd zapisu języka:", e); }
             }
             
@@ -237,7 +249,7 @@ function setupGlobalEventListeners() {
         
         if (document.getElementById('downloadChart') && state.currentFilteredResults) {
             // Zaimportowane z charts.js
-            const { renderCharts } = require('./charts.js'); // Dynamiczny import, lub przeładowanie widoku
+            // const { renderCharts } = require('./charts.js'); 
             // W tym setupie lepiej po prostu wywołać renderData, które jest zaimportowane
             renderData();
         }

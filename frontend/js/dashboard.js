@@ -238,7 +238,8 @@ export async function handleQuickSettingsChange(e) {
             chart_color_download: currentSettings.chart_color_download,
             chart_color_upload: currentSettings.chart_color_upload,
             chart_color_ping: currentSettings.chart_color_ping,
-            chart_color_jitter: currentSettings.chart_color_jitter
+            chart_color_jitter: currentSettings.chart_color_jitter,
+            app_language: state.currentLang // ZMIANA: Dodano język do payloadu
         });
         
         if (sourceId === 'serverSelect') {
@@ -321,7 +322,7 @@ function startNextRunCountdown() {
     countdownInterval = setInterval(updateTimer, 1000);
 }
 
-// Inicjalizacja event listenerów specyficznych dla dashboardu
+// Inicjalizacja event listenerĂłw specyficznych dla dashboardu
 export function initDashboardListeners() {
     const triggerBtn = document.getElementById('triggerTestBtn');
     if(triggerBtn) triggerBtn.addEventListener('click', handleManualTest);
