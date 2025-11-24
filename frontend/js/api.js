@@ -16,7 +16,8 @@ export async function fetchServers() {
 }
 
 export async function fetchSettings() {
-    const response = await fetch('/api/settings');
+    // ZMIANA: Dodano 'no-store' aby uniknąć cachowania ustawień przez przeglądarkę
+    const response = await fetch('/api/settings', { cache: 'no-store' });
     return await response.json();
 }
 
@@ -30,7 +31,6 @@ export async function updateSettings(payload) {
     return await response.json();
 }
 
-// ZMIANA: Dodanie parametru language
 export async function triggerTest(serverId, language) {
     const response = await fetch('/api/trigger-test', { 
         method: 'POST',

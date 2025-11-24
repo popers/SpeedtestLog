@@ -5,19 +5,21 @@ from typing import Optional, List
 
 class SettingsModel(BaseModel):
     server_id: int | None = None
-    schedule_hours: int | None = 1
-    ping_target: str | None = "8.8.8.8"
-    ping_interval: int | None = 30
-    declared_download: int | None = 0
-    declared_upload: int | None = 0
-    startup_test_enabled: bool | None = True
+    # ZMIANA: Wszystkie pola domyślnie None, aby umożliwić częściowe aktualizacje (PATCH-like behavior)
+    # Zapobiega to nadpisywaniu ustawień domyślnymi wartościami przy zmianie tylko jednego pola (np. języka)
+    schedule_hours: int | None = None
+    ping_target: str | None = None
+    ping_interval: int | None = None
+    declared_download: int | None = None
+    declared_upload: int | None = None
+    startup_test_enabled: bool | None = None
     app_language: str | None = None 
     # Kolory podstawowe
     chart_color_download: str | None = None
     chart_color_upload: str | None = None
     chart_color_ping: str | None = None
     chart_color_jitter: str | None = None
-    # NOWE: Kolory Latency
+    # Kolory Latency
     chart_color_lat_dl_low: str | None = None
     chart_color_lat_dl_high: str | None = None
     chart_color_lat_ul_low: str | None = None

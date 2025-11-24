@@ -6,7 +6,6 @@ import { updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
 // Importy nowych modułów
 import { initNotificationSystem } from './notifications.js';
-// ZMIANA: Import refreshWatchdogPopover
 import { startWatchdogPolling, stopWatchdogPolling, resetWatchdogChart, refreshWatchdogPopover } from './watchdog.js';
 import { loadDashboardData, renderData, initDashboardListeners } from './dashboard.js';
 import { loadSettingsToForm, loadNotificationSettingsToForm, initSettingsListeners } from './settings-page.js';
@@ -202,39 +201,23 @@ function setupGlobalEventListeners() {
             
             if (!document.getElementById('loginForm')) {
                 try {
-                    const currentSettings = await fetchSettings();
+                    // ZMIANA: Uproszczona aktualizacja języka. 
+                    // Wysyłamy TYLKO app_language, aby uniknąć nadpisania innych ustawień 
+                    // (np. harmonogramu) starymi/domyślnymi wartościami.
+                    // Backend (schemas.py) musi mieć ustawione domyślne wartości na None dla innych pól.
                     
-                    // ZMIANA: Pobieramy aktualną wartość z selecta, jeśli istnieje
-                    let scheduleHours = currentSettings.schedule_hours;
-                    const scheduleSelect = document.getElementById('scheduleSelect');
-                    if (scheduleSelect) {
-                        scheduleHours = parseInt(scheduleSelect.value);
-                    }
-
                     const payload = {
-                        server_id: currentSettings.selected_server_id,
-                        schedule_hours: scheduleHours, // Użyj z UI lub DB
-                        ping_target: currentSettings.ping_target,
-                        ping_interval: currentSettings.ping_interval,
-                        declared_download: currentSettings.declared_download,
-                        declared_upload: currentSettings.declared_upload,
-                        startup_test_enabled: currentSettings.startup_test_enabled,
-                        chart_color_download: currentSettings.chart_color_download,
-                        chart_color_upload: currentSettings.chart_color_upload,
-                        chart_color_ping: currentSettings.chart_color_ping,
-                        chart_color_jitter: currentSettings.chart_color_jitter,
-                        // Zachowaj kolory Latency przy zmianie języka
-                        chart_color_lat_dl_low: currentSettings.chart_color_lat_dl_low,
-                        chart_color_lat_dl_high: currentSettings.chart_color_lat_dl_high,
-                        chart_color_lat_ul_low: currentSettings.chart_color_lat_ul_low,
-                        chart_color_lat_ul_high: currentSettings.chart_color_lat_ul_high,
-                        
                         app_language: newLang
                     };
                     await updateSettings(payload);
                     
-                    // Aktualizuj stan frontendu
-                    state.currentScheduleHours = scheduleHours;
+                    // Jeśli jesteśmy na dashboardzie, upewniamy się, że stan harmonogramu jest zsynchronizowany
+                    // Chociaż przy zmianie języka nie powinien się zmienić, warto odświeżyć UI
+                    if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+                         // Opcjonalnie można przeładować ustawienia, aby upewnić się, że UI jest spójne
+                         // const freshSettings = await fetchSettings();
+                         // state.currentScheduleHours = freshSettings.schedule_hours;
+                    }
 
                 } catch (e) { console.error("Błąd zapisu języka:", e); }
             }
@@ -260,9 +243,6 @@ function setupGlobalEventListeners() {
         else showToast('toastThemeLight', 'info');
         
         if (document.getElementById('downloadChart') && state.currentFilteredResults) {
-            // Zaimportowane z charts.js
-            // const { renderCharts } = require('./charts.js'); 
-            // W tym setupie lepiej po prostu wywołać renderData, które jest zaimportowane
             renderData();
         }
         
@@ -304,9 +284,6 @@ function setupGlobalEventListeners() {
         wdIcon.addEventListener('click', (e) => {
             e.stopPropagation();
             wdPopover.classList.toggle('show');
-            
-            // ZMIANA: Natychmiastowe odświeżenie widoku przy kliknięciu
-            // Dzięki temu, jeśli dane zostały już pobrane w tle, pojawią się od razu
             refreshWatchdogPopover();
         });
     }

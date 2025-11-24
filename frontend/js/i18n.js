@@ -385,6 +385,10 @@ export const translations = {
         'chartColorUpload': 'Upload',
         'chartColorPing': 'Ping',
         'chartColorJitter': 'Jitter',
+        'chartColorLatDlLow': 'Download (Low)',
+        'chartColorLatDlHigh': 'Download (High)',
+        'chartColorLatUlLow': 'Upload (Low)',
+        'chartColorLatUlHigh': 'Upload (High)',
 
         // Notifications
         'notificationsTitle': 'Notifications',
