@@ -12,10 +12,16 @@ class SettingsModel(BaseModel):
     declared_upload: int | None = 0
     startup_test_enabled: bool | None = True
     app_language: str | None = None 
+    # Kolory podstawowe
     chart_color_download: str | None = None
     chart_color_upload: str | None = None
     chart_color_ping: str | None = None
     chart_color_jitter: str | None = None
+    # NOWE: Kolory Latency
+    chart_color_lat_dl_low: str | None = None
+    chart_color_lat_dl_high: str | None = None
+    chart_color_lat_ul_low: str | None = None
+    chart_color_lat_ul_high: str | None = None
 
 class NotificationSettingsModel(BaseModel):
     enabled: bool | None = False

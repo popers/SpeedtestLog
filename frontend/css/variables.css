@@ -39,6 +39,12 @@
     --color-jitter: #81c784;
     --color-jitter-bg: rgba(129, 199, 132, 0.15);
     
+    /* NOWE: Kolory dla wykresu opóźnień pod obciążeniem */
+    --color-lat-dl-low: #29b6f6; /* Jaśniejszy niebieski */
+    --color-lat-dl-high: #01579b; /* Ciemny niebieski */
+    --color-lat-ul-low: #ef5350; /* Jaśniejszy czerwony */
+    --color-lat-ul-high: #b71c1c; /* Ciemny czerwony */
+    
     --sidebar-width: 280px;
     --header-height: 64px;
     --sidebar-bg: #1e1e1e;
@@ -88,6 +94,12 @@ body.light-mode {
     --color-ping-bg: rgba(251, 192, 45, 0.1);
     --color-jitter: #388e3c;
     --color-jitter-bg: rgba(56, 142, 60, 0.1);
+    
+    /* NOWE: Kolory Latency Light Mode */
+    --color-lat-dl-low: #4fc3f7;
+    --color-lat-dl-high: #0277bd;
+    --color-lat-ul-low: #e57373;
+    --color-lat-ul-high: #c62828;
 
     --sidebar-bg: #ffffff;
     --sidebar-border: transparent;

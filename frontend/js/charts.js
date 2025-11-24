@@ -2,13 +2,16 @@ import { state } from './state.js';
 import { translations } from './i18n.js';
 import { parseISOLocally, convertValue, getUnitLabel, hexToRgba } from './utils.js';
 
-let downloadChart, uploadChart, pingChart, jitterChart;
+let downloadChart, uploadChart, pingChart, jitterChart, latencyChart;
 
 export function renderCharts(results) {
     const downloadCtx = document.getElementById('downloadChart').getContext('2d');
     const uploadCtx = document.getElementById('uploadChart').getContext('2d');
     const pingCtx = document.getElementById('pingChart').getContext('2d');
     const jitterCtx = document.getElementById('jitterChart').getContext('2d');
+    // NOWE: Pobranie kontekstu dla wykresu opóźnień
+    const latencyCanvas = document.getElementById('latencyChart');
+    const latencyCtx = latencyCanvas ? latencyCanvas.getContext('2d') : null;
 
     const chartResults = results.slice().reverse();
     
@@ -17,6 +20,12 @@ export function renderCharts(results) {
     const uploadData = chartResults.map(res => convertValue(res.upload, state.currentUnit));
     const pingData = chartResults.map(res => res.ping);
     const jitterData = chartResults.map(res => res.jitter);
+
+    // Dane dla Loaded Latency (sprawdzamy null, bo stare testy mogą ich nie mieć)
+    const latDlLow = chartResults.map(res => res.download_latency_low !== null ? res.download_latency_low : null);
+    const latDlHigh = chartResults.map(res => res.download_latency_high !== null ? res.download_latency_high : null);
+    const latUlLow = chartResults.map(res => res.upload_latency_low !== null ? res.upload_latency_low : null);
+    const latUlHigh = chartResults.map(res => res.upload_latency_high !== null ? res.upload_latency_high : null);
 
     const unitLabel = getUnitLabel(state.currentUnit);
     
@@ -38,17 +47,153 @@ export function renderCharts(results) {
     const cPi = getColor('--color-ping', '#ffd54f');
     const cJi = getColor('--color-jitter', '#81c784');
 
+    // Kolory Latency
+    const cLatDlLow = getColor('--color-lat-dl-low', '#29b6f6');
+    const cLatDlHigh = getColor('--color-lat-dl-high', '#01579b');
+    const cLatUlLow = getColor('--color-lat-ul-low', '#ef5350');
+    const cLatUlHigh = getColor('--color-lat-ul-high', '#b71c1c');
+
     // Aktualizacja nagłówków
     document.querySelector('#downloadChart').closest('.chart-block').querySelector('h3').textContent = `${lang.downloadChartTitle.split('(')[0].trim()} (${unitLabel})`;
     document.querySelector('#uploadChart').closest('.chart-block').querySelector('h3').textContent = `${lang.uploadChartTitle.split('(')[0].trim()} (${unitLabel})`;
     document.querySelector('#pingChart').closest('.chart-block').querySelector('h3').textContent = `${lang.pingChartTitle.split('(')[0].trim()} (${lang.chartUnitMs})`;
     document.querySelector('#jitterChart').closest('.chart-block').querySelector('h3').textContent = `${lang.jitterChartTitle.split('(')[0].trim()} (${lang.chartUnitMs})`;
+    if(latencyCanvas) {
+        latencyCanvas.closest('.chart-block').querySelector('h3').textContent = `${lang.latencyChartTitle}`;
+    }
 
     // Tworzenie wykresów z użyciem nowej funkcji wspierającej gradienty
     createAreaChart(downloadCtx, downloadChart, (chart) => { downloadChart = chart; }, labels, downloadData, chartResults, lang.chartLabelDownload, unitLabel, cDl, gridColor, labelColor);
     createAreaChart(uploadCtx, uploadChart, (chart) => { uploadChart = chart; }, labels, uploadData, chartResults, lang.chartLabelUpload, unitLabel, cUl, gridColor, labelColor);
     createAreaChart(pingCtx, pingChart, (chart) => { pingChart = chart; }, labels, pingData, chartResults, lang.chartLabelPing, lang.chartUnitMs, cPi, gridColor, labelColor);
     createAreaChart(jitterCtx, jitterChart, (chart) => { jitterChart = chart; }, labels, jitterData, chartResults, lang.chartLabelJitter, lang.chartUnitMs, cJi, gridColor, labelColor);
+
+    // NOWE: Tworzenie wykresu złożonego dla Latency
+    if (latencyCtx) {
+        createMultiLineChart(
+            latencyCtx,
+            latencyChart,
+            (chart) => { latencyChart = chart; },
+            labels,
+            [
+                { label: lang.chartLabelLatDlLow, data: latDlLow, color: cLatDlLow, dashed: true },
+                { label: lang.chartLabelLatDlHigh, data: latDlHigh, color: cLatDlHigh },
+                { label: lang.chartLabelLatUlLow, data: latUlLow, color: cLatUlLow, dashed: true },
+                { label: lang.chartLabelLatUlHigh, data: latUlHigh, color: cLatUlHigh }
+            ],
+            chartResults,
+            lang.chartUnitMs,
+            gridColor,
+            labelColor
+        );
+    }
+}
+
+// NOWE: Funkcja do tworzenia wykresu wieloliniowego
+function createMultiLineChart(ctx, chartInstance, setChartInstance, labels, datasetsInfo, serverData, unit, gridColor, labelColor) {
+    if (chartInstance) chartInstance.destroy(); 
+    
+    ctx.canvas.removeAttribute('style');
+    ctx.canvas.removeAttribute('width');
+    ctx.canvas.removeAttribute('height');
+
+    const datasets = datasetsInfo.map(ds => ({
+        label: ds.label,
+        data: ds.data,
+        borderColor: ds.color,
+        borderWidth: 2,
+        backgroundColor: ds.color,
+        fill: false,
+        tension: 0.35,
+        borderDash: ds.dashed ? [5, 5] : [], // Linia przerywana dla "Low"
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointBackgroundColor: ds.color,
+        pointBorderColor: '#ffffff',
+        spanGaps: true
+    }));
+
+    const newChart = new Chart(ctx, {
+        type: 'line', 
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true, 
+            maintainAspectRatio: false, 
+            animation: { duration: 0 }, 
+            layout: { padding: { top: 10, left: 0, right: 0, bottom: 0 } },
+            interaction: { 
+                mode: 'index', // Pokazuje tooltip dla wszystkich punktów w danym czasie
+                axis: 'x',
+                intersect: false,
+            },
+            scales: {
+                y: { 
+                    type: 'linear', 
+                    position: 'left', 
+                    beginAtZero: true, // Latency lepiej widzieć od zera
+                    ticks: { 
+                        color: labelColor,
+                        font: { size: 11 },
+                        maxTicksLimit: 6
+                    }, 
+                    grid: { 
+                        color: gridColor,
+                        borderDash: [3, 3], 
+                        drawBorder: false
+                    } 
+                },
+                x: { 
+                    ticks: { 
+                        color: labelColor,
+                        maxRotation: 0,
+                        maxTicksLimit: 8,
+                        autoSkip: true,
+                        font: { size: 11 }
+                    }, 
+                    grid: { display: false, drawBorder: false } 
+                }
+            },
+            plugins: {
+                legend: { 
+                    display: true,
+                    labels: { color: labelColor, boxWidth: 12, usePointStyle: true } 
+                },
+                tooltip: {
+                    enabled: true,
+                    mode: 'index', 
+                    intersect: false,
+                    backgroundColor: 'rgba(28, 28, 30, 0.95)',
+                    titleColor: '#ffffff', 
+                    bodyColor: '#e0e0e0', 
+                    footerColor: '#a0a0a0',
+                    borderColor: 'rgba(255, 255, 255, 0.1)', 
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 8,
+                    boxPadding: 4,
+                    callbacks: {
+                        title: (tooltipItems) => tooltipItems[0].label,
+                        label: (context) => {
+                            if (context.parsed.y !== null) return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} ${unit}`;
+                            return '';
+                        },
+                        footer: (tooltipItems) => {
+                            const dataIndex = tooltipItems[0].dataIndex;
+                            const result = serverData[dataIndex];
+                            if (result && result.server_name) {
+                                return `Serwer: (${result.server_id}) ${result.server_name}`;
+                            }
+                            return null;
+                        },
+                    }
+                }
+            }
+        }
+    });
+    setChartInstance(newChart);
 }
 
 function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, serverData, label, unit, color, gridColor, labelColor) {

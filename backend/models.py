@@ -46,11 +46,16 @@ class AppSettings(Base):
     declared_upload = Column(Integer, default=0)
     startup_test_enabled = Column(Boolean, default=True)
     app_language = Column(String(5), default="pl")
-    # Kolory
+    # Kolory podstawowe
     chart_color_download = Column(String(20), nullable=True)
     chart_color_upload = Column(String(20), nullable=True)
     chart_color_ping = Column(String(20), nullable=True)
     chart_color_jitter = Column(String(20), nullable=True)
+    # NOWE: Kolory Latency
+    chart_color_lat_dl_low = Column(String(20), nullable=True)
+    chart_color_lat_dl_high = Column(String(20), nullable=True)
+    chart_color_lat_ul_low = Column(String(20), nullable=True)
+    chart_color_lat_ul_high = Column(String(20), nullable=True)
 
 class NotificationSettings(Base):
     __tablename__ = "notification_settings"

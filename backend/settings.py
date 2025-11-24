@@ -36,10 +36,17 @@ async def get_set(db: Session = Depends(get_db)):
         "declared_download": s.declared_download,
         "declared_upload": s.declared_upload,
         "startup_test_enabled": s.startup_test_enabled,
+        # Kolory podstawowe
         "chart_color_download": s.chart_color_download,
         "chart_color_upload": s.chart_color_upload,
         "chart_color_ping": s.chart_color_ping,
         "chart_color_jitter": s.chart_color_jitter,
+        # Kolory Latency - NOWE
+        "chart_color_lat_dl_low": s.chart_color_lat_dl_low,
+        "chart_color_lat_dl_high": s.chart_color_lat_dl_high,
+        "chart_color_lat_ul_low": s.chart_color_lat_ul_low,
+        "chart_color_lat_ul_high": s.chart_color_lat_ul_high,
+        
         "latest_test_timestamp": l.timestamp if l else None,
         "app_language": s.app_language
     }
@@ -58,10 +65,19 @@ async def set_set(s: SettingsModel, db: Session = Depends(get_db)):
     if s.declared_download is not None: rec.declared_download = s.declared_download
     if s.declared_upload is not None: rec.declared_upload = s.declared_upload
     if s.startup_test_enabled is not None: rec.startup_test_enabled = s.startup_test_enabled
+    
+    # Zapis kolorów podstawowych
     if s.chart_color_download: rec.chart_color_download = s.chart_color_download
     if s.chart_color_upload: rec.chart_color_upload = s.chart_color_upload
     if s.chart_color_ping: rec.chart_color_ping = s.chart_color_ping
     if s.chart_color_jitter: rec.chart_color_jitter = s.chart_color_jitter
+    
+    # Zapis kolorów Latency - NOWE
+    if s.chart_color_lat_dl_low: rec.chart_color_lat_dl_low = s.chart_color_lat_dl_low
+    if s.chart_color_lat_dl_high: rec.chart_color_lat_dl_high = s.chart_color_lat_dl_high
+    if s.chart_color_lat_ul_low: rec.chart_color_lat_ul_low = s.chart_color_lat_ul_low
+    if s.chart_color_lat_ul_high: rec.chart_color_lat_ul_high = s.chart_color_lat_ul_high
+
     if s.app_language: rec.app_language = s.app_language
 
     db.commit()

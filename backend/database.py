@@ -58,7 +58,7 @@ def initialize_db(app_state, max_retries=10, delay=5):
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN startup_test_enabled BOOLEAN DEFAULT 1"))
                     connection.commit()
                 
-                # 2. Migracja Kolory Wykresów
+                # 2. Migracja Kolory Wykresów (Podstawowe)
                 try:
                     connection.execute(text("SELECT chart_color_download FROM app_settings LIMIT 1"))
                 except Exception:
@@ -87,6 +87,17 @@ def initialize_db(app_state, max_retries=10, delay=5):
                             logging.info(get_log("db_mig_notify"))
                 except Exception as e:
                     logging.warning(f"Notification init warning: {e}")
+
+                # 5. Migracja Kolory Wykresów (Latency) - NOWE
+                try:
+                    connection.execute(text("SELECT chart_color_lat_dl_low FROM app_settings LIMIT 1"))
+                except Exception:
+                    logging.info("🔧 Migration: Adding latency chart color columns...")
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_dl_low VARCHAR(20) DEFAULT NULL"))
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_dl_high VARCHAR(20) DEFAULT NULL"))
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_ul_low VARCHAR(20) DEFAULT NULL"))
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_ul_high VARCHAR(20) DEFAULT NULL"))
+                    connection.commit()
 
                 logging.info(get_log("db_connected"))
                 return

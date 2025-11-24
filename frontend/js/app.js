@@ -133,6 +133,11 @@ function applyColorsToCSS(settings) {
         root.style.setProperty('--color-jitter', settings.chart_color_jitter);
         root.style.setProperty('--color-jitter-bg', hexToRgba(settings.chart_color_jitter, 0.15));
     }
+    // NOWE: Zastosowanie kolorów Latency przy starcie
+    if (settings.chart_color_lat_dl_low) root.style.setProperty('--color-lat-dl-low', settings.chart_color_lat_dl_low);
+    if (settings.chart_color_lat_dl_high) root.style.setProperty('--color-lat-dl-high', settings.chart_color_lat_dl_high);
+    if (settings.chart_color_lat_ul_low) root.style.setProperty('--color-lat-ul-low', settings.chart_color_lat_ul_low);
+    if (settings.chart_color_lat_ul_high) root.style.setProperty('--color-lat-ul-high', settings.chart_color_lat_ul_high);
 }
 
 function handleDashboardNavigation() {
@@ -218,6 +223,12 @@ function setupGlobalEventListeners() {
                         chart_color_upload: currentSettings.chart_color_upload,
                         chart_color_ping: currentSettings.chart_color_ping,
                         chart_color_jitter: currentSettings.chart_color_jitter,
+                        // Zachowaj kolory Latency przy zmianie języka
+                        chart_color_lat_dl_low: currentSettings.chart_color_lat_dl_low,
+                        chart_color_lat_dl_high: currentSettings.chart_color_lat_dl_high,
+                        chart_color_lat_ul_low: currentSettings.chart_color_lat_ul_low,
+                        chart_color_lat_ul_high: currentSettings.chart_color_lat_ul_high,
+                        
                         app_language: newLang
                     };
                     await updateSettings(payload);
