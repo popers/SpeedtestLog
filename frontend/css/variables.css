@@ -45,6 +45,10 @@
     --color-lat-ul-low: #ef5350; /* Jaśniejszy czerwony */
     --color-lat-ul-high: #b71c1c; /* Ciemny czerwony */
     
+    /* Watchdog */
+    --color-ping-watchdog: #17a2b8;
+    --color-ping-watchdog-bg: rgba(23, 162, 184, 0.15);
+    
     --sidebar-width: 280px;
     --header-height: 64px;
     --sidebar-bg: #1e1e1e;
@@ -100,6 +104,10 @@ body.light-mode {
     --color-lat-dl-high: #0277bd;
     --color-lat-ul-low: #e57373;
     --color-lat-ul-high: #c62828;
+    
+    /* Watchdog Light Mode */
+    --color-ping-watchdog: #0097a7;
+    --color-ping-watchdog-bg: rgba(0, 151, 167, 0.1);
 
     --sidebar-bg: #ffffff;
     --sidebar-border: transparent;

@@ -88,7 +88,7 @@ def initialize_db(app_state, max_retries=10, delay=5):
                 except Exception as e:
                     logging.warning(f"Notification init warning: {e}")
 
-                # 5. Migracja Kolory Wykresów (Latency) - NOWE
+                # 5. Migracja Kolory Wykresów (Latency)
                 try:
                     connection.execute(text("SELECT chart_color_lat_dl_low FROM app_settings LIMIT 1"))
                 except Exception:
@@ -97,6 +97,14 @@ def initialize_db(app_state, max_retries=10, delay=5):
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_dl_high VARCHAR(20) DEFAULT NULL"))
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_ul_low VARCHAR(20) DEFAULT NULL"))
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_ul_high VARCHAR(20) DEFAULT NULL"))
+                    connection.commit()
+
+                # 6. Migracja Kolor Ping Watchdog
+                try:
+                    connection.execute(text("SELECT chart_color_ping_watchdog FROM app_settings LIMIT 1"))
+                except Exception:
+                    logging.info("🔧 Migration: Adding chart_color_ping_watchdog column...")
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_ping_watchdog VARCHAR(20) DEFAULT NULL"))
                     connection.commit()
 
                 logging.info(get_log("db_connected"))

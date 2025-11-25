@@ -51,11 +51,13 @@ class AppSettings(Base):
     chart_color_upload = Column(String(20), nullable=True)
     chart_color_ping = Column(String(20), nullable=True)
     chart_color_jitter = Column(String(20), nullable=True)
-    # NOWE: Kolory Latency
+    # Kolory Latency
     chart_color_lat_dl_low = Column(String(20), nullable=True)
     chart_color_lat_dl_high = Column(String(20), nullable=True)
     chart_color_lat_ul_low = Column(String(20), nullable=True)
     chart_color_lat_ul_high = Column(String(20), nullable=True)
+    # NOWE: Kolor Ping Watchdog
+    chart_color_ping_watchdog = Column(String(20), nullable=True)
 
 class NotificationSettings(Base):
     __tablename__ = "notification_settings"

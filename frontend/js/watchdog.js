@@ -115,9 +115,19 @@ function renderSparkline(history) {
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
     const tickColor = isDark ? '#888' : '#666';
 
+    // ZMIANA: Pobieranie koloru z CSS
+    const style = getComputedStyle(document.body);
+    const chartColor = style.getPropertyValue('--color-ping-watchdog').trim() || '#17a2b8';
+    const chartColorBg = style.getPropertyValue('--color-ping-watchdog-bg').trim() || 'rgba(23, 162, 184, 0.1)';
+
     if (wdChart) {
         wdChart.data.labels = labels;
         wdChart.data.datasets[0].data = dataPoints;
+        
+        // Aktualizacja kolorów w czasie rzeczywistym
+        wdChart.data.datasets[0].borderColor = chartColor;
+        wdChart.data.datasets[0].backgroundColor = chartColorBg;
+        
         wdChart.options.scales.x.grid.color = gridColor;
         wdChart.options.scales.y.grid.color = gridColor;
         wdChart.options.scales.x.ticks.color = tickColor;
@@ -131,8 +141,8 @@ function renderSparkline(history) {
                 labels: labels,
                 datasets: [{
                     data: dataPoints,
-                    borderColor: '#17a2b8',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)', 
+                    borderColor: chartColor,
+                    backgroundColor: chartColorBg,
                     borderWidth: 2,
                     pointRadius: 0,
                     fill: true,
@@ -172,7 +182,6 @@ function renderSparkline(history) {
                         ticks: {
                             color: tickColor,
                             font: { size: 9 }
-                            // ZMIANA: Usunięto stepSize: 0.5, aby podziałka była elastyczna
                         },
                         // ZMIANA: beginAtZero: false pozwala na 'zoom' wykresu
                         beginAtZero: false 

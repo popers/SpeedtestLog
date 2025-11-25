@@ -60,6 +60,8 @@ async def get_set(db: Session = Depends(get_db)):
         "chart_color_lat_dl_high": s.chart_color_lat_dl_high,
         "chart_color_lat_ul_low": s.chart_color_lat_ul_low,
         "chart_color_lat_ul_high": s.chart_color_lat_ul_high,
+        # Kolor Watchdog
+        "chart_color_ping_watchdog": s.chart_color_ping_watchdog,
         
         "latest_test_timestamp": l.timestamp if l else None,
         "app_language": s.app_language,
@@ -92,6 +94,8 @@ async def set_set(s: SettingsModel, db: Session = Depends(get_db)):
     if s.chart_color_lat_dl_high: rec.chart_color_lat_dl_high = s.chart_color_lat_dl_high
     if s.chart_color_lat_ul_low: rec.chart_color_lat_ul_low = s.chart_color_lat_ul_low
     if s.chart_color_lat_ul_high: rec.chart_color_lat_ul_high = s.chart_color_lat_ul_high
+    
+    if s.chart_color_ping_watchdog: rec.chart_color_ping_watchdog = s.chart_color_ping_watchdog
 
     if s.app_language: rec.app_language = s.app_language
 

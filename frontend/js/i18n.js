@@ -167,6 +167,7 @@ export const translations = {
         'chartColorLatDlHigh': 'Pobieranie (Wysokie)',
         'chartColorLatUlLow': 'Wysyłanie (Niskie)',
         'chartColorLatUlHigh': 'Wysyłanie (Wysokie)',
+        'chartColorPingWatchdog': 'Ping Watchdog',
 
         // Notifications
         'notificationsTitle': 'Powiadomienia',
@@ -389,6 +390,7 @@ export const translations = {
         'chartColorLatDlHigh': 'Download (High)',
         'chartColorLatUlLow': 'Upload (Low)',
         'chartColorLatUlHigh': 'Upload (High)',
+        'chartColorPingWatchdog': 'Ping Watchdog',
 
         // Notifications
         'notificationsTitle': 'Notifications',

@@ -6,7 +6,6 @@ from typing import Optional, List
 class SettingsModel(BaseModel):
     server_id: int | None = None
     # ZMIANA: Wszystkie pola domyślnie None, aby umożliwić częściowe aktualizacje (PATCH-like behavior)
-    # Zapobiega to nadpisywaniu ustawień domyślnymi wartościami przy zmianie tylko jednego pola (np. języka)
     schedule_hours: int | None = None
     ping_target: str | None = None
     ping_interval: int | None = None
@@ -24,6 +23,8 @@ class SettingsModel(BaseModel):
     chart_color_lat_dl_high: str | None = None
     chart_color_lat_ul_low: str | None = None
     chart_color_lat_ul_high: str | None = None
+    # NOWE: Kolor Ping Watchdog
+    chart_color_ping_watchdog: str | None = None
 
 class NotificationSettingsModel(BaseModel):
     enabled: bool | None = False

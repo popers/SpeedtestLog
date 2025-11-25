@@ -154,40 +154,57 @@
 
                     <div class="settings-card" style="margin-bottom: 2rem;">
                         <h3 data-i18n-key="chartColorsTitle">Kolory Wykresów</h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
-                            <div class="control-group">
-                                <label data-i18n-key="chartColorDownload">Pobieranie</label>
-                                <input type="color" id="colorDownloadInput" value="#4fc3f7" style="width: 100%; height: 48px; padding: 4px;">
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <!-- Linia 1: Pobieranie, Wysyłanie, Ping, Jitter -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorDownload">Pobieranie</label>
+                                    <input type="color" id="colorDownloadInput" value="#4fc3f7" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorUpload">Wysyłanie</label>
+                                    <input type="color" id="colorUploadInput" value="#e57373" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorPing">Ping</label>
+                                    <input type="color" id="colorPingInput" value="#ffd54f" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorJitter">Jitter</label>
+                                    <input type="color" id="colorJitterInput" value="#81c784" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
                             </div>
-                            <div class="control-group">
-                                <label data-i18n-key="chartColorUpload">Wysyłanie</label>
-                                <input type="color" id="colorUploadInput" value="#e57373" style="width: 100%; height: 48px; padding: 4px;">
+
+                            <!-- Linia 2: Latency -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorLatDlLow">Pobieranie (Niskie)</label>
+                                    <input type="color" id="colorLatDlLowInput" value="#29b6f6" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorLatDlHigh">Pobieranie (Wysokie)</label>
+                                    <input type="color" id="colorLatDlHighInput" value="#01579b" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorLatUlLow">Wysyłanie (Niskie)</label>
+                                    <input type="color" id="colorLatUlLowInput" value="#ef5350" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorLatUlHigh">Wysyłanie (Wysokie)</label>
+                                    <input type="color" id="colorLatUlHighInput" value="#b71c1c" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
                             </div>
-                            <div class="control-group">
-                                <label data-i18n-key="chartColorPing">Ping</label>
-                                <input type="color" id="colorPingInput" value="#ffd54f" style="width: 100%; height: 48px; padding: 4px;">
-                            </div>
-                            <div class="control-group">
-                                <label data-i18n-key="chartColorJitter">Jitter</label>
-                                <input type="color" id="colorJitterInput" value="#81c784" style="width: 100%; height: 48px; padding: 4px;">
-                            </div>
-                            
-                            <!-- NOWE: Kolory Latency -->
-                            <div class="control-group">
-                                <label data-i18n-key="chartColorLatDlLow">Download (Low)</label>
-                                <input type="color" id="colorLatDlLowInput" value="#29b6f6" style="width: 100%; height: 48px; padding: 4px;">
-                            </div>
-                            <div class="control-group">
-                                <label data-i18n-key="chartColorLatDlHigh">Download (High)</label>
-                                <input type="color" id="colorLatDlHighInput" value="#01579b" style="width: 100%; height: 48px; padding: 4px;">
-                            </div>
-                            <div class="control-group">
-                                <label data-i18n-key="chartColorLatUlLow">Upload (Low)</label>
-                                <input type="color" id="colorLatUlLowInput" value="#ef5350" style="width: 100%; height: 48px; padding: 4px;">
-                            </div>
-                            <div class="control-group">
-                                <label data-i18n-key="chartColorLatUlHigh">Upload (High)</label>
-                                <input type="color" id="colorLatUlHighInput" value="#b71c1c" style="width: 100%; height: 48px; padding: 4px;">
+
+                            <!-- Linia 3: Watchdog -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                <div class="control-group">
+                                    <label data-i18n-key="chartColorPingWatchdog">Ping Watchdog</label>
+                                    <input type="color" id="colorPingWatchdogInput" value="#17a2b8" style="width: 100%; height: 48px; padding: 4px;">
+                                </div>
+                                <!-- Puste miejsce, żeby grid się ładnie układał, opcjonalne -->
+                                <div></div>
+                                <div></div>
+                                <div></div>
                             </div>
                         </div>
                     </div>

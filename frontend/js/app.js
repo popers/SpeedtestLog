@@ -132,11 +132,17 @@ function applyColorsToCSS(settings) {
         root.style.setProperty('--color-jitter', settings.chart_color_jitter);
         root.style.setProperty('--color-jitter-bg', hexToRgba(settings.chart_color_jitter, 0.15));
     }
-    // NOWE: Zastosowanie kolorów Latency przy starcie
+    // Kolory Latency
     if (settings.chart_color_lat_dl_low) root.style.setProperty('--color-lat-dl-low', settings.chart_color_lat_dl_low);
     if (settings.chart_color_lat_dl_high) root.style.setProperty('--color-lat-dl-high', settings.chart_color_lat_dl_high);
     if (settings.chart_color_lat_ul_low) root.style.setProperty('--color-lat-ul-low', settings.chart_color_lat_ul_low);
     if (settings.chart_color_lat_ul_high) root.style.setProperty('--color-lat-ul-high', settings.chart_color_lat_ul_high);
+    
+    // NOWE: Kolor Watchdog
+    if (settings.chart_color_ping_watchdog) {
+        root.style.setProperty('--color-ping-watchdog', settings.chart_color_ping_watchdog);
+        root.style.setProperty('--color-ping-watchdog-bg', hexToRgba(settings.chart_color_ping_watchdog, 0.15));
+    }
 }
 
 function handleDashboardNavigation() {
@@ -188,7 +194,7 @@ function setupGlobalEventListeners() {
             langMenu.classList.toggle('show');
         });
     }
-    window.addEventListener('click', () => {
+    window.addEventListener('click', (e) => {
         if (langMenu) langMenu.classList.remove('show');
     });
     

@@ -36,13 +36,28 @@ export async function loadSettingsToForm() {
         const cUl = document.getElementById('colorUploadInput');
         const cPi = document.getElementById('colorPingInput');
         const cJi = document.getElementById('colorJitterInput');
+        
+        // NOWE: Kolor Watchdog
+        const cWd = document.getElementById('colorPingWatchdogInput');
 
         const style = getComputedStyle(document.body);
         if(cDl) cDl.value = s.chart_color_download || style.getPropertyValue('--color-download').trim() || '#4fc3f7';
         if(cUl) cUl.value = s.chart_color_upload || style.getPropertyValue('--color-upload').trim() || '#e57373';
         if(cPi) cPi.value = s.chart_color_ping || style.getPropertyValue('--color-ping').trim() || '#ffd54f';
         if(cJi) cJi.value = s.chart_color_jitter || style.getPropertyValue('--color-jitter').trim() || '#81c784';
+        if(cWd) cWd.value = s.chart_color_ping_watchdog || style.getPropertyValue('--color-ping-watchdog').trim() || '#17a2b8';
         
+        // Kolory Latency
+        const cLatDlLow = document.getElementById('colorLatDlLowInput');
+        const cLatDlHigh = document.getElementById('colorLatDlHighInput');
+        const cLatUlLow = document.getElementById('colorLatUlLowInput');
+        const cLatUlHigh = document.getElementById('colorLatUlHighInput');
+
+        if(cLatDlLow) cLatDlLow.value = s.chart_color_lat_dl_low || style.getPropertyValue('--color-lat-dl-low').trim() || '#29b6f6';
+        if(cLatDlHigh) cLatDlHigh.value = s.chart_color_lat_dl_high || style.getPropertyValue('--color-lat-dl-high').trim() || '#01579b';
+        if(cLatUlLow) cLatUlLow.value = s.chart_color_lat_ul_low || style.getPropertyValue('--color-lat-ul-low').trim() || '#ef5350';
+        if(cLatUlHigh) cLatUlHigh.value = s.chart_color_lat_ul_high || style.getPropertyValue('--color-lat-ul-high').trim() || '#b71c1c';
+
     } catch (e) {
         console.error("Error loading settings:", e);
     }
@@ -104,6 +119,8 @@ export async function saveSettingsFromPage() {
         const cUl = document.getElementById('colorUploadInput').value;
         const cPi = document.getElementById('colorPingInput').value;
         const cJi = document.getElementById('colorJitterInput').value;
+        
+        const cWd = document.getElementById('colorPingWatchdogInput').value;
 
         // NOWE: Kolory Latency
         const cLatDlLow = document.getElementById('colorLatDlLowInput').value;
@@ -127,6 +144,7 @@ export async function saveSettingsFromPage() {
             chart_color_lat_dl_high: cLatDlHigh,
             chart_color_lat_ul_low: cLatUlLow,
             chart_color_lat_ul_high: cLatUlHigh,
+            chart_color_ping_watchdog: cWd,
             // app_language: ... POMINIĘTE - bezpieczne (zmienia się tylko flagą)
         };
 
@@ -142,10 +160,15 @@ export async function saveSettingsFromPage() {
         root.style.setProperty('--color-ping-bg', hexToRgba(cPi, 0.15));
         root.style.setProperty('--color-jitter', cJi);
         root.style.setProperty('--color-jitter-bg', hexToRgba(cJi, 0.15));
+        
         root.style.setProperty('--color-lat-dl-low', cLatDlLow);
         root.style.setProperty('--color-lat-dl-high', cLatDlHigh);
         root.style.setProperty('--color-lat-ul-low', cLatUlLow);
         root.style.setProperty('--color-lat-ul-high', cLatUlHigh);
+        
+        // Watchdog
+        root.style.setProperty('--color-ping-watchdog', cWd);
+        root.style.setProperty('--color-ping-watchdog-bg', hexToRgba(cWd, 0.15));
 
         // 2. Ustawienia Powiadomień
         const notifEnabled = document.getElementById('notifEnabled').checked;
