@@ -79,7 +79,8 @@ async function initializeApp() {
         loadBackupPage();
         initBackupListeners();
     } else if (page === 'index.html' || page === '' || page === '/') {
-        handleDashboardNavigation();
+        // ZMIANA: Dodajemy await tutaj, chociaż initializeApp jest async, to ważne dla porządku
+        await handleDashboardNavigation();
         initDashboardListeners();
         window.addEventListener('hashchange', handleDashboardNavigation);
     }
@@ -145,14 +146,19 @@ function applyColorsToCSS(settings) {
     }
 }
 
-function handleDashboardNavigation() {
+// ZMIANA: Funkcja asynchroniczna, aby czekać na załadowanie danych przed scrollem
+async function handleDashboardNavigation() {
     if (document.getElementById('loginForm')) return;
     if (window.location.pathname.includes('settings.html')) return;
     if (window.location.pathname.includes('backup.html')) return;
 
     const hash = window.location.hash || '#dashboard';
-    loadDashboardData();
     
+    // 1. Najpierw ładujemy dane i renderujemy wykresy
+    // Dzięki await kod poniżej wykona się dopiero, gdy DOM będzie gotowy (wykresy zajmą miejsce)
+    await loadDashboardData();
+    
+    // 2. Aktualizacja aktywnego linku w menu
     document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
     
     let activeLink = document.querySelector(`.nav-link[href="index.html${hash}"]`);
@@ -160,6 +166,25 @@ function handleDashboardNavigation() {
          activeLink = document.querySelector(`.nav-link[href="index.html#dashboard"]`);
     }
     if(activeLink) activeLink.classList.add('active');
+
+    // 3. Fix przewijania: Wymuszamy przewinięcie do odpowiedniej sekcji PO załadowaniu danych
+    if (hash && hash !== '#dashboard') {
+        // Mały timeout pozwala przeglądarce "uspokoić" layout po renderowaniu canvasów
+        setTimeout(() => {
+            const targetId = hash.substring(1); // usuwamy #
+            const targetElement = document.getElementById(targetId);
+            // Musimy przewijać kontener .content-scroll, a nie window, bo mamy layout fixed sidebar
+            const scrollContainer = document.querySelector('.content-scroll');
+            
+            if (targetElement && scrollContainer) {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 150); 
+    } else if (hash === '#dashboard') {
+        // Jeśli wracamy na górę, przewiń kontener na 0
+        const scrollContainer = document.querySelector('.content-scroll');
+        if(scrollContainer) scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 }
 
 function setupGlobalEventListeners() {
@@ -209,21 +234,13 @@ function setupGlobalEventListeners() {
             if (!document.getElementById('loginForm')) {
                 try {
                     // ZMIANA: Uproszczona aktualizacja języka. 
-                    // Wysyłamy TYLKO app_language, aby uniknąć nadpisania innych ustawień 
-                    // (np. harmonogramu) starymi/domyślnymi wartościami.
-                    // Backend (schemas.py) musi mieć ustawione domyślne wartości na None dla innych pól.
-                    
                     const payload = {
                         app_language: newLang
                     };
                     await updateSettings(payload);
                     
-                    // Jeśli jesteśmy na dashboardzie, upewniamy się, że stan harmonogramu jest zsynchronizowany
-                    // Chociaż przy zmianie języka nie powinien się zmienić, warto odświeżyć UI
                     if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
-                         // Opcjonalnie można przeładować ustawienia, aby upewnić się, że UI jest spójne
-                         // const freshSettings = await fetchSettings();
-                         // state.currentScheduleHours = freshSettings.schedule_hours;
+                         // Opcjonalne odświeżenie
                     }
 
                 } catch (e) { console.error("Błąd zapisu języka:", e); }
