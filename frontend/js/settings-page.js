@@ -88,7 +88,9 @@ export async function loadNotificationSettingsToForm() {
 export async function saveSettingsFromPage() {
     try {
         // 1. Główne ustawienia
-        const currentSettings = await fetchSettings();
+        // ZMIANA: Partial Updates. Nie pobieramy fetchSettings() w celu skopiowania danych.
+        // Wysyłamy TYLKO te pola, które użytkownik widzi i edytuje na tej stronie.
+        // Dzięki temu nie nadpiszemy przypadkiem harmonogramu testów (schedule_hours) ani serwera (server_id).
         
         const target = document.getElementById('pingTargetInput').value;
         const interval = parseInt(document.getElementById('pingIntervalInput').value);
@@ -103,9 +105,15 @@ export async function saveSettingsFromPage() {
         const cPi = document.getElementById('colorPingInput').value;
         const cJi = document.getElementById('colorJitterInput').value;
 
+        // NOWE: Kolory Latency
+        const cLatDlLow = document.getElementById('colorLatDlLowInput').value;
+        const cLatDlHigh = document.getElementById('colorLatDlHighInput').value;
+        const cLatUlLow = document.getElementById('colorLatUlLowInput').value;
+        const cLatUlHigh = document.getElementById('colorLatUlHighInput').value;
+
         const payload = {
-            server_id: currentSettings.selected_server_id, 
-            schedule_hours: currentSettings.schedule_hours, 
+            // server_id: ... POMINIĘTE - bezpieczne
+            // schedule_hours: ... POMINIĘTE - bezpieczne
             ping_target: target,
             ping_interval: interval,
             declared_download: dl,
@@ -115,12 +123,16 @@ export async function saveSettingsFromPage() {
             chart_color_upload: cUl,
             chart_color_ping: cPi,
             chart_color_jitter: cJi,
-            app_language: state.currentLang 
+            chart_color_lat_dl_low: cLatDlLow,
+            chart_color_lat_dl_high: cLatDlHigh,
+            chart_color_lat_ul_low: cLatUlLow,
+            chart_color_lat_ul_high: cLatUlHigh,
+            // app_language: ... POMINIĘTE - bezpieczne (zmienia się tylko flagą)
         };
 
         await updateSettings(payload);
         
-        // Zastosuj kolory (funkcja helpera inline lub importowana, tutaj duplikujemy logikę applyColorsToCSS)
+        // Zastosuj kolory
         const root = document.body;
         root.style.setProperty('--color-download', cDl);
         root.style.setProperty('--color-download-bg', hexToRgba(cDl, 0.15));
@@ -130,6 +142,10 @@ export async function saveSettingsFromPage() {
         root.style.setProperty('--color-ping-bg', hexToRgba(cPi, 0.15));
         root.style.setProperty('--color-jitter', cJi);
         root.style.setProperty('--color-jitter-bg', hexToRgba(cJi, 0.15));
+        root.style.setProperty('--color-lat-dl-low', cLatDlLow);
+        root.style.setProperty('--color-lat-dl-high', cLatDlHigh);
+        root.style.setProperty('--color-lat-ul-low', cLatUlLow);
+        root.style.setProperty('--color-lat-ul-high', cLatUlHigh);
 
         // 2. Ustawienia Powiadomień
         const notifEnabled = document.getElementById('notifEnabled').checked;
@@ -148,12 +164,10 @@ export async function saveSettingsFromPage() {
 
         await saveNotificationSettings(notifPayload);
         
-        // Aktualizuj stan powiadomień przeglądarkowych
         initNotificationSystem();
 
         showToast('toastSettingsSaved', 'success');
         
-        // Restart Watchdoga (bo mógł zmienić się target/interwał)
         stopWatchdogPolling();
         startWatchdogPolling();
         
@@ -167,7 +181,6 @@ export function initSettingsListeners() {
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     if(saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromPage);
 
-    // Obsługa przycisku testu powiadomień
     const testNotifBtn = document.getElementById('notifTestBtn');
     if(testNotifBtn) {
         testNotifBtn.addEventListener('click', async () => {
@@ -191,7 +204,6 @@ export function initSettingsListeners() {
         });
     }
 
-    // Obsługa przycisku rejestracji przeglądarki
     const regBrowserBtn = document.getElementById('notifRegisterBtn');
     if(regBrowserBtn) {
         regBrowserBtn.addEventListener('click', () => {

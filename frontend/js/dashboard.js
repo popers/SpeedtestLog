@@ -46,7 +46,6 @@ export async function loadDashboardData() {
         if (document.getElementById('unitSelect')) document.getElementById('unitSelect').value = savedUnit;
 
         // ZMIANA: Ustawiamy datę ostatniego testu na podstawie faktycznej listy wyników.
-        // Eliminuje to problem cachowania endpointu /api/settings przez przeglądarkę.
         if (state.allResults.length > 0) {
             state.lastTestTimestamp = state.allResults[0].timestamp;
         } else {
@@ -235,21 +234,18 @@ export async function handleQuickSettingsChange(e) {
     const sourceId = e.target.id;
 
     try {
-        const currentSettings = await fetchSettings();
-        await updateSettings({
+        // ZMIANA: Usunięto fetchSettings().
+        // Teraz wysyłamy TYLKO te pola, które są kontrolowane przez Dashboard.
+        // Dzięki temu, że w backendzie domyślne wartości to None,
+        // nie nadpiszemy np. Ping Target czy Kolorów.
+        
+        const payload = {
             server_id: newServerId === 'null' ? null : parseInt(newServerId),
-            schedule_hours: newScheduleHours,
-            ping_target: currentSettings.ping_target,
-            ping_interval: currentSettings.ping_interval,
-            declared_download: currentSettings.declared_download, 
-            declared_upload: currentSettings.declared_upload,
-            startup_test_enabled: currentSettings.startup_test_enabled,
-            chart_color_download: currentSettings.chart_color_download,
-            chart_color_upload: currentSettings.chart_color_upload,
-            chart_color_ping: currentSettings.chart_color_ping,
-            chart_color_jitter: currentSettings.chart_color_jitter,
-            app_language: state.currentLang // ZMIANA: Dodano język do payloadu
-        });
+            schedule_hours: newScheduleHours
+            // app_language, chart_colors, etc. -> NIE SĄ WYSYŁANE, WIĘC SĄ BEZPIECZNE
+        };
+
+        await updateSettings(payload);
         
         if (sourceId === 'serverSelect') {
             const serverText = serverSelect.options[serverSelect.selectedIndex].text;
@@ -315,13 +311,7 @@ function startNextRunCountdown() {
             const scheduleIntervalMs = state.currentScheduleHours * 60 * 60 * 1000;
             const now = new Date();
             
-            // ZMIANA: Obliczanie celu na podstawie cykli, a nie tylko prostego dodawania
-            // Naprawia błąd znikającego licznika, gdy "lastRunDate + interval" jest lekko w przeszłości
-            // w momencie przeładowania danych po teście automatycznym.
             const timeElapsed = now.getTime() - lastRunDate.getTime();
-            
-            // Obliczamy ile pełnych cykli minęło i celujemy w następny
-            // Math.floor(timeElapsed / scheduleIntervalMs) + 1 daje nam następny mnożnik interwału
             const cyclesPassed = Math.floor(timeElapsed / scheduleIntervalMs);
             const nextTargetTime = lastRunDate.getTime() + ((cyclesPassed + 1) * scheduleIntervalMs);
             
@@ -329,8 +319,6 @@ function startNextRunCountdown() {
             const diff = nextRunDate - now;
 
             if (diff <= 0) {
-                // Zamiast czyścić tekst (""), pokazujemy 00:00:00, aby licznik nie "mrugał"
-                // w momentach granicznych.
                 countdownEl.textContent = `${prefix} 00:00:00`;
             } else {
                 countdownEl.textContent = `${prefix} ${formatCountdown(diff)}`;
