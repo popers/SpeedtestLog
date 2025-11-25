@@ -173,9 +173,10 @@ function setupGlobalEventListeners() {
         if(sidebarOverlay) sidebarOverlay.classList.remove('show'); 
     };
 
+    // ZMIANA: Hamburger teraz przełącza (toggle) klasy 'open' i 'show'
     if(hamburgerBtn) hamburgerBtn.addEventListener('click', () => { 
-        if(sidebar) sidebar.classList.add('open'); 
-        if(sidebarOverlay) sidebarOverlay.classList.add('show'); 
+        if(sidebar) sidebar.classList.toggle('open'); 
+        if(sidebarOverlay) sidebarOverlay.classList.toggle('show'); 
     });
     if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
     if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);

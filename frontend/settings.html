@@ -8,67 +8,67 @@
     <link rel="apple-touch-icon" href="logo.png">
     <title>Ustawienia - SpeedtestLog</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- ZMIANA: Dodano fonty Material Symbols Rounded -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="css/main.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">    
 </head>
 <body>
     <div class="app-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <img src="logo.png" alt="SpeedtestLog Logo" class="logo-img">
-                <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button id="hamburgerBtn" class="hamburger-btn"><span class="material-symbols-rounded">menu</span></button>
+                <img src="logo.png" alt="SpeedtestLog Logo" class="logo-img" data-i18n-key="title" data-i18n-attr="alt">
             </div>
+            <div class="top-bar-actions">
+                <div class="watchdog-wrapper">
+                    <div id="watchdogIcon" class="watchdog-indicator" title="Ping Watchdog"></div>
+                    <div id="watchdogPopover" class="watchdog-popover">
+                        <h4 id="wdStatus">...</h4>
+                        <div class="wd-detail"><span data-i18n-key="wdTarget">Cel:</span> <span id="wdTarget">...</span></div>
+                        <div class="wd-detail"><span data-i18n-key="wdPing">Ping:</span> <span id="wdLatency">...</span></div>
+                        <div class="wd-detail"><span data-i18n-key="wdLoss">Pakiety:</span> <span id="wdLoss">...</span></div>
+                        <div style="height: 90px; width: 100%; margin-top: 10px;">
+                            <canvas id="wdChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="lang-dropdown-wrapper">
+                    <button id="langBtn" class="lang-btn">
+                        <span class="material-symbols-rounded">language</span>
+                        <span id="currentLangText">PL</span>
+                    </button>
+                    <ul id="langMenu" class="lang-menu">
+                        <li data-lang="pl">Polski</li>
+                        <li data-lang="en">English</li>
+                    </ul>
+                </div>
+                <button id="themeToggle" title="Zmień motyw" class="theme-btn">
+                    <span class="material-symbols-rounded">dark_mode</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="index.html#dashboard" class="nav-link"><span class="material-symbols-rounded icon">dashboard</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
                     <li><a href="index.html#charts" class="nav-link"><span class="material-symbols-rounded icon">analytics</span> <span data-i18n-key="historyCharts">Wykresy Historii</span></a></li>
                     <li><a href="index.html#history" class="nav-link"><span class="material-symbols-rounded icon">history</span> <span data-i18n-key="historyTable">Historia Pomiarów</span></a></li>
-                    <li class="nav-spacer"></li>
+                    <!-- ZMIANA: Usunięto <li class="nav-spacer"></li> -->
                     <li><a href="backup.html" class="nav-link"><span class="material-symbols-rounded icon">save</span> <span data-i18n-key="navBackup">Kopia Zapasowa</span></a></li>
                     <li><a href="settings.html" class="nav-link active"><span class="material-symbols-rounded icon">settings</span> <span data-i18n-key="navSettings">Ustawienia</span></a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
                 <button id="logoutBtn" class="logout-btn"><span class="material-symbols-rounded icon">logout</span> <span data-i18n-key="logout">Wyloguj</span></button>
-                <div style="margin-top: 10px;"><small>SpeedtestLog v1.9</small></div>
+                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v1.9</small></div>
             </div>
         </aside>
 
         <main class="main-content">
-            <header class="top-bar">
-                <button id="hamburgerBtn" class="hamburger-btn">☰</button>
-                <div class="top-bar-actions">
-                    <div class="watchdog-wrapper">
-                        <div id="watchdogIcon" class="watchdog-indicator" title="Ping Watchdog"></div>
-                        <div id="watchdogPopover" class="watchdog-popover">
-                            <h4 id="wdStatus">...</h4>
-                            <div class="wd-detail"><span data-i18n-key="wdTarget">Cel:</span> <span id="wdTarget">...</span></div>
-                            <div class="wd-detail"><span data-i18n-key="wdPing">Ping:</span> <span id="wdLatency">...</span></div>
-                            <div class="wd-detail"><span data-i18n-key="wdLoss">Pakiety:</span> <span id="wdLoss">...</span></div>
-                            <div style="height: 90px; width: 100%; margin-top: 10px;">
-                                <canvas id="wdChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="lang-dropdown-wrapper">
-                        <button id="langBtn" class="lang-btn">
-                            <span class="material-symbols-rounded">language</span>
-                            <span id="currentLangText">PL</span>
-                        </button>
-                        <ul id="langMenu" class="lang-menu">
-                            <li data-lang="pl">Polski</li>
-                            <li data-lang="en">English</li>
-                        </ul>
-                    </div>
-                    <button id="themeToggle" title="Zmień motyw" class="theme-btn">
-                        <span class="material-symbols-rounded">dark_mode</span>
-                    </button>
-                </div>
-            </header>
-
             <div class="content-scroll">
                 <section class="section-block">
                     <h2 data-i18n-key="navSettings">Ustawienia</h2>
@@ -89,7 +89,6 @@
                     <div class="settings-card" style="margin-bottom: 2rem;">
                         <h3 data-i18n-key="startupTestTitle">Automatyczny test przy starcie</h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="startupTestDesc">Jeśli włączone, test prędkości zostanie wykonany automatycznie 1 minutę po uruchomieniu aplikacji.</p>
-                        
                         <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
                             <label for="startupTestInput" style="margin: 0; cursor: pointer; font-weight: 600; color: var(--text-color);" data-i18n-key="startupTestLabel">Uruchom test po starcie kontenera</label>
                             <label class="switch">
@@ -99,7 +98,6 @@
                         </div>
                     </div>
 
-                    <!-- NOWE: Sekcja Powiadomień -->
                     <div class="settings-card" style="margin-bottom: 2rem;">
                         <h3 data-i18n-key="notificationsTitle">Powiadomienia</h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="notificationsDesc">Otrzymuj powiadomienia o zakończonym teście lub zmianie statusu Ping Watchdog.</p>
@@ -155,70 +153,29 @@
                     <div class="settings-card" style="margin-bottom: 2rem;">
                         <h3 data-i18n-key="chartColorsTitle">Kolory Wykresów</h3>
                         <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <!-- Linia 1: Pobieranie, Wysyłanie, Ping, Jitter -->
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorDownload">Pobieranie</label>
-                                    <input type="color" id="colorDownloadInput" value="#4fc3f7" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorUpload">Wysyłanie</label>
-                                    <input type="color" id="colorUploadInput" value="#e57373" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorPing">Ping</label>
-                                    <input type="color" id="colorPingInput" value="#ffd54f" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorJitter">Jitter</label>
-                                    <input type="color" id="colorJitterInput" value="#81c784" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
+                                <div class="control-group"><label data-i18n-key="chartColorDownload">Pobieranie</label><input type="color" id="colorDownloadInput" value="#4fc3f7" style="width: 100%; height: 48px; padding: 4px;"></div>
+                                <div class="control-group"><label data-i18n-key="chartColorUpload">Wysyłanie</label><input type="color" id="colorUploadInput" value="#e57373" style="width: 100%; height: 48px; padding: 4px;"></div>
+                                <div class="control-group"><label data-i18n-key="chartColorPing">Ping</label><input type="color" id="colorPingInput" value="#ffd54f" style="width: 100%; height: 48px; padding: 4px;"></div>
+                                <div class="control-group"><label data-i18n-key="chartColorJitter">Jitter</label><input type="color" id="colorJitterInput" value="#81c784" style="width: 100%; height: 48px; padding: 4px;"></div>
                             </div>
-
-                            <!-- Linia 2: Latency -->
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorLatDlLow">Pobieranie (Niskie)</label>
-                                    <input type="color" id="colorLatDlLowInput" value="#29b6f6" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorLatDlHigh">Pobieranie (Wysokie)</label>
-                                    <input type="color" id="colorLatDlHighInput" value="#01579b" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorLatUlLow">Wysyłanie (Niskie)</label>
-                                    <input type="color" id="colorLatUlLowInput" value="#ef5350" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorLatUlHigh">Wysyłanie (Wysokie)</label>
-                                    <input type="color" id="colorLatUlHighInput" value="#b71c1c" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
+                                <div class="control-group"><label data-i18n-key="chartColorLatDlLow">Pobieranie (Niskie)</label><input type="color" id="colorLatDlLowInput" value="#29b6f6" style="width: 100%; height: 48px; padding: 4px;"></div>
+                                <div class="control-group"><label data-i18n-key="chartColorLatDlHigh">Pobieranie (Wysokie)</label><input type="color" id="colorLatDlHighInput" value="#01579b" style="width: 100%; height: 48px; padding: 4px;"></div>
+                                <div class="control-group"><label data-i18n-key="chartColorLatUlLow">Wysyłanie (Niskie)</label><input type="color" id="colorLatUlLowInput" value="#ef5350" style="width: 100%; height: 48px; padding: 4px;"></div>
+                                <div class="control-group"><label data-i18n-key="chartColorLatUlHigh">Wysyłanie (Wysokie)</label><input type="color" id="colorLatUlHighInput" value="#b71c1c" style="width: 100%; height: 48px; padding: 4px;"></div>
                             </div>
-
-                            <!-- Linia 3: Watchdog -->
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-                                <div class="control-group">
-                                    <label data-i18n-key="chartColorPingWatchdog">Ping Watchdog</label>
-                                    <input type="color" id="colorPingWatchdogInput" value="#17a2b8" style="width: 100%; height: 48px; padding: 4px;">
-                                </div>
-                                <!-- Puste miejsce, żeby grid się ładnie układał, opcjonalne -->
-                                <div></div>
-                                <div></div>
-                                <div></div>
+                                <div class="control-group"><label data-i18n-key="chartColorPingWatchdog">Ping Watchdog</label><input type="color" id="colorPingWatchdogInput" value="#17a2b8" style="width: 100%; height: 48px; padding: 4px;"></div>
+                                <div></div><div></div><div></div>
                             </div>
                         </div>
                     </div>
 
                     <div class="settings-card">
                         <h3>Ping Watchdog</h3>
-                        <div class="control-group">
-                            <label data-i18n-key="wdTarget">Cel (IP/Host):</label>
-                            <input type="text" id="pingTargetInput" placeholder="8.8.8.8">
-                        </div>
-                        <div class="control-group">
-                            <label data-i18n-key="wdInterval">Interwał (sekundy):</label>
-                            <input type="number" id="pingIntervalInput" min="5" value="30">
-                        </div>
+                        <div class="control-group"><label data-i18n-key="wdTarget">Cel (IP/Host):</label><input type="text" id="pingTargetInput" placeholder="8.8.8.8"></div>
+                        <div class="control-group"><label data-i18n-key="wdInterval">Interwał (sekundy):</label><input type="number" id="pingIntervalInput" min="5" value="30"></div>
                     </div>
 
                     <button id="saveSettingsBtn" class="action-btn" style="margin-top: 1.5rem; width: 100%; justify-content: center; background-color: var(--primary-color);">
@@ -230,9 +187,7 @@
         </main>
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
     </div>
-    
     <div id="toastNotification" class="toast"></div>
-    
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

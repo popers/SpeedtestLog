@@ -8,13 +8,11 @@
     <link rel="apple-touch-icon" href="logo.png">
     <title>Kopia Zapasowa - SpeedtestLog</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- ZMIANA: Dodano fonty Material Symbols Rounded -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="css/main.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
-        /* Inline CSS dla nowej sekcji, można przenieść do main.css  */
         .gdrive-status { font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         .gdrive-status.connected { color: var(--success-color); }
         .gdrive-status.disconnected { color: var(--danger-color); }
@@ -28,18 +26,50 @@
 </head>
 <body>
     <div class="app-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button id="hamburgerBtn" class="hamburger-btn"><span class="material-symbols-rounded">menu</span></button>
                 <img src="logo.png" alt="SpeedtestLog Logo" class="logo-img">
-                <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             </div>
+            <div class="top-bar-actions">
+                <div class="watchdog-wrapper">
+                    <div id="watchdogIcon" class="watchdog-indicator" title="Ping Watchdog"></div>
+                    <div id="watchdogPopover" class="watchdog-popover">
+                        <h4 id="wdStatus">...</h4>
+                        <div class="wd-detail"><span data-i18n-key="wdTarget">Cel:</span> <span id="wdTarget">...</span></div>
+                        <div class="wd-detail"><span data-i18n-key="wdPing">Ping:</span> <span id="wdLatency">...</span></div>
+                        <div class="wd-detail"><span data-i18n-key="wdLoss">Pakiety:</span> <span id="wdLoss">...</span></div>
+                        <div style="height: 60px; width: 100%; margin-top: 10px;">
+                            <canvas id="wdChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="lang-dropdown-wrapper">
+                    <button id="langBtn" class="lang-btn">
+                        <span class="material-symbols-rounded">language</span>
+                        <span id="currentLangText">PL</span>
+                    </button>
+                    <ul id="langMenu" class="lang-menu">
+                        <li data-lang="pl">Polski</li>
+                        <li data-lang="en">English</li>
+                    </ul>
+                </div>
+                <button id="themeToggle" title="Zmień motyw" class="theme-btn">
+                    <span class="material-symbols-rounded">dark_mode</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             <nav class="sidebar-nav">
                 <ul>
-                    <!-- ZMIANA: Nowe ikony Material Symbols -->
                     <li><a href="index.html#dashboard" class="nav-link"><span class="material-symbols-rounded icon">dashboard</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
                     <li><a href="index.html#charts" class="nav-link"><span class="material-symbols-rounded icon">analytics</span> <span data-i18n-key="historyCharts">Wykresy Historii</span></a></li>
                     <li><a href="index.html#history" class="nav-link"><span class="material-symbols-rounded icon">history</span> <span data-i18n-key="historyTable">Pomiary</span></a></li>
-                    <li class="nav-spacer"></li>
+                    <!-- ZMIANA: Usunięto <li class="nav-spacer"></li> -->
                     <li><a href="backup.html" class="nav-link active"><span class="material-symbols-rounded icon">save</span> <span data-i18n-key="navBackup">Kopia Zapasowa</span></a></li>
                     <li><a href="settings.html" class="nav-link"><span class="material-symbols-rounded icon">settings</span> <span data-i18n-key="navSettings">Ustawienia</span></a></li>
                 </ul>
@@ -51,52 +81,14 @@
         </aside>
 
         <main class="main-content">
-            <header class="top-bar">
-                <button id="hamburgerBtn" class="hamburger-btn">☰</button>
-                <div class="top-bar-actions">
-                    <div class="watchdog-wrapper">
-                        <div id="watchdogIcon" class="watchdog-indicator" title="Ping Watchdog"></div>
-                        <div id="watchdogPopover" class="watchdog-popover">
-                            <h4 id="wdStatus">...</h4>
-                            <div class="wd-detail"><span data-i18n-key="wdTarget">Cel:</span> <span id="wdTarget">...</span></div>
-                            <div class="wd-detail"><span data-i18n-key="wdPing">Ping:</span> <span id="wdLatency">...</span></div>
-                            <div class="wd-detail"><span data-i18n-key="wdLoss">Pakiety:</span> <span id="wdLoss">...</span></div>
-                            <div style="height: 60px; width: 100%; margin-top: 10px;">
-                                <canvas id="wdChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="lang-dropdown-wrapper">
-                        <!-- ZMIANA: Ikona globu zamiast flagi -->
-                        <button id="langBtn" class="lang-btn">
-                            <span class="material-symbols-rounded">language</span>
-                            <span id="currentLangText">PL</span>
-                        </button>
-                        <ul id="langMenu" class="lang-menu">
-                            <li data-lang="pl">Polski</li>
-                            <li data-lang="en">English</li>
-                        </ul>
-                    </div>
-                    <!-- ZMIANA: Ikona motywu Material Symbols -->
-                    <button id="themeToggle" title="Zmień motyw" class="theme-btn">
-                        <span class="material-symbols-rounded">dark_mode</span>
-                    </button>
-                </div>
-            </header>
-
             <div class="content-scroll">
-                <!-- ZMIANA: Usunięto style max-width: 800px, teraz korzysta z domyślnego layout.css (max 1400px) -->
                 <section class="section-block">
                     <h2 data-i18n-key="backupTitle">Zarządzanie Kopią Zapasową</h2>
                     <p style="color: var(--text-color-secondary); margin-bottom: 2rem;" data-i18n-key="backupDesc">Możesz pobrać pełną kopię bazy danych lub przywrócić dane z wcześniej zapisanego pliku SQL.</p>
                     
                     <div class="backup-grid">
                         <div class="backup-card">
-                            <!-- ZMIANA: Nowa ikona pobierania (duża) -->
-                            <div class="backup-icon">
-                                <span class="material-symbols-rounded" style="font-size: inherit;">cloud_download</span>
-                            </div>
+                            <div class="backup-icon"><span class="material-symbols-rounded" style="font-size: inherit;">cloud_download</span></div>
                             <div class="backup-content">
                                 <h3 data-i18n-key="backupDownloadTitle">Pobierz Kopię</h3>
                                 <p data-i18n-key="backupDownloadText">Pobierz plik SQL zawierający całą historię pomiarów oraz ustawienia.</p>
@@ -108,17 +100,13 @@
                         </div>
 
                         <div class="backup-card" style="border-color: var(--danger-color);">
-                            <!-- ZMIANA: Nowa ikona przywracania (duża) -->
-                            <div class="backup-icon">
-                                <span class="material-symbols-rounded" style="font-size: inherit;">cloud_upload</span>
-                            </div>
+                            <div class="backup-icon"><span class="material-symbols-rounded" style="font-size: inherit;">cloud_upload</span></div>
                             <div class="backup-content">
                                 <h3 data-i18n-key="backupRestoreTitle">Przywróć Kopię</h3>
                                 <p data-i18n-key="backupRestoreText" style="color: var(--danger-text); font-weight: bold;">UWAGA: Przywrócenie kopii nadpisze wszystkie obecne dane!</p>
                                 
                                 <form id="restoreForm">
                                     <div class="file-input-custom">
-                                        <!-- ZMIANA: Dodano ikonę folderu do etykiety pliku -->
                                         <label for="backupFile" class="file-label">
                                             <span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 5px;">folder_open</span>
                                             <span data-i18n-key="selectFile">Wybierz plik</span>
@@ -126,7 +114,6 @@
                                         <span id="fileNameDisplay" data-i18n-key="noFileChosen">Brak wybranego pliku</span>
                                         <input type="file" id="backupFile" name="file" accept=".sql" required style="display: none;">
                                     </div>
-                                    
                                     <button type="submit" id="restoreBackupBtn" class="action-btn" style="background-color: var(--danger-color); border-color: var(--danger-color); margin-top: 15px;">
                                         <span class="material-symbols-rounded" style="font-size: 20px;">restore</span>
                                         <span data-i18n-key="backupRestoreBtn">Przywróć z pliku</span>
@@ -137,114 +124,60 @@
                         </div>
                     </div>
 
-                    <!-- NOWE: Kafelka Google Drive Backup -->
                     <div class="backup-card" style="margin-top: 2rem; border-color: #34a853;">
-                        <div class="backup-icon">
-                            <span class="material-symbols-rounded" style="font-size: inherit; color: #34a853;">add_to_drive</span>
-                        </div>
+                        <div class="backup-icon"><span class="material-symbols-rounded" style="font-size: inherit; color: #34a853;">add_to_drive</span></div>
                         <div class="backup-content">
                             <h3 data-i18n-key="gDriveTitle">Google Drive Backup</h3>
                             <p data-i18n-key="gDriveDesc" style="margin-bottom: 1rem;">Automatycznie wysyłaj kopie zapasowe do folderu na Google Drive.</p>
-                            
                             <div id="gDriveStatus" class="gdrive-status disconnected">
                                 <span class="material-symbols-rounded">link_off</span>
                                 <span data-i18n-key="authStatusDisconnected">Status: Niepołączono</span>
                             </div>
-
                             <div class="run-info">
                                 <span data-i18n-key="lastBackupRun">Ostatni backup:</span> <span id="lastRunVal">-</span>
                                 <span style="margin: 0 5px;">|</span>
                                 <span data-i18n-key="lastBackupStatus">Status:</span> <span id="lastStatusVal">-</span>
                             </div>
-                            <!-- NOWE: Sekcja następnego backupu i licznika -->
                             <div class="run-info" id="nextBackupInfo" style="display: none;">
                                 <span data-i18n-key="nextBackupLabel">Następny backup:</span> <span id="nextBackupVal">-</span>
                                 <br>
                                 <span id="backupCountdown" class="countdown-timer"></span>
                             </div>
-
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                                <div class="control-group">
-                                    <label data-i18n-key="lblClientId">Client ID:</label>
-                                    <input type="text" id="gdClientId" placeholder="xxx.apps.googleusercontent.com">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="lblClientSecret">Client Secret:</label>
-                                    <input type="password" id="gdClientSecret" placeholder="••••••••">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="lblFolderName">Folder Name:</label>
-                                    <input type="text" id="gdFolderName" value="SpeedtestLog_Backup">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="lblRetention">Retencja (dni):</label>
-                                    <input type="number" id="gdRetention" value="30" min="1">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="lblScheduleDays">Co ile dni:</label>
-                                    <input type="number" id="gdScheduleDays" value="1" min="1">
-                                </div>
-                                <div class="control-group">
-                                    <label data-i18n-key="lblScheduleTime">Godzina:</label>
-                                    <input type="time" id="gdScheduleTime" value="03:00">
-                                </div>
+                                <div class="control-group"><label data-i18n-key="lblClientId">Client ID:</label><input type="text" id="gdClientId" placeholder="xxx.apps.googleusercontent.com"></div>
+                                <div class="control-group"><label data-i18n-key="lblClientSecret">Client Secret:</label><input type="password" id="gdClientSecret" placeholder="••••••••"></div>
+                                <div class="control-group"><label data-i18n-key="lblFolderName">Folder Name:</label><input type="text" id="gdFolderName" value="SpeedtestLog_Backup"></div>
+                                <div class="control-group"><label data-i18n-key="lblRetention">Retencja (dni):</label><input type="number" id="gdRetention" value="30" min="1"></div>
+                                <div class="control-group"><label data-i18n-key="lblScheduleDays">Co ile dni:</label><input type="number" id="gdScheduleDays" value="1" min="1"></div>
+                                <div class="control-group"><label data-i18n-key="lblScheduleTime">Godzina:</label><input type="time" id="gdScheduleTime" value="03:00"></div>
                             </div>
-
                             <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                                <button id="gdSaveBtn" class="action-btn" style="background-color: var(--primary-color);">
-                                    <span class="material-symbols-rounded">save</span>
-                                    <span data-i18n-key="btnSaveDrive">Zapisz Konfigurację</span>
-                                </button>
-                                
-                                <button id="gdAuthBtn" class="action-btn" style="background-color: #34a853;">
-                                    <span class="material-symbols-rounded">login</span>
-                                    <span data-i18n-key="btnAuthorize">Autoryzuj</span>
-                                </button>
-
-                                <button id="gdRevokeBtn" class="action-btn" style="background-color: var(--danger-color); display: none;">
-                                    <span class="material-symbols-rounded">logout</span>
-                                    <span data-i18n-key="btnRevoke">Odłącz</span>
-                                </button>
-
-                                <!-- NOWE: Przycisk ręcznego uruchamiania backupu z animacją  -->
+                                <button id="gdSaveBtn" class="action-btn" style="background-color: var(--primary-color);"><span class="material-symbols-rounded">save</span> <span data-i18n-key="btnSaveDrive">Zapisz Konfigurację</span></button>
+                                <button id="gdAuthBtn" class="action-btn" style="background-color: #34a853;"><span class="material-symbols-rounded">login</span> <span data-i18n-key="btnAuthorize">Autoryzuj</span></button>
+                                <button id="gdRevokeBtn" class="action-btn" style="background-color: var(--danger-color); display: none;"><span class="material-symbols-rounded">logout</span> <span data-i18n-key="btnRevoke">Odłącz</span></button>
                                 <button id="gdRunBtn" class="action-btn" style="background-color: var(--info-color); display: none; min-width: 140px; justify-content: center;">
-                                    <span class="btn-text" style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <span class="material-symbols-rounded">cloud_upload</span>
-                                        <span data-i18n-key="btnRunBackup">Wyślij teraz</span>
-                                    </span>
-                                    <span class="btn-dot-loader">
-                                        <span class="dot" style="--dot-index:0; background-color: white;"></span>
-                                        <span class="dot" style="--dot-index:1; background-color: white;"></span>
-                                        <span class="dot" style="--dot-index:2; background-color: white;"></span>
-                                        <span class="dot" style="--dot-index:3; background-color: white;"></span>
-                                    </span>
+                                    <span class="btn-text" style="display: flex; align-items: center; gap: 0.5rem;"><span class="material-symbols-rounded">cloud_upload</span> <span data-i18n-key="btnRunBackup">Wyślij teraz</span></span>
+                                    <span class="btn-dot-loader"><span class="dot" style="--dot-index:0; background-color: white;"></span><span class="dot" style="--dot-index:1; background-color: white;"></span><span class="dot" style="--dot-index:2; background-color: white;"></span><span class="dot" style="--dot-index:3; background-color: white;"></span></span>
                                 </button>
                             </div>
-
                             <details class="collapsible-help">
                                 <summary data-i18n-key="howToTitle">Jak skonfigurować Client ID/Secret?</summary>
                                 <ol>
                                     <li data-i18n-key="howToStep1">Wejdź na Google Cloud Console.</li>
                                     <li data-i18n-key="howToStep2">Utwórz projekt i włącz API "Google Drive API".</li>
                                     <li data-i18n-key="howToStep3">W "Credentials" utwórz "OAuth Client ID" (Typ: Web application).</li>
-                                    <li>
-                                        <span data-i18n-key="howToStep4">Dodaj ten adres w "Authorized redirect URIs":</span><br>
-                                        <span id="redirectUrlDisplay" class="code-block">.../api/backup/google/callback</span>
-                                    </li>
+                                    <li><span data-i18n-key="howToStep4">Dodaj ten adres w "Authorized redirect URIs":</span><br><span id="redirectUrlDisplay" class="code-block">.../api/backup/google/callback</span></li>
                                 </ol>
                             </details>
                         </div>
                     </div>
-
                 </section>
                 <footer style="text-align: center; padding: 20px; color: var(--text-color-secondary); font-size: 0.8rem;">&copy; 2025 SpeedtestLog</footer>
             </div>
         </main>
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
     </div>
-    
     <div id="toastNotification" class="toast"></div>
-    
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

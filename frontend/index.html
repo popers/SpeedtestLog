@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpeedtestLog</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- ZMIANA: Dodano fonty Material Symbols Rounded -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="css/main.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -13,65 +12,62 @@
 </head>
 <body>
     <div class="app-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button id="hamburgerBtn" class="hamburger-btn"><span class="material-symbols-rounded">menu</span></button>
                 <img src="logo.png" alt="SpeedtestLog Logo" class="logo-img" data-i18n-key="title" data-i18n-attr="alt">
-                <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             </div>
+            <div class="top-bar-actions">
+                <div class="watchdog-wrapper">
+                    <div id="watchdogIcon" class="watchdog-indicator" title="Ping Watchdog"></div>
+                    <div id="watchdogPopover" class="watchdog-popover">
+                        <h4 id="wdStatus">...</h4>
+                        <div class="wd-detail"><span data-i18n-key="wdTarget">Cel:</span> <span id="wdTarget">...</span></div>
+                        <div class="wd-detail"><span data-i18n-key="wdPing">Ping:</span> <span id="wdLatency">...</span></div>
+                        <div class="wd-detail"><span data-i18n-key="wdLoss">Pakiety:</span> <span id="wdLoss">...</span></div>
+                        <div style="height: 90px; width: 100%; margin-top: 10px;">
+                            <canvas id="wdChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="lang-dropdown-wrapper">
+                    <button id="langBtn" class="lang-btn">
+                        <span class="material-symbols-rounded">language</span>
+                        <span id="currentLangText">PL</span>
+                    </button>
+                    <ul id="langMenu" class="lang-menu">
+                        <li data-lang="pl">Polski</li>
+                        <li data-lang="en">English</li>
+                    </ul>
+                </div>
+                <button id="themeToggle" title="Zmień motyw" class="theme-btn">
+                    <span class="material-symbols-rounded">dark_mode</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             <nav class="sidebar-nav">
                 <ul>
-                    <!-- ZMIANA: Nowe ikony Material Symbols  -->
                     <li><a href="index.html#dashboard" class="nav-link active"><span class="material-symbols-rounded icon">dashboard</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
                     <li><a href="index.html#charts" class="nav-link"><span class="material-symbols-rounded icon">analytics</span> <span data-i18n-key="historyCharts">Wykresy</span></a></li>
                     <li><a href="index.html#history" class="nav-link"><span class="material-symbols-rounded icon">history</span> <span data-i18n-key="historyTable">Historia Pomiarów</span></a></li>
-                    <li class="nav-spacer"></li>
+                    <!-- ZMIANA: Usunięto <li class="nav-spacer"></li> -->
                     <li><a href="backup.html" class="nav-link"><span class="material-symbols-rounded icon">save</span> <span data-i18n-key="navBackup">Kopia Zapasowa</span></a></li>
                     <li><a href="settings.html" class="nav-link"><span class="material-symbols-rounded icon">settings</span> <span data-i18n-key="navSettings">Ustawienia</span></a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
                 <button id="logoutBtn" class="logout-btn"><span class="material-symbols-rounded icon">logout</span> <span data-i18n-key="logout">Wyloguj</span></button>
-                <div style="margin-top: 10px;"><small>SpeedtestLog v1.9</small></div>
+                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v1.9</small></div>
             </div>
         </aside>
+
         <main class="main-content">
-            <header class="top-bar">
-                <button id="hamburgerBtn" class="hamburger-btn">☰</button>
-                <div class="top-bar-actions">
-                    <div class="watchdog-wrapper">
-                        <div id="watchdogIcon" class="watchdog-indicator" title="Ping Watchdog"></div>
-                        <div id="watchdogPopover" class="watchdog-popover">
-                            <h4 id="wdStatus">...</h4>
-                            <div class="wd-detail"><span data-i18n-key="wdTarget">Cel:</span> <span id="wdTarget">...</span></div>
-                            <div class="wd-detail"><span data-i18n-key="wdPing">Ping:</span> <span id="wdLatency">...</span></div>
-                            <div class="wd-detail"><span data-i18n-key="wdLoss">Pakiety:</span> <span id="wdLoss">...</span></div>
-                            <!-- Wykres Watchdoga -->
-                            <div style="height: 90px; width: 100%; margin-top: 10px;">
-                                <canvas id="wdChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="lang-dropdown-wrapper">
-                        <!-- ZMIANA: Usunięto flagę i dodano ikonę języka -->
-                        <button id="langBtn" class="lang-btn">
-                            <span class="material-symbols-rounded">language</span>
-                            <span id="currentLangText">PL</span>
-                        </button>
-                        <ul id="langMenu" class="lang-menu">
-                            <li data-lang="pl">Polski</li>
-                            <li data-lang="en">English</li>
-                        </ul>
-                    </div>
-                    <!-- ZMIANA: Ikonka zmiany motywu na Material Symbol -->
-                    <button id="themeToggle" title="Zmień motyw" class="theme-btn">
-                        <span class="material-symbols-rounded">dark_mode</span>
-                    </button>
-                </div>
-            </header>
-            
             <div class="content-scroll" id="contentToCapture">
-                
                 <section id="dashboard" class="section-block">
                     <div class="controls-dashboard">
                         <div class="control-group manual-test-group">
@@ -105,7 +101,6 @@
                         <div class="control-group info-group">
                             <label data-i18n-key="nextTest">Następny test:</label>
                             <span id="nextRunTime" class="next-run-indicator" data-i18n-key="calculating">Obliczanie...</span>
-                            <!-- NOWE: Licznik odliczania -->
                             <small id="nextRunCountdown" class="countdown-timer"></small>
                         </div>
                     </div>
@@ -141,7 +136,6 @@
                         <div class="chart-block"><h3 data-i18n-key="uploadChartTitle">Upload</h3><canvas id="uploadChart"></canvas></div>
                         <div class="chart-block"><h3 data-i18n-key="pingChartTitle">Ping</h3><canvas id="pingChart"></canvas></div>
                         <div class="chart-block"><h3 data-i18n-key="jitterChartTitle">Jitter</h3><canvas id="jitterChart"></canvas></div>
-                        <!-- NOWE: Wykres Opóźnień pod obciążeniem -->
                         <div class="chart-block"><h3 data-i18n-key="latencyChartTitle">Opóźnienia (Pod obciążeniem)</h3><canvas id="latencyChart"></canvas></div>
                     </div>
                 </section>
@@ -151,12 +145,10 @@
                         <h2 data-i18n-key="historyTable">Historia Pomiarów</h2>
                         <div class="table-actions">
                             <input type="text" id="tableSearch" class="search-input" placeholder="Szukaj..." data-i18n-attr="placeholder" data-i18n-key="searchPlaceholder">
-                            <!-- ZMIANA: Ikona Eksport CSV -->
                             <button id="exportBtn" class="action-btn" style="background-color: var(--info-color); border-color: var(--info-color);">
                                 <span class="material-symbols-rounded">download</span> 
                                 <span data-i18n-key="exportCSV">CSV</span>
                             </button>
-                            <!-- ZMIANA: Ikona Usuń zaznaczone -->
                             <button id="deleteSelectedBtn" class="action-btn" style="display: none;">
                                 <span class="material-symbols-rounded">delete</span>
                                 <span data-i18n-key="deleteSelected">Usuń zaznaczone</span>
@@ -180,7 +172,6 @@
                             <tbody></tbody>
                         </table>
                     </div>
-                    
                     <div class="pagination-container">
                         <div class="pagination-per-page">
                             <div class="pagination-label" data-i18n-key="rowsPerPage">Na stronę</div>
@@ -192,18 +183,14 @@
                                 <option value="all" data-i18n-key="filterAll">Wszystko</option>
                             </select>
                         </div>
-                        <div class="pagination-nav" id="paginationNav">
-                            <!-- Przyciski będą generowane dynamicznie w JS  -->
-                        </div>
+                        <div class="pagination-nav" id="paginationNav"></div>
                     </div>
                 </section>
-
             </div>
         </main>
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
     </div>
     <div id="toastNotification" class="toast"></div>
-    
     <div id="confirmModal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <button id="confirmModalCloseBtn" class="modal-close-x">&times;</button>
@@ -215,9 +202,7 @@
             </div>
         </div>
     </div>
-
     <div id="detailsModal" class="modal-overlay" style="display: none;"><div class="modal-content"><button id="modalCloseBtn" class="modal-close-x">&times;</button><h3 data-i18n-key="detailsTitle">Szczegóły</h3><div id="detailsContent" style="text-align: left;"></div></div></div>
-    
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
