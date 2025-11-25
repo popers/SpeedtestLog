@@ -3,6 +3,7 @@ import threading
 import time
 import schedule
 import uvicorn
+import logging # Dodano import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse
@@ -11,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 # Nasze moduły
 from config import setup_logging, AUTH_ENABLED, SESSION_COOKIE_NAME, SESSION_SECRET
 from database import initialize_db
-from speedtest import get_closest_servers, init_scheduler
+from speedtest import get_closest_servers, init_scheduler, scheduler_lock # Importujemy locka
 from backup import setup_backup_schedule
 from watchdog import run_ping_watchdog
 
@@ -35,12 +36,21 @@ app_state = {
 
 # --- Wątki tła ---
 def run_schedule_loop():
-    while True: schedule.run_pending(); time.sleep(1)
+    while True: 
+        try:
+            # ZMIANA: Zabezpieczenie pętli harmonogramu
+            # Używamy locka, aby nie kolidować z update_scheduler w innym wątku
+            with scheduler_lock:
+                schedule.run_pending()
+        except Exception as e:
+            # Logujemy błąd, ale NIE zabijamy wątku
+            logging.error(f"CRITICAL: Scheduler loop error: {e}")
+        
+        time.sleep(1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Start - Inicjalizacja
-    # ZMIANA: Przekazujemy poprawne app_state
     initialize_db(app_state, 10, 5) 
     
     threading.Thread(target=get_closest_servers, daemon=True).start()

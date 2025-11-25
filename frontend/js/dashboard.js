@@ -7,14 +7,19 @@ import { updateStatsCards, updateTable, showDetailsModal } from './ui.js';
 
 let countdownInterval = null;
 let pollingInterval = null;
+let scheduleCheckInProgress = false; // NOWE: Flaga blokująca wielokrotne zapytania
 
 export async function loadDashboardData() {
     try {
         const serversData = await fetchServers();
         const settingsData = await fetchSettings();
         
-        // ZMIANA: Pobieramy wyniki wcześniej, aby mieć pewny timestamp ostatniego testu
         state.allResults = await fetchResults();
+
+        // Zapisujemy czas następnego testu zwrócony przez backend
+        if (settingsData.next_run_time) {
+            state.nextExplicitRunTime = settingsData.next_run_time;
+        }
 
         state.declaredSpeeds = {
             download: settingsData.declared_download || 0,
@@ -45,7 +50,6 @@ export async function loadDashboardData() {
         if (document.getElementById('filterSelect')) document.getElementById('filterSelect').value = savedFilter;
         if (document.getElementById('unitSelect')) document.getElementById('unitSelect').value = savedUnit;
 
-        // ZMIANA: Ustawiamy datę ostatniego testu na podstawie faktycznej listy wyników.
         if (state.allResults.length > 0) {
             state.lastTestTimestamp = state.allResults[0].timestamp;
         } else {
@@ -154,7 +158,12 @@ export async function handleManualTest() {
             if (isNew) {
                 clearInterval(pollingInterval); 
                 showToast('toastTestComplete', 'success');
+                
                 state.allResults = await fetchResults(); 
+                const newSettings = await fetchSettings(); 
+                if (newSettings.next_run_time) {
+                    state.nextExplicitRunTime = newSettings.next_run_time;
+                }
                 
                 if (state.allResults.length > 0) {
                     state.lastTestTimestamp = state.allResults[0].timestamp;
@@ -234,18 +243,18 @@ export async function handleQuickSettingsChange(e) {
     const sourceId = e.target.id;
 
     try {
-        // ZMIANA: Usunięto fetchSettings().
-        // Teraz wysyłamy TYLKO te pola, które są kontrolowane przez Dashboard.
-        // Dzięki temu, że w backendzie domyślne wartości to None,
-        // nie nadpiszemy np. Ping Target czy Kolorów.
-        
         const payload = {
             server_id: newServerId === 'null' ? null : parseInt(newServerId),
             schedule_hours: newScheduleHours
-            // app_language, chart_colors, etc. -> NIE SĄ WYSYŁANE, WIĘC SĄ BEZPIECZNE
         };
 
-        await updateSettings(payload);
+        const response = await updateSettings(payload);
+        
+        if (response.next_run_time) {
+            state.nextExplicitRunTime = response.next_run_time;
+        } else if (newScheduleHours === 0) {
+            state.nextExplicitRunTime = null;
+        }
         
         if (sourceId === 'serverSelect') {
             const serverText = serverSelect.options[serverSelect.selectedIndex].text;
@@ -292,7 +301,7 @@ function startNextRunCountdown() {
 
     if (countdownInterval) clearInterval(countdownInterval);
 
-    if (state.currentScheduleHours === 0 || !state.lastTestTimestamp) {
+    if (state.currentScheduleHours === 0) {
         countdownEl.style.display = 'none';
         countdownEl.textContent = '';
         return;
@@ -300,26 +309,54 @@ function startNextRunCountdown() {
 
     countdownEl.style.display = 'block';
     
-    const updateTimer = () => {
+    // ZMIANA: Funkcja asynchroniczna, aby móc pytać API
+    const updateTimer = async () => {
         try {
             const lang = translations[state.currentLang];
             const prefix = lang.countdownPrefix || 'za';
-
-            const lastRunDate = parseISOLocally(state.lastTestTimestamp);
-            if (!lastRunDate) return;
-
-            const scheduleIntervalMs = state.currentScheduleHours * 60 * 60 * 1000;
             const now = new Date();
-            
-            const timeElapsed = now.getTime() - lastRunDate.getTime();
-            const cyclesPassed = Math.floor(timeElapsed / scheduleIntervalMs);
-            const nextTargetTime = lastRunDate.getTime() + ((cyclesPassed + 1) * scheduleIntervalMs);
-            
-            const nextRunDate = new Date(nextTargetTime);
+            let nextRunDate;
+
+            if (state.nextExplicitRunTime) {
+                nextRunDate = parseISOLocally(state.nextExplicitRunTime);
+            } else {
+                const lastRunDate = parseISOLocally(state.lastTestTimestamp);
+                if (!lastRunDate) return;
+                const scheduleIntervalMs = state.currentScheduleHours * 60 * 60 * 1000;
+                const timeElapsed = now.getTime() - lastRunDate.getTime();
+                const cyclesPassed = Math.floor(timeElapsed / scheduleIntervalMs);
+                const nextTargetTime = lastRunDate.getTime() + ((cyclesPassed + 1) * scheduleIntervalMs);
+                nextRunDate = new Date(nextTargetTime);
+            }
+
             const diff = nextRunDate - now;
 
             if (diff <= 0) {
                 countdownEl.textContent = `${prefix} 00:00:00`;
+                
+                // NOWE: Jeśli czas minął (test powinien był ruszyć), a my nadal stoimy na 0,
+                // sprawdzamy backend czy harmonogram się zmienił (np. zresetował po błędzie).
+                // Robimy to po 5 sekundach opóźnienia (diff < -5000), aby dać czas na wykonanie testu.
+                if (diff < -5000 && !scheduleCheckInProgress) {
+                    scheduleCheckInProgress = true;
+                    try {
+                        const s = await fetchSettings();
+                        // Jeśli backend podaje nową datę (inną niż mamy), aktualizujemy stan
+                        if (s.next_run_time && s.next_run_time !== state.nextExplicitRunTime) {
+                            console.log("Sync: Harmonogram zmieniony w tle, aktualizacja licznika.");
+                            state.nextExplicitRunTime = s.next_run_time;
+                            
+                            const nextRunEl = document.getElementById('nextRunTime');
+                            if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
+                        }
+                    } catch(e) {
+                        // Cichy błąd, spróbujemy w następnej pętli
+                    } finally {
+                        // Backoff na 10 sekund, żeby nie spamować API
+                        setTimeout(() => { scheduleCheckInProgress = false; }, 10000);
+                    }
+                }
+
             } else {
                 countdownEl.textContent = `${prefix} ${formatCountdown(diff)}`;
             }
@@ -332,7 +369,6 @@ function startNextRunCountdown() {
     countdownInterval = setInterval(updateTimer, 1000);
 }
 
-// Inicjalizacja event listenerĂłw specyficznych dla dashboardu
 export function initDashboardListeners() {
     const triggerBtn = document.getElementById('triggerTestBtn');
     if(triggerBtn) triggerBtn.addEventListener('click', handleManualTest);
@@ -346,7 +382,7 @@ export function initDashboardListeners() {
 
     const filterSelect = document.getElementById('filterSelect');
     const unitSelect = document.getElementById('unitSelect');
-    if(filterSelect) filterSelect.addEventListener('change', () => {
+    if(filterSelect) filterSelect.addEventListener('change', () => { 
         state.currentPage = 1; 
         localStorage.setItem('dashboardFilter', filterSelect.value);
         renderData();

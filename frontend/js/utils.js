@@ -28,7 +28,6 @@ export function parseISOLocally(isoString) {
     return new Date(year, month, day, hour, minute, second); 
 }
 
-// NOWE: Funkcja formatująca czas do odliczania 
 export function formatCountdown(ms) {
     if (ms < 0) return "00:00:00";
     const seconds = Math.floor((ms / 1000) % 60);
@@ -39,7 +38,6 @@ export function formatCountdown(ms) {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-// NOWE: Helper do konwersji HEX na RGBA (dla wykresów)
 export function hexToRgba(hex, alpha) {
     let c;
     if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
@@ -50,7 +48,7 @@ export function hexToRgba(hex, alpha) {
         c = '0x' + c.join('');
         return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+','+alpha+')';
     }
-    return hex; // Fallback jeśli nieprawidłowy hex
+    return hex;
 }
 
 // --- UX Helpers ---
@@ -85,8 +83,6 @@ export function setNightMode(isNight) {
     if(themeToggle) {
         const iconSpan = themeToggle.querySelector('.material-symbols-rounded');
         if (iconSpan) {
-            // Jeśli jest ciemno (isNight=true), pokaż "light_mode" (słońce) jako opcję zmiany
-            // Jeśli jest jasno (isNight=false), pokaż "dark_mode" (księżyc) 
             iconSpan.textContent = isNight ? 'light_mode' : 'dark_mode';
         }
     }
@@ -140,6 +136,17 @@ export function getNextRunTimeText() {
         return lang.nextTestDisabled || 'Harmonogram wyłączony';
     }
 
+    // ZMIANA: Jeśli mamy dokładny czas z backendu (scheduler), używamy go priorytetowo
+    if (state.nextExplicitRunTime) {
+        const explicitDate = parseISOLocally(state.nextExplicitRunTime);
+        const now = new Date();
+        // Wyświetlaj tylko jeśli jest w przyszłości (z małym buforem np. -1 minuta w razie lekkiej desynchronizacji zegara)
+        if (explicitDate && explicitDate.getTime() > now.getTime() - 60000) {
+            return explicitDate.toLocaleString(state.currentLang);
+        }
+    }
+
+    // Fallback: stara logika obliczeniowa (np. gdy brak połączenia z backendem lub harmonogram pusty)
     if (!state.lastTestTimestamp) return lang.nextTestAfterFirst;
     
     try {

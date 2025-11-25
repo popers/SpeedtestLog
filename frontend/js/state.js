@@ -4,6 +4,10 @@ export const state = {
     currentFilter: '24h',
     currentScheduleHours: 1,
     lastTestTimestamp: null,
+    
+    // NOWE: Przechowuje dokładny czas następnego testu pobrany z backendu
+    nextExplicitRunTime: null,
+
     currentLang: 'pl',
     currentUnit: 'Mbps',
     previousFilter: '24h',
@@ -12,10 +16,10 @@ export const state = {
     currentFilteredResults: [],
     currentSelectedServerId: 'null',
     
-    // NOWE: Stan wyszukiwarki
+    // Stan wyszukiwarki
     searchTerm: '',
     
-    // NOWE: Deklarowane prędkości
+    // Deklarowane prędkości
     declaredSpeeds: {
         download: 0,
         upload: 0
@@ -25,8 +29,7 @@ export const state = {
     currentPage: 1,
     itemsPerPage: 10, 
     
-    // Zmienna przechowująca surowy status backupu (np. 'success', 'error')
-    // Pozwala na ponowne przetłumaczenie statusu przy zmianie języka bez odświeżania
+    // Status backupu
     backupRawStatus: null, 
 
     pollingInterval: null,

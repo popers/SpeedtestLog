@@ -8,11 +8,14 @@ import schedule
 import uuid
 from datetime import datetime
 from config import get_log, NOTIF_TRANS, SERVERS_FILE
-import database # ZMIANA: Import całego modułu zamiast zmiennej
+import database 
 from models import AppSettings, SpeedtestResult, NotificationSettings
 import requests
 
-test_lock = threading.Lock()
+# Blokady wątków
+test_lock = threading.Lock()      # Blokada samego testu speedtest (żeby nie szły dwa naraz)
+scheduler_lock = threading.Lock() # Blokada dla operacji na bibliotece schedule
+
 schedule_job = None
 
 # Helper do ładowania ustawień powiadomień (lokalnie, aby uniknąć cykli)
@@ -25,7 +28,6 @@ def load_notification_settings(db):
     return settings
 
 def send_system_notification(title: str, message: str, type: str = "info"):
-    # ZMIANA: Użycie database.SessionLocal()
     db = database.SessionLocal()
     try:
         ns = load_notification_settings(db)
@@ -58,12 +60,19 @@ def get_closest_servers():
         except Exception as e: logging.error(get_log("servers_err", e))
 
 def run_speed_test_and_save(server_id=None, forced_lang=None):
+    # Jeśli test już trwa, nie uruchamiaj kolejnego
     if not test_lock.acquire(blocking=False): return None
-    # ZMIANA: Użycie database.SessionLocal()
+    
     db_session = database.SessionLocal()
+    schedule_hours_to_reset = None # Zmienna pomocnicza do resetu harmonogramu
+
     try:
         s = db_session.query(AppSettings).filter(AppSettings.id == 1).first()
         app_lang = forced_lang if forced_lang else (s.app_language or "pl")
+        
+        # Pobieramy aktualny interwał, aby wiedzieć czy zresetować licznik po teście
+        if s.schedule_hours and s.schedule_hours > 0:
+            schedule_hours_to_reset = s.schedule_hours
 
         cmd = ['speedtest', '--accept-license', '--accept-gdpr', '--format=json']
         if server_id: cmd.extend(['--server-id', str(server_id)])
@@ -125,10 +134,17 @@ def run_speed_test_and_save(server_id=None, forced_lang=None):
     finally:
         db_session.close()
         test_lock.release()
+        
+        # Synchronizacja harmonogramu po teście
+        if schedule_hours_to_reset:
+            update_scheduler(schedule_hours_to_reset)
 
 def run_scheduled_test(job_tag=None):
-    if job_tag == 'startup-test': schedule.clear('startup-test')
-    # ZMIANA: Użycie database.SessionLocal()
+    if job_tag == 'startup-test':
+        # Użycie blokady przy modyfikacji harmonogramu
+        with scheduler_lock:
+            schedule.clear('startup-test')
+            
     db = database.SessionLocal()
     s = db.query(AppSettings).filter(AppSettings.id == 1).first()
     srv_id = s.selected_server_id if s else None
@@ -139,7 +155,6 @@ def run_speed_test_and_save_threaded(job_tag=None):
     threading.Thread(target=run_scheduled_test, args=(job_tag,), daemon=True).start()
 
 def init_scheduler():
-    # ZMIANA: Użycie database.SessionLocal()
     db = database.SessionLocal()
     s = db.query(AppSettings).filter(AppSettings.id == 1).first()
     if not s: 
@@ -149,22 +164,32 @@ def init_scheduler():
     global schedule_job
     hours = s.schedule_hours
     
-    if hours and hours > 0:
-        schedule_job = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
-    
-    if s.startup_test_enabled:
-        logging.info(get_log("startup_test_scheduled"))
-        schedule.every(1).minutes.do(run_speed_test_and_save_threaded, job_tag='startup-test').tag('startup-test')
+    # Użycie blokady przy inicjalizacji
+    with scheduler_lock:
+        if hours and hours > 0:
+            # ZMIANA: Dodano .tag('hourly-test'), aby można było znaleźć to zadanie w settings.py
+            schedule_job = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test').tag('hourly-test')
+        
+        if s.startup_test_enabled:
+            logging.info(get_log("startup_test_scheduled"))
+            schedule.every(1).minutes.do(run_speed_test_and_save_threaded, job_tag='startup-test').tag('startup-test')
     
     db.close()
 
 def update_scheduler(hours):
     global schedule_job
-    if schedule_job:
-        try:
-            schedule.cancel_job(schedule_job)
-        except: pass
-        schedule_job = None
-    
-    if hours > 0:
-        schedule_job = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test')
+    # Użycie blokady przy aktualizacji
+    with scheduler_lock:
+        if schedule_job:
+            try:
+                schedule.cancel_job(schedule_job)
+            except: pass
+            schedule_job = None
+        
+        # Usuwamy stare zadanie 'hourly-test' dla pewności
+        schedule.clear('hourly-test')
+        
+        if hours > 0:
+            # ZMIANA: Tutaj również dodano .tag('hourly-test')
+            schedule_job = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test').tag('hourly-test')
+            logging.info(f"Scheduler reset: Next run in {hours} hours.")

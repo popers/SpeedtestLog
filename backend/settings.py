@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import schedule # Dodano import schedule
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
@@ -8,11 +9,20 @@ from models import AppSettings, NotificationSettings, SpeedtestResult
 from schemas import SettingsModel, NotificationSettingsModel, NotificationTestModel
 from dependencies import verify_session
 from config import get_log, NOTIF_TRANS, SERVERS_FILE
-from speedtest import update_scheduler
+from speedtest import update_scheduler, scheduler_lock # Dodano scheduler_lock
 import requests
 from datetime import datetime
 
 router = APIRouter(dependencies=[Depends(verify_session)])
+
+# NOWA FUNKCJA: Wyciąga dokładny czas z biblioteki schedule
+def get_next_run_time():
+    with scheduler_lock:
+        # Szukamy zadania z tagiem 'hourly-test'
+        job = next((j for j in schedule.jobs if 'hourly-test' in j.tags), None)
+        if job and job.next_run:
+            return job.next_run.isoformat()
+    return None
 
 @router.get("/api/servers")
 async def get_srv():
@@ -28,6 +38,10 @@ async def get_set(db: Session = Depends(get_db)):
         db.add(s)
         db.commit()
     l = db.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).first()
+    
+    # Pobieramy czas następnego testu
+    next_run = get_next_run_time()
+
     return {
         "selected_server_id": s.selected_server_id,
         "schedule_hours": s.schedule_hours,
@@ -41,14 +55,17 @@ async def get_set(db: Session = Depends(get_db)):
         "chart_color_upload": s.chart_color_upload,
         "chart_color_ping": s.chart_color_ping,
         "chart_color_jitter": s.chart_color_jitter,
-        # Kolory Latency - NOWE
+        # Kolory Latency
         "chart_color_lat_dl_low": s.chart_color_lat_dl_low,
         "chart_color_lat_dl_high": s.chart_color_lat_dl_high,
         "chart_color_lat_ul_low": s.chart_color_lat_ul_low,
         "chart_color_lat_ul_high": s.chart_color_lat_ul_high,
         
         "latest_test_timestamp": l.timestamp if l else None,
-        "app_language": s.app_language
+        "app_language": s.app_language,
+        
+        # Zwracamy czas w odpowiedzi API
+        "next_run_time": next_run
     }
 
 @router.post("/api/settings")
@@ -66,13 +83,11 @@ async def set_set(s: SettingsModel, db: Session = Depends(get_db)):
     if s.declared_upload is not None: rec.declared_upload = s.declared_upload
     if s.startup_test_enabled is not None: rec.startup_test_enabled = s.startup_test_enabled
     
-    # Zapis kolorów podstawowych
     if s.chart_color_download: rec.chart_color_download = s.chart_color_download
     if s.chart_color_upload: rec.chart_color_upload = s.chart_color_upload
     if s.chart_color_ping: rec.chart_color_ping = s.chart_color_ping
     if s.chart_color_jitter: rec.chart_color_jitter = s.chart_color_jitter
     
-    # Zapis kolorów Latency - NOWE
     if s.chart_color_lat_dl_low: rec.chart_color_lat_dl_low = s.chart_color_lat_dl_low
     if s.chart_color_lat_dl_high: rec.chart_color_lat_dl_high = s.chart_color_lat_dl_high
     if s.chart_color_lat_ul_low: rec.chart_color_lat_ul_low = s.chart_color_lat_ul_low
@@ -81,9 +96,17 @@ async def set_set(s: SettingsModel, db: Session = Depends(get_db)):
     if s.app_language: rec.app_language = s.app_language
 
     db.commit()
+    
+    # Jeśli interwał się zmienił, scheduler zostanie zaktualizowany (i zresetowany "od teraz")
     if update_sched: update_scheduler(rec.schedule_hours)
+    
+    # Pobieramy nowy czas po aktualizacji
+    next_run = get_next_run_time()
+    
     logging.info(get_log("settings_updated"))
-    return {"message": "Settings saved"}
+    
+    # Zwracamy nowy czas do frontendu
+    return {"message": "Settings saved", "next_run_time": next_run}
 
 @router.get("/api/notifications/settings")
 async def get_notif_settings(db: Session = Depends(get_db)):
