@@ -171,10 +171,11 @@ function renderSparkline(history) {
                         },
                         ticks: {
                             color: tickColor,
-                            font: { size: 9 },
-                            stepSize: 0.5 
+                            font: { size: 9 }
+                            // ZMIANA: Usunięto stepSize: 0.5, aby podziałka była elastyczna
                         },
-                        suggestedMin: 0
+                        // ZMIANA: beginAtZero: false pozwala na 'zoom' wykresu
+                        beginAtZero: false 
                     } 
                 }
             }
