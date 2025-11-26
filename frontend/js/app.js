@@ -189,21 +189,38 @@ async function handleDashboardNavigation() {
 
 function setupGlobalEventListeners() {
     const hamburgerBtn = document.getElementById('hamburgerBtn');
-    const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+    // ZMIANA: Usuwamy niepotrzebną referencję do closeSidebarBtn
+    // const closeSidebarBtn = document.getElementById('closeSidebarBtn');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     const sidebar = document.getElementById('sidebar');
     
+    // NOWA ZMIANA: Pobranie ikonki z przycisku hamburgera
+    const hamburgerIcon = hamburgerBtn ? hamburgerBtn.querySelector('.material-symbols-rounded') : null;
+
+    // NOWA FUNKCJA: Przełączanie ikonki hamburgera
+    const updateHamburgerIcon = (isOpen) => {
+        if (hamburgerIcon) {
+            // Zmieniamy ikonę z 'menu' na 'close' po otwarciu, i z powrotem na 'menu' po zamknięciu
+            hamburgerIcon.textContent = isOpen ? 'close' : 'menu';
+        }
+    };
+
     const closeSidebar = () => { 
         if(sidebar) sidebar.classList.remove('open'); 
         if(sidebarOverlay) sidebarOverlay.classList.remove('show'); 
+        updateHamburgerIcon(false); // NOWA ZMIANA: Ustaw ikonę na 'menu' po zamknięciu
     };
 
     // ZMIANA: Hamburger teraz przełącza (toggle) klasy 'open' i 'show'
     if(hamburgerBtn) hamburgerBtn.addEventListener('click', () => { 
-        if(sidebar) sidebar.classList.toggle('open'); 
+        if(sidebar) {
+            const isOpen = sidebar.classList.toggle('open');
+            updateHamburgerIcon(isOpen); // NOWA ZMIANA: Przełącz ikonę na podstawie stanu
+        }
         if(sidebarOverlay) sidebarOverlay.classList.toggle('show'); 
     });
-    if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
+    // ZMIANA: Usunięto nasłuchiwanie na nieistniejący już closeSidebarBtn
+    // if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
     if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 
     document.querySelectorAll('.sidebar-nav a').forEach(link => {

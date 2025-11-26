@@ -264,7 +264,7 @@ th { background-color: rgba(0,0,0,0.02); font-weight: 500; color: var(--text-col
 body.light-mode th { background-color: #f9f9f9; }
 tbody tr { transition: background-color 0.1s; }
 tbody tr:hover { background-color: rgba(255,255,255, 0.03); }
-body.light-mode tbody tr:hover { background-color: rgba(0,0,0, 0.03); }
+body.light-mode tbody tr:hover { background-color: rgba(0, 0, 0, 0.03); }
 
 .table-header { 
     display: flex; 
@@ -404,7 +404,15 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
 }
 
 /* Watchdog Styles */
-.watchdog-wrapper { position: relative; margin-right: 15px; display: flex; align-items: center; }
+.watchdog-wrapper { 
+    position: relative; 
+    /* ZMIANA: Zmniejszenie marginesu z prawej strony */
+    margin-right: 10px; 
+    display: flex; 
+    align-items: center; 
+    /* NOWA ZMIANA: Upewnienie się, że element nie zajmie zbyt dużo miejsca */
+    flex-shrink: 0;
+}
 .watchdog-indicator { width: 14px; height: 14px; border-radius: 50%; background-color: #ccc; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7); }
 .watchdog-indicator.online { background-color: #28a745; box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); animation: pulse-green 2s infinite; }
 .watchdog-indicator.offline { background-color: #dc3545; box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); animation: pulse-red 1.5s infinite; }

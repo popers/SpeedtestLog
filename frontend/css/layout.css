@@ -53,10 +53,12 @@ html, body {
     display: block;
     padding: 6px 0; /* Margines góra/dół, aby logo "oddychało" */
     box-sizing: border-box; 
+    /* NOWA ZMIANA: Ograniczenie maksymalnej szerokości logo na desktopie, aby zapobiec dominacji */
+    max-width: 300px;
 }
 
 .hamburger-btn { 
-    display: none; 
+    /* ZMIANA: Teraz hamburger jest zawsze wyświetlany, ale ukryty na desktopie przez media query */
     background: none; 
     border: none; 
     font-size: 1.5rem; 
@@ -73,6 +75,8 @@ html, body {
     align-items: center; 
     gap: 1rem; 
     margin-left: auto; 
+    /* NOWA ZMIANA: Zezwól na zawijanie w widoku mobilnym, chociaż docelowo chcemy, aby się mieściło */
+    flex-wrap: nowrap; 
 }
 
 /* --- Sidebar (Transparent & Below Header) --- */
@@ -96,20 +100,8 @@ html, body {
 }
 
 .close-sidebar-btn { 
-    display: none; 
-    background: none; 
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    width: 32px; height: 32px;
-    font-size: 1.2rem; 
-    color: var(--text-color); 
-    cursor: pointer; 
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    align-items: center;
-    justify-content: center;
-    z-index: 1001;
+    /* ZMIANA: Ukrywamy ten przycisk całkowicie, ponieważ hamburger będzie przełączał ikonę */
+    display: none !important; 
 }
 
 .sidebar-nav { 
@@ -228,6 +220,7 @@ body.light-mode .nav-link:hover {
 
 /* Responsive */
 @media (min-width: 993px) {
+    /* ZMIANA: Ukrywamy hamburgera TYLKO na desktopie */
     .hamburger-btn { display: none; }
     .content-scroll > section, .content-scroll > footer { 
         margin-left: auto; margin-right: auto; 
@@ -238,6 +231,22 @@ body.light-mode .nav-link:hover {
 
 @media (max-width: 992px) {
     :root { --sidebar-width: 280px; }
+    
+    /* NOWA ZMIANA: Zmniejszenie paddingu i gap w top-bar na mobile */
+    .top-bar {
+        padding: 0 0.75rem; /* Zmniejszenie paddingu bocznego */
+    }
+    .top-bar-left {
+        gap: 0.5rem;
+    }
+    .top-bar-actions {
+        gap: 0.5rem; /* Zmniejszenie odstępu między akcjami */
+    }
+    
+    .logo-img { 
+        /* NOWA ZMIANA: Ogranicz maksymalną szerokość logo, aby zmieściło się obok ikon */
+        max-width: 180px; 
+    }
     
     .sidebar { 
         transform: translateX(-100%); 
@@ -251,7 +260,8 @@ body.light-mode .nav-link:hover {
         box-shadow: 10px 0 30px rgba(0,0,0,0.5); 
     }
     
-    .hamburger-btn { display: flex; margin-right: 1rem; }
+    /* ZMIANA: Hamburger jest zawsze widoczny na mobile */
+    .hamburger-btn { display: flex; margin-right: 0.5rem; }
     
     /* ZMIANA: Ukrywamy przycisk zamykania "X" na mobile, bo hamburger będzie sterował */
     .close-sidebar-btn { display: none; }
