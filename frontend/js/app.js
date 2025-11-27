@@ -4,7 +4,6 @@ import { fetchSettings, updateSettings, getAuthStatus, logoutUser, loginUser } f
 import { setLanguage, setNightMode, showToast, getNextRunTimeText, hexToRgba } from './utils.js';
 import { updateLangButtonUI, setLogoutButtonVisibility } from './ui.js';
 
-// Importy nowych modułów
 import { initNotificationSystem } from './notifications.js';
 import { startWatchdogPolling, stopWatchdogPolling, resetWatchdogChart, refreshWatchdogPopover } from './watchdog.js';
 import { loadDashboardData, renderData, initDashboardListeners } from './dashboard.js';
@@ -13,8 +12,6 @@ import { loadBackupPage, initBackupListeners, updateBackupStatusUI } from './bac
 
 let resizeTimer = null;
 
-// --- Main Logic & Event Listeners ---
-
 async function initializeApp() {
     const savedLang = localStorage.getItem('language') || navigator.language.split('-')[0];
     const initialLang = translations[savedLang] ? savedLang : 'pl';
@@ -22,24 +19,50 @@ async function initializeApp() {
     updateLangButtonUI(initialLang); 
     
     const savedTheme = localStorage.getItem('theme');
-    
-    if (!savedTheme || savedTheme === 'dark') {
-        setNightMode(true); 
-    } else {
-        setNightMode(false);
-    }
+    if (!savedTheme || savedTheme === 'dark') setNightMode(true); 
+    else setNightMode(false);
 
-    if (!document.getElementById('loginForm')) {
+    if (document.getElementById('loginForm')) {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.get('error') === 'oidc_failed') {
+                showToast('toastTestError', 'error'); 
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            const authStatus = await getAuthStatus();
+            
+            if (authStatus.oidc_enabled) {
+                const oidcContainer = document.getElementById('oidcContainer');
+                const oidcBtn = document.getElementById('oidcLoginBtn');
+                
+                if(oidcContainer) oidcContainer.style.display = 'block';
+                if(oidcBtn) {
+                    oidcBtn.addEventListener('click', () => {
+                        window.location.href = '/api/auth/oidc/login';
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Auth check failed on login page", e);
+        }
+    } else {
         try {
             const authStatus = await getAuthStatus();
             setLogoutButtonVisibility(authStatus.enabled);
-            
-            // Załaduj wstępne ustawienia powiadomień
             initNotificationSystem();
-            
         } catch (e) {
             setLogoutButtonVisibility(false);
         }
+        
+        startWatchdogPolling();
+        window.addEventListener('speedtest-data-updated', () => {
+            if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+                loadDashboardData();
+            }
+        });
+        
+        syncGlobalSettings();
     }
     
     const savedPerPage = localStorage.getItem('itemsPerPage');
@@ -64,11 +87,6 @@ async function initializeApp() {
     
     setupGlobalEventListeners();
     
-    // Synchronizacja ustawień (kolory + język) z bazy
-    if (!document.getElementById('loginForm')) {
-        syncGlobalSettings();
-    }
-
     const page = window.location.pathname.split("/").pop();
     
     if (page === 'settings.html') {
@@ -79,21 +97,9 @@ async function initializeApp() {
         loadBackupPage();
         initBackupListeners();
     } else if (page === 'index.html' || page === '' || page === '/') {
-        // ZMIANA: Dodajemy await tutaj, chociaż initializeApp jest async, to ważne dla porządku
         await handleDashboardNavigation();
         initDashboardListeners();
         window.addEventListener('hashchange', handleDashboardNavigation);
-    }
-
-    if (!document.getElementById('loginForm')) {
-        startWatchdogPolling();
-        
-        // Nasłuchiwanie na event z notifications.js, aby odświeżyć dashboard
-        window.addEventListener('speedtest-data-updated', () => {
-            if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
-                loadDashboardData();
-            }
-        });
     }
 }
 
@@ -101,18 +107,13 @@ async function syncGlobalSettings() {
     try {
         const s = await fetchSettings();
         applyColorsToCSS(s);
-        
-        // Zastosuj język z bazy danych, jeśli jest inny niż obecny
         if (s.app_language && s.app_language !== state.currentLang) {
             setLanguage(s.app_language);
             updateLangButtonUI(s.app_language);
-            // Odśwież interfejs, jeśli jesteśmy na stronie backupu lub ustawień
             if (window.location.pathname.includes('backup.html')) loadBackupPage();
             if (window.location.pathname.includes('settings.html')) loadSettingsToForm();
         }
-    } catch (e) {
-        console.log("Could not load global settings");
-    }
+    } catch (e) { console.log("Could not load global settings"); }
 }
 
 function applyColorsToCSS(settings) {
@@ -133,94 +134,65 @@ function applyColorsToCSS(settings) {
         root.style.setProperty('--color-jitter', settings.chart_color_jitter);
         root.style.setProperty('--color-jitter-bg', hexToRgba(settings.chart_color_jitter, 0.15));
     }
-    // Kolory Latency
     if (settings.chart_color_lat_dl_low) root.style.setProperty('--color-lat-dl-low', settings.chart_color_lat_dl_low);
     if (settings.chart_color_lat_dl_high) root.style.setProperty('--color-lat-dl-high', settings.chart_color_lat_dl_high);
     if (settings.chart_color_lat_ul_low) root.style.setProperty('--color-lat-ul-low', settings.chart_color_lat_ul_low);
     if (settings.chart_color_lat_ul_high) root.style.setProperty('--color-lat-ul-high', settings.chart_color_lat_ul_high);
-    
-    // NOWE: Kolor Watchdog
     if (settings.chart_color_ping_watchdog) {
         root.style.setProperty('--color-ping-watchdog', settings.chart_color_ping_watchdog);
         root.style.setProperty('--color-ping-watchdog-bg', hexToRgba(settings.chart_color_ping_watchdog, 0.15));
     }
 }
 
-// ZMIANA: Funkcja asynchroniczna, aby czekać na załadowanie danych przed scrollem
 async function handleDashboardNavigation() {
     if (document.getElementById('loginForm')) return;
     if (window.location.pathname.includes('settings.html')) return;
     if (window.location.pathname.includes('backup.html')) return;
 
     const hash = window.location.hash || '#dashboard';
-    
-    // 1. Najpierw ładujemy dane i renderujemy wykresy
-    // Dzięki await kod poniżej wykona się dopiero, gdy DOM będzie gotowy (wykresy zajmą miejsce)
     await loadDashboardData();
     
-    // 2. Aktualizacja aktywnego linku w menu
     document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-    
     let activeLink = document.querySelector(`.nav-link[href="index.html${hash}"]`);
-    if(!activeLink && hash === '#dashboard') {
-         activeLink = document.querySelector(`.nav-link[href="index.html#dashboard"]`);
-    }
+    if(!activeLink && hash === '#dashboard') activeLink = document.querySelector(`.nav-link[href="index.html#dashboard"]`);
     if(activeLink) activeLink.classList.add('active');
 
-    // 3. Fix przewijania: Wymuszamy przewinięcie do odpowiedniej sekcji PO załadowaniu danych
     if (hash && hash !== '#dashboard') {
-        // Mały timeout pozwala przeglądarce "uspokoić" layout po renderowaniu canvasów
         setTimeout(() => {
-            const targetId = hash.substring(1); // usuwamy #
+            const targetId = hash.substring(1);
             const targetElement = document.getElementById(targetId);
-            // Musimy przewijać kontener .content-scroll, a nie window, bo mamy layout fixed sidebar
             const scrollContainer = document.querySelector('.content-scroll');
-            
-            if (targetElement && scrollContainer) {
-                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            if (targetElement && scrollContainer) targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 150); 
     } else if (hash === '#dashboard') {
-        // Jeśli wracamy na górę, przewiń kontener na 0
         const scrollContainer = document.querySelector('.content-scroll');
-        if(scrollContainer) scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        if(scrollContainer) scrollContainer.scrollTo({ top: 0, behavior: 'auto' });
     }
 }
 
 function setupGlobalEventListeners() {
     const hamburgerBtn = document.getElementById('hamburgerBtn');
-    // ZMIANA: Usuwamy niepotrzebną referencję do closeSidebarBtn
-    // const closeSidebarBtn = document.getElementById('closeSidebarBtn');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     const sidebar = document.getElementById('sidebar');
-    
-    // NOWA ZMIANA: Pobranie ikonki z przycisku hamburgera
     const hamburgerIcon = hamburgerBtn ? hamburgerBtn.querySelector('.material-symbols-rounded') : null;
 
-    // NOWA FUNKCJA: Przełączanie ikonki hamburgera
     const updateHamburgerIcon = (isOpen) => {
-        if (hamburgerIcon) {
-            // Zmieniamy ikonę z 'menu' na 'close' po otwarciu, i z powrotem na 'menu' po zamknięciu
-            hamburgerIcon.textContent = isOpen ? 'close' : 'menu';
-        }
+        if (hamburgerIcon) hamburgerIcon.textContent = isOpen ? 'close' : 'menu';
     };
 
     const closeSidebar = () => { 
         if(sidebar) sidebar.classList.remove('open'); 
         if(sidebarOverlay) sidebarOverlay.classList.remove('show'); 
-        updateHamburgerIcon(false); // NOWA ZMIANA: Ustaw ikonę na 'menu' po zamknięciu
+        updateHamburgerIcon(false);
     };
 
-    // ZMIANA: Hamburger teraz przełącza (toggle) klasy 'open' i 'show'
     if(hamburgerBtn) hamburgerBtn.addEventListener('click', () => { 
         if(sidebar) {
             const isOpen = sidebar.classList.toggle('open');
-            updateHamburgerIcon(isOpen); // NOWA ZMIANA: Przełącz ikonę na podstawie stanu
+            updateHamburgerIcon(isOpen);
         }
         if(sidebarOverlay) sidebarOverlay.classList.toggle('show'); 
     });
-    // ZMIANA: Usunięto nasłuchiwanie na nieistniejący już closeSidebarBtn
-    // if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
     if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
@@ -250,16 +222,8 @@ function setupGlobalEventListeners() {
             
             if (!document.getElementById('loginForm')) {
                 try {
-                    // ZMIANA: Uproszczona aktualizacja języka. 
-                    const payload = {
-                        app_language: newLang
-                    };
+                    const payload = { app_language: newLang };
                     await updateSettings(payload);
-                    
-                    if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
-                         // Opcjonalne odświeżenie
-                    }
-
                 } catch (e) { console.error("Błąd zapisu języka:", e); }
             }
             
@@ -279,15 +243,9 @@ function setupGlobalEventListeners() {
     if(themeToggle) themeToggle.addEventListener('click', () => {
         const isCurrentlyLight = document.body.classList.contains('light-mode');
         setNightMode(isCurrentlyLight); 
-        
         if (isCurrentlyLight) showToast('toastThemeDark', 'info');
         else showToast('toastThemeLight', 'info');
-        
-        if (document.getElementById('downloadChart') && state.currentFilteredResults) {
-            renderData();
-        }
-        
-        // Reset Watchdoga
+        if (document.getElementById('downloadChart') && state.currentFilteredResults) renderData();
         resetWatchdogChart();
     });
 
@@ -302,7 +260,7 @@ function setupGlobalEventListeners() {
             try { 
                 await loginUser(data.username, data.password); 
                 sessionStorage.setItem('pendingToast', 'login:' + data.username);
-                window.location.reload(); 
+                window.location.href = '/'; 
             } catch (err) { 
                 btn.disabled = false; 
                 btn.textContent = lang.loginBtn || 'Zaloguj'; 
@@ -338,7 +296,7 @@ function setupGlobalEventListeners() {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
             if (state.currentFilteredResults && state.currentFilteredResults.length > 0 && document.getElementById('downloadChart')) {
-                renderData(); // renderData calls renderCharts
+                renderData();
             }
         }, 250); 
     });

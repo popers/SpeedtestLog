@@ -220,7 +220,17 @@ export const translations = {
         'statusSuccess': 'Sukces',
         'statusError': 'Błąd',
         'statusAuthError': 'Błąd autoryzacji',
-        'statusUnknown': 'Nieznany'
+        'statusUnknown': 'Nieznany',
+
+        // NOWE: OIDC Translations (PL)
+        'oidcTitle': 'Logowanie OIDC (SSO)',
+        'oidcDesc': 'Skonfiguruj logowanie przez OpenID Connect (np. Authentik, Keycloak, Google, Authelia).',
+        'oidcEnable': 'Włącz logowanie OIDC',
+        'oidcDiscovery': 'Discovery URL (.well-known):',
+        'oidcHelp': 'Adres URL metadanych providera. Musi być dostępny z kontenera backendu.',
+        'oidcRedirect': 'Redirect URI (Callback) do wpisania u dostawcy:',
+        'oidcBtn': 'Zaloguj przez SSO',
+        'oidcOr': 'LUB'
     },
     'en': {
         'title': 'SpeedtestLog Logo',
@@ -443,6 +453,16 @@ export const translations = {
         'statusSuccess': 'Success',
         'statusError': 'Error',
         'statusAuthError': 'Auth Error',
-        'statusUnknown': 'Unknown'
+        'statusUnknown': 'Unknown',
+
+        // NOWE: OIDC Translations (EN)
+        'oidcTitle': 'OIDC Login (SSO)',
+        'oidcDesc': 'Configure login via OpenID Connect (e.g. Authentik, Keycloak, Google, Authelia).',
+        'oidcEnable': 'Enable OIDC Login',
+        'oidcDiscovery': 'Discovery URL (.well-known):',
+        'oidcHelp': 'Provider metadata URL. Must be accessible from the backend container.',
+        'oidcRedirect': 'Redirect URI (Callback) to register with provider:',
+        'oidcBtn': 'Login via SSO',
+        'oidcOr': 'OR'
     }
 };

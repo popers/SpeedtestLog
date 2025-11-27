@@ -4,6 +4,29 @@ import { showToast, hexToRgba } from './utils.js';
 import { initNotificationSystem } from './notifications.js';
 import { stopWatchdogPolling, startWatchdogPolling } from './watchdog.js';
 
+// NOWE: Funkcja do pobierania ustawień OIDC
+async function fetchOIDCSettings() {
+    try {
+        const response = await fetch('/api/settings/oidc');
+        if (!response.ok) throw new Error("Failed to fetch OIDC");
+        return await response.json();
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
+}
+
+// NOWE: Funkcja do zapisu ustawień OIDC
+async function saveOIDCSettings(payload) {
+    const response = await fetch('/api/settings/oidc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error("Failed to save OIDC");
+    return await response.json();
+}
+
 export async function loadSettingsToForm() {
     try {
         const s = await fetchSettings();
@@ -32,12 +55,11 @@ export async function loadSettingsToForm() {
             });
         }
 
+        // Ładowanie kolorów...
         const cDl = document.getElementById('colorDownloadInput');
         const cUl = document.getElementById('colorUploadInput');
         const cPi = document.getElementById('colorPingInput');
         const cJi = document.getElementById('colorJitterInput');
-        
-        // NOWE: Kolor Watchdog
         const cWd = document.getElementById('colorPingWatchdogInput');
 
         const style = getComputedStyle(document.body);
@@ -47,7 +69,6 @@ export async function loadSettingsToForm() {
         if(cJi) cJi.value = s.chart_color_jitter || style.getPropertyValue('--color-jitter').trim() || '#81c784';
         if(cWd) cWd.value = s.chart_color_ping_watchdog || style.getPropertyValue('--color-ping-watchdog').trim() || '#17a2b8';
         
-        // Kolory Latency
         const cLatDlLow = document.getElementById('colorLatDlLowInput');
         const cLatDlHigh = document.getElementById('colorLatDlHighInput');
         const cLatUlLow = document.getElementById('colorLatUlLowInput');
@@ -58,6 +79,23 @@ export async function loadSettingsToForm() {
         if(cLatUlLow) cLatUlLow.value = s.chart_color_lat_ul_low || style.getPropertyValue('--color-lat-ul-low').trim() || '#ef5350';
         if(cLatUlHigh) cLatUlHigh.value = s.chart_color_lat_ul_high || style.getPropertyValue('--color-lat-ul-high').trim() || '#b71c1c';
 
+        // NOWE: Ładowanie ustawień OIDC
+        const oidc = await fetchOIDCSettings();
+        if (oidc) {
+            const oidcEnabled = document.getElementById('oidcEnabled');
+            const oidcClientId = document.getElementById('oidcClientId');
+            const oidcClientSecret = document.getElementById('oidcClientSecret');
+            const oidcDiscovery = document.getElementById('oidcDiscoveryUrl');
+            const oidcRedirect = document.getElementById('oidcRedirectUri');
+
+            if(oidcEnabled) oidcEnabled.checked = oidc.enabled;
+            if(oidcClientId) oidcClientId.value = oidc.client_id || '';
+            if(oidcClientSecret) oidcClientSecret.value = oidc.client_secret || ''; // Hasło może być puste w odpowiedzi dla bezp.
+            if(oidcDiscovery) oidcDiscovery.value = oidc.discovery_url || '';
+            
+            if(oidcRedirect) oidcRedirect.textContent = window.location.origin + '/api/auth/oidc/callback';
+        }
+
     } catch (e) {
         console.error("Error loading settings:", e);
     }
@@ -66,7 +104,6 @@ export async function loadSettingsToForm() {
 export async function loadNotificationSettingsToForm() {
     try {
         const ns = await fetchNotificationSettings();
-        
         const enableCheck = document.getElementById('notifEnabled');
         const providerSelect = document.getElementById('notifProvider');
         const urlInput = document.getElementById('notifWebhookUrl');
@@ -84,34 +121,21 @@ export async function loadNotificationSettingsToForm() {
             const val = providerSelect.value;
             document.getElementById('fieldWebhook').style.display = val === 'webhook' ? 'block' : 'none';
             document.getElementById('fieldNtfy').style.display = val === 'ntfy' ? 'block' : 'none';
-            
-            if (val === 'browser') {
-                registerBtn.style.display = 'flex';
-            } else {
-                registerBtn.style.display = 'none';
-            }
+            if (val === 'browser') registerBtn.style.display = 'flex';
+            else registerBtn.style.display = 'none';
         };
-
         providerSelect.addEventListener('change', updateVisibility);
         updateVisibility();
-
-    } catch(e) {
-        console.error("Error loading notification settings", e);
-    }
+    } catch(e) { console.error(e); }
 }
 
 export async function saveSettingsFromPage() {
     try {
-        // 1. Główne ustawienia
-        // ZMIANA: Partial Updates. Nie pobieramy fetchSettings() w celu skopiowania danych.
-        // Wysyłamy TYLKO te pola, które użytkownik widzi i edytuje na tej stronie.
-        // Dzięki temu nie nadpiszemy przypadkiem harmonogramu testów (schedule_hours) ani serwera (server_id).
-        
+        // 1. Główne ustawienia (bez zmian)
         const target = document.getElementById('pingTargetInput').value;
         const interval = parseInt(document.getElementById('pingIntervalInput').value);
         const dl = parseInt(document.getElementById('declaredDownloadInput').value) || 0;
         const ul = parseInt(document.getElementById('declaredUploadInput').value) || 0;
-        
         const startupInput = document.getElementById('startupTestInput');
         const startupEnabled = startupInput ? startupInput.checked : true;
 
@@ -119,18 +143,13 @@ export async function saveSettingsFromPage() {
         const cUl = document.getElementById('colorUploadInput').value;
         const cPi = document.getElementById('colorPingInput').value;
         const cJi = document.getElementById('colorJitterInput').value;
-        
         const cWd = document.getElementById('colorPingWatchdogInput').value;
-
-        // NOWE: Kolory Latency
         const cLatDlLow = document.getElementById('colorLatDlLowInput').value;
         const cLatDlHigh = document.getElementById('colorLatDlHighInput').value;
         const cLatUlLow = document.getElementById('colorLatUlLowInput').value;
         const cLatUlHigh = document.getElementById('colorLatUlHighInput').value;
 
         const payload = {
-            // server_id: ... POMINIĘTE - bezpieczne
-            // schedule_hours: ... POMINIĘTE - bezpieczne
             ping_target: target,
             ping_interval: interval,
             declared_download: dl,
@@ -145,12 +164,11 @@ export async function saveSettingsFromPage() {
             chart_color_lat_ul_low: cLatUlLow,
             chart_color_lat_ul_high: cLatUlHigh,
             chart_color_ping_watchdog: cWd,
-            // app_language: ... POMINIĘTE - bezpieczne (zmienia się tylko flagą)
         };
 
         await updateSettings(payload);
         
-        // Zastosuj kolory
+        // Zastosuj kolory...
         const root = document.body;
         root.style.setProperty('--color-download', cDl);
         root.style.setProperty('--color-download-bg', hexToRgba(cDl, 0.15));
@@ -160,17 +178,14 @@ export async function saveSettingsFromPage() {
         root.style.setProperty('--color-ping-bg', hexToRgba(cPi, 0.15));
         root.style.setProperty('--color-jitter', cJi);
         root.style.setProperty('--color-jitter-bg', hexToRgba(cJi, 0.15));
-        
         root.style.setProperty('--color-lat-dl-low', cLatDlLow);
         root.style.setProperty('--color-lat-dl-high', cLatDlHigh);
         root.style.setProperty('--color-lat-ul-low', cLatUlLow);
         root.style.setProperty('--color-lat-ul-high', cLatUlHigh);
-        
-        // Watchdog
         root.style.setProperty('--color-ping-watchdog', cWd);
         root.style.setProperty('--color-ping-watchdog-bg', hexToRgba(cWd, 0.15));
 
-        // 2. Ustawienia Powiadomień
+        // 2. Ustawienia Powiadomień (bez zmian)
         const notifEnabled = document.getElementById('notifEnabled').checked;
         const notifProvider = document.getElementById('notifProvider').value;
         const webhookUrl = document.getElementById('notifWebhookUrl').value;
@@ -184,11 +199,24 @@ export async function saveSettingsFromPage() {
             ntfy_topic: ntfyTopic,
             ntfy_server: ntfyServer
         };
-
         await saveNotificationSettings(notifPayload);
         
-        initNotificationSystem();
+        // NOWE: 3. Ustawienia OIDC
+        const oidcEnabled = document.getElementById('oidcEnabled').checked;
+        const oidcClientId = document.getElementById('oidcClientId').value;
+        const oidcClientSecret = document.getElementById('oidcClientSecret').value;
+        const oidcDiscovery = document.getElementById('oidcDiscoveryUrl').value;
 
+        const oidcPayload = {
+            enabled: oidcEnabled,
+            client_id: oidcClientId,
+            // Wysyłamy sekret tylko jeśli user coś wpisał (żeby nie nadpisać pustym stringiem, jeśli backend nie zwrócił)
+            client_secret: oidcClientSecret.length > 0 ? oidcClientSecret : undefined,
+            discovery_url: oidcDiscovery
+        };
+        await saveOIDCSettings(oidcPayload);
+
+        initNotificationSystem();
         showToast('toastSettingsSaved', 'success');
         
         stopWatchdogPolling();
@@ -211,19 +239,13 @@ export function initSettingsListeners() {
             const url = document.getElementById('notifWebhookUrl').value;
             const topic = document.getElementById('notifNtfyTopic').value;
             const server = document.getElementById('notifNtfyServer').value;
-            
             try {
                 await testNotification({ 
-                    provider, 
-                    webhook_url: url, 
-                    ntfy_topic: topic, 
-                    ntfy_server: server,
-                    language: state.currentLang 
+                    provider, webhook_url: url, ntfy_topic: topic, 
+                    ntfy_server: server, language: state.currentLang 
                 });
                 showToast('toastNotifSent', 'success');
-            } catch (e) {
-                showToast('toastNotifError', 'error');
-            }
+            } catch (e) { showToast('toastNotifError', 'error'); }
         });
     }
 

@@ -81,3 +81,13 @@ class DriveBackupSettings(Base):
     is_enabled = Column(Boolean, default=False)
     last_run = Column(DATETIME, nullable=True)
     last_status = Column(String(50), nullable=True)
+
+# NOWE: Ustawienia OIDC
+class OIDCSettings(Base):
+    __tablename__ = "oidc_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    enabled = Column(Boolean, default=False)
+    display_name = Column(String(50), default="SSO Login")
+    client_id = Column(String(255), nullable=True)
+    client_secret = Column(String(255), nullable=True)
+    discovery_url = Column(String(500), nullable=True) # .well-known/openid-configuration

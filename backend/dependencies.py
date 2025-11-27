@@ -1,11 +1,15 @@
 from fastapi import Request, HTTPException
 from config import AUTH_ENABLED, SESSION_COOKIE_NAME, SESSION_SECRET
 
+# Używamy tej samej nazwy co w auth.py
+COOKIE_NAME = f"{SESSION_COOKIE_NAME}_v2"
+
 # --- Dependency: Weryfikacja Sesji ---
 async def verify_session(request: Request):
     if not AUTH_ENABLED:
         return True
-    if request.cookies.get(SESSION_COOKIE_NAME) != SESSION_SECRET:
+    # Sprawdzamy nowe ciasteczko
+    if request.cookies.get(COOKIE_NAME) != SESSION_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return True
 

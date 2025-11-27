@@ -10,7 +10,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="css/main.css">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">    
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        .code-block { background: rgba(0,0,0,0.1); padding: 4px 8px; border-radius: 4px; font-family: monospace; word-break: break-all; user-select: all; font-size: 0.85rem; display: block; margin-top: 5px;}
+        .help-text { font-size: 0.85rem; color: var(--text-color-secondary); margin-top: 5px; }
+    </style>
 </head>
 <body>
     <div class="app-wrapper">
@@ -51,7 +55,6 @@
 
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <!-- ZMIANA: Usunięto przycisk zamykania X -->
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="index.html#dashboard" class="nav-link"><span class="material-symbols-rounded icon">dashboard</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
@@ -82,6 +85,42 @@
                         <div class="control-group">
                             <label data-i18n-key="ispUpload">Deklarowany Upload (Mbps):</label>
                             <input type="number" id="declaredUploadInput" min="0" placeholder="np. 100">
+                        </div>
+                    </div>
+
+                    <!-- NOWE: OIDC Settings Card -->
+                    <div class="settings-card" style="margin-bottom: 2rem; border-left: 4px solid #673ab7;">
+                        <h3 style="color: #673ab7;" data-i18n-key="oidcTitle">Logowanie OIDC (SSO)</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="oidcDesc">Skonfiguruj logowanie przez OpenID Connect (np. Authentik, Keycloak, Google, Authelia).</p>
+                        
+                        <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                            <label for="oidcEnabled" style="margin: 0; cursor: pointer; font-weight: 600; color: var(--text-color);" data-i18n-key="oidcEnable">Włącz logowanie OIDC</label>
+                            <label class="switch">
+                                <input type="checkbox" id="oidcEnabled">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label data-i18n-key="oidcDiscovery">Discovery URL (.well-known):</label>
+                            <input type="text" id="oidcDiscoveryUrl" placeholder="https://auth.example.com/.well-known/openid-configuration">
+                            <div class="help-text" data-i18n-key="oidcHelp">Adres URL metadanych providera. Musi być dostępny z kontenera backendu.</div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="control-group">
+                                <label data-i18n-key="lblClientId">Client ID:</label>
+                                <input type="text" id="oidcClientId">
+                            </div>
+                            <div class="control-group">
+                                <label data-i18n-key="lblClientSecret">Client Secret:</label>
+                                <input type="password" id="oidcClientSecret">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 10px;">
+                            <label style="font-size: 0.85rem;" data-i18n-key="oidcRedirect">Redirect URI (Callback) do wpisania u dostawcy:</label>
+                            <span id="oidcRedirectUri" class="code-block">.../api/auth/oidc/callback</span>
                         </div>
                     </div>
 
