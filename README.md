@@ -66,11 +66,11 @@ cd speedtestlog
 
 2. Create compose.yaml
 
-Create a file named compose.yaml (or docker-compose.yml) with the following content. This configuration pulls the stable version 1.0 from Docker Hub.
+Create a file named compose.yaml with the following content. This configuration pulls latest version from Docker Hub.
 ```
 services:
   backend:
-    image: popers/speedtestlog:1.0
+    image: popers/speedtestlog:latest
     container_name: speedtest-backend
     ports:
       - "8000:8000"
@@ -88,7 +88,7 @@ services:
       # Required to accept Ookla's license
       - OOKLA_EULA_GDPR=true
       # Set your timezone for correct scheduling
-      - TZ=Europe/Warsaw
+      - TZ=Europe/Amsterdam
     volumes:
       # Persist application logs
       - ./data_app:/app/data
@@ -163,7 +163,7 @@ APP_PASSWORD=admin
 APP_LANG=en
 
 # Timezone (Important for correct scheduling)
-TZ=Europe/London
+TZ=Europe/Amsterdam
 ```
 
 4. Run the application
