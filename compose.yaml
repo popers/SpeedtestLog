@@ -18,7 +18,7 @@ services:
       - SESSION_SECRET=${SESSION_SECRET}
       - APP_LANG=${APP_LANG}
       - OOKLA_EULA_GDPR=true
-      - TZ=Europe/Warsaw
+      - TZ=Europe/Amsterdam
     volumes:
       - ./backend/data:/app/data
     depends_on:
