@@ -28,12 +28,18 @@ class NotificationSettingsModel(BaseModel):
     webhook_url: str | None = ""
     ntfy_topic: str | None = ""
     ntfy_server: str | None = "https://ntfy.sh"
+    # NOWE: Pola dla Pushover
+    pushover_user_key: str | None = None
+    pushover_api_token: str | None = None
 
 class NotificationTestModel(BaseModel):
     provider: str
     webhook_url: str | None = None
     ntfy_topic: str | None = None
     ntfy_server: str | None = None
+    # NOWE: Pola dla Pushover
+    pushover_user_key: str | None = None
+    pushover_api_token: str | None = None
     language: str | None = "pl" 
 
 class BackupSettingsModel(BaseModel):
@@ -45,7 +51,6 @@ class BackupSettingsModel(BaseModel):
     retention_days: int | None = 30
     is_enabled: bool | None = False
 
-# NOWE: Model dla ustawień OIDC
 class OIDCSettingsModel(BaseModel):
     enabled: bool | None = False
     display_name: str | None = "SSO Login"

@@ -4,7 +4,6 @@ import { showToast, hexToRgba } from './utils.js';
 import { initNotificationSystem } from './notifications.js';
 import { stopWatchdogPolling, startWatchdogPolling } from './watchdog.js';
 
-// NOWE: Funkcja do pobierania ustawień OIDC
 async function fetchOIDCSettings() {
     try {
         const response = await fetch('/api/settings/oidc');
@@ -16,7 +15,6 @@ async function fetchOIDCSettings() {
     }
 }
 
-// NOWE: Funkcja do zapisu ustawień OIDC
 async function saveOIDCSettings(payload) {
     const response = await fetch('/api/settings/oidc', {
         method: 'POST',
@@ -55,7 +53,6 @@ export async function loadSettingsToForm() {
             });
         }
 
-        // Ładowanie kolorów...
         const cDl = document.getElementById('colorDownloadInput');
         const cUl = document.getElementById('colorUploadInput');
         const cPi = document.getElementById('colorPingInput');
@@ -79,7 +76,6 @@ export async function loadSettingsToForm() {
         if(cLatUlLow) cLatUlLow.value = s.chart_color_lat_ul_low || style.getPropertyValue('--color-lat-ul-low').trim() || '#ef5350';
         if(cLatUlHigh) cLatUlHigh.value = s.chart_color_lat_ul_high || style.getPropertyValue('--color-lat-ul-high').trim() || '#b71c1c';
 
-        // NOWE: Ładowanie ustawień OIDC
         const oidc = await fetchOIDCSettings();
         if (oidc) {
             const oidcEnabled = document.getElementById('oidcEnabled');
@@ -106,21 +102,31 @@ export async function loadNotificationSettingsToForm() {
         const ns = await fetchNotificationSettings();
         const enableCheck = document.getElementById('notifEnabled');
         const providerSelect = document.getElementById('notifProvider');
+        
         const urlInput = document.getElementById('notifWebhookUrl');
         const topicInput = document.getElementById('notifNtfyTopic');
         const serverInput = document.getElementById('notifNtfyServer');
+        
+        const pushoverUser = document.getElementById('notifPushoverUser');
+        const pushoverToken = document.getElementById('notifPushoverToken');
+        
         const registerBtn = document.getElementById('notifRegisterBtn');
 
         if(enableCheck) enableCheck.checked = ns.enabled;
         if(providerSelect) providerSelect.value = ns.provider || 'browser';
+        
         if(urlInput) urlInput.value = ns.webhook_url || '';
         if(topicInput) topicInput.value = ns.ntfy_topic || '';
         if(serverInput) serverInput.value = ns.ntfy_server || 'https://ntfy.sh';
+        if(pushoverUser) pushoverUser.value = ns.pushover_user_key || '';
+        if(pushoverToken) pushoverToken.value = ns.pushover_api_token || '';
 
         const updateVisibility = () => {
             const val = providerSelect.value;
             document.getElementById('fieldWebhook').style.display = val === 'webhook' ? 'block' : 'none';
             document.getElementById('fieldNtfy').style.display = val === 'ntfy' ? 'block' : 'none';
+            document.getElementById('fieldPushover').style.display = val === 'pushover' ? 'block' : 'none';
+            
             if (val === 'browser') registerBtn.style.display = 'flex';
             else registerBtn.style.display = 'none';
         };
@@ -131,7 +137,6 @@ export async function loadNotificationSettingsToForm() {
 
 export async function saveSettingsFromPage() {
     try {
-        // 1. Główne ustawienia (bez zmian)
         const target = document.getElementById('pingTargetInput').value;
         const interval = parseInt(document.getElementById('pingIntervalInput').value);
         const dl = parseInt(document.getElementById('declaredDownloadInput').value) || 0;
@@ -168,7 +173,6 @@ export async function saveSettingsFromPage() {
 
         await updateSettings(payload);
         
-        // Zastosuj kolory...
         const root = document.body;
         root.style.setProperty('--color-download', cDl);
         root.style.setProperty('--color-download-bg', hexToRgba(cDl, 0.15));
@@ -185,23 +189,25 @@ export async function saveSettingsFromPage() {
         root.style.setProperty('--color-ping-watchdog', cWd);
         root.style.setProperty('--color-ping-watchdog-bg', hexToRgba(cWd, 0.15));
 
-        // 2. Ustawienia Powiadomień (bez zmian)
         const notifEnabled = document.getElementById('notifEnabled').checked;
         const notifProvider = document.getElementById('notifProvider').value;
         const webhookUrl = document.getElementById('notifWebhookUrl').value;
         const ntfyTopic = document.getElementById('notifNtfyTopic').value;
         const ntfyServer = document.getElementById('notifNtfyServer').value;
+        const pushoverUser = document.getElementById('notifPushoverUser').value;
+        const pushoverToken = document.getElementById('notifPushoverToken').value;
 
         const notifPayload = {
             enabled: notifEnabled,
             provider: notifProvider,
             webhook_url: webhookUrl,
             ntfy_topic: ntfyTopic,
-            ntfy_server: ntfyServer
+            ntfy_server: ntfyServer,
+            pushover_user_key: pushoverUser,
+            pushover_api_token: pushoverToken
         };
         await saveNotificationSettings(notifPayload);
         
-        // NOWE: 3. Ustawienia OIDC
         const oidcEnabled = document.getElementById('oidcEnabled').checked;
         const oidcClientId = document.getElementById('oidcClientId').value;
         const oidcClientSecret = document.getElementById('oidcClientSecret').value;
@@ -210,7 +216,6 @@ export async function saveSettingsFromPage() {
         const oidcPayload = {
             enabled: oidcEnabled,
             client_id: oidcClientId,
-            // Wysyłamy sekret tylko jeśli user coś wpisał (żeby nie nadpisać pustym stringiem, jeśli backend nie zwrócił)
             client_secret: oidcClientSecret.length > 0 ? oidcClientSecret : undefined,
             discovery_url: oidcDiscovery
         };
@@ -232,17 +237,30 @@ export function initSettingsListeners() {
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     if(saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromPage);
 
-    // NOWE: Listener dla ikonki oka (OIDC Secret)
     const toggleSecretBtn = document.getElementById('toggleSecretBtn');
     const secretInput = document.getElementById('oidcClientSecret');
     if (toggleSecretBtn && secretInput) {
         toggleSecretBtn.addEventListener('click', () => {
             if (secretInput.type === 'password') {
                 secretInput.type = 'text';
-                toggleSecretBtn.textContent = 'visibility_off'; // Zmień ikonę na przekreślone oko
+                toggleSecretBtn.textContent = 'visibility_off'; 
             } else {
                 secretInput.type = 'password';
-                toggleSecretBtn.textContent = 'visibility'; // Zmień ikonę na zwykłe oko
+                toggleSecretBtn.textContent = 'visibility'; 
+            }
+        });
+    }
+
+    const togglePushBtn = document.getElementById('togglePushoverTokenBtn');
+    const pushInput = document.getElementById('notifPushoverToken');
+    if (togglePushBtn && pushInput) {
+        togglePushBtn.addEventListener('click', () => {
+            if (pushInput.type === 'password') {
+                pushInput.type = 'text';
+                togglePushBtn.textContent = 'visibility_off'; 
+            } else {
+                pushInput.type = 'password';
+                togglePushBtn.textContent = 'visibility'; 
             }
         });
     }
@@ -254,10 +272,18 @@ export function initSettingsListeners() {
             const url = document.getElementById('notifWebhookUrl').value;
             const topic = document.getElementById('notifNtfyTopic').value;
             const server = document.getElementById('notifNtfyServer').value;
+            const pushUser = document.getElementById('notifPushoverUser').value;
+            const pushToken = document.getElementById('notifPushoverToken').value;
+            
             try {
                 await testNotification({ 
-                    provider, webhook_url: url, ntfy_topic: topic, 
-                    ntfy_server: server, language: state.currentLang 
+                    provider, 
+                    webhook_url: url, 
+                    ntfy_topic: topic, 
+                    ntfy_server: server, 
+                    pushover_user_key: pushUser,
+                    pushover_api_token: pushToken,
+                    language: state.currentLang 
                 });
                 showToast('toastNotifSent', 'success');
             } catch (e) { showToast('toastNotifError', 'error'); }

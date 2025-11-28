@@ -9,6 +9,11 @@ let resultPollingInterval = null;
 export async function initNotificationSystem() {
     try {
         const s = await fetchNotificationSettings();
+        // Sprawdzamy, czy włączony jest tryb przeglądarkowy
+        // Możliwe też, że użytkownik włączył powiadomienia, ale provider jest inny (np. pushover)
+        // W takim przypadku backend wysyła powiadomienie, a przeglądarka nie powinna dublować,
+        // chyba że chcemy powiadomienia lokalne niezależnie od backendowych.
+        // Obecna logika: włącz browserNotif tylko jak provider === 'browser'.
         if (s.enabled && s.provider === 'browser') {
             browserNotifEnabled = true;
             // Pobierz ostatni wynik, aby nie powiadamiać o starych przy odświeżeniu
@@ -43,14 +48,14 @@ function startResultPolling() {
             const latest = await getLatestResult();
             if (latest && lastSeenResultId && latest.id !== lastSeenResultId) {
                 lastSeenResultId = latest.id;
+                // ZMIANA: Dodano Ping i Jitter do treści powiadomienia przeglądarkowego
                 showBrowserNotification(
                     "SpeedtestLog: Nowy wynik", 
-                    `Download: ${latest.download} Mbps, Upload: ${latest.upload} Mbps`,
+                    `Download: ${latest.download} Mbps, Upload: ${latest.upload} Mbps, Ping: ${latest.ping} ms, Jitter: ${latest.jitter} ms`,
                     "speedtest-result"
                 );
                 
                 // Jeśli jesteśmy na dashboardzie, wyemituj zdarzenie odświeżenia
-                // (Można by tu importować loadDashboardData, ale unikamy cyklicznych zależności)
                 window.dispatchEvent(new CustomEvent('speedtest-data-updated'));
             } else if (latest && !lastSeenResultId) {
                 lastSeenResultId = latest.id;

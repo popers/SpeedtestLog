@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-import schedule # Dodano import schedule
+import schedule
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
@@ -9,16 +9,14 @@ from models import AppSettings, NotificationSettings, SpeedtestResult
 from schemas import SettingsModel, NotificationSettingsModel, NotificationTestModel
 from dependencies import verify_session
 from config import get_log, NOTIF_TRANS, SERVERS_FILE
-from speedtest import update_scheduler, scheduler_lock # Dodano scheduler_lock
+from speedtest import update_scheduler, scheduler_lock
 import requests
 from datetime import datetime
 
 router = APIRouter(dependencies=[Depends(verify_session)])
 
-# NOWA FUNKCJA: Wyciąga dokładny czas z biblioteki schedule
 def get_next_run_time():
     with scheduler_lock:
-        # Szukamy zadania z tagiem 'hourly-test'
         job = next((j for j in schedule.jobs if 'hourly-test' in j.tags), None)
         if job and job.next_run:
             return job.next_run.isoformat()
@@ -38,8 +36,6 @@ async def get_set(db: Session = Depends(get_db)):
         db.add(s)
         db.commit()
     l = db.query(SpeedtestResult).order_by(SpeedtestResult.timestamp.desc()).first()
-    
-    # Pobieramy czas następnego testu
     next_run = get_next_run_time()
 
     return {
@@ -50,23 +46,17 @@ async def get_set(db: Session = Depends(get_db)):
         "declared_download": s.declared_download,
         "declared_upload": s.declared_upload,
         "startup_test_enabled": s.startup_test_enabled,
-        # Kolory podstawowe
         "chart_color_download": s.chart_color_download,
         "chart_color_upload": s.chart_color_upload,
         "chart_color_ping": s.chart_color_ping,
         "chart_color_jitter": s.chart_color_jitter,
-        # Kolory Latency
         "chart_color_lat_dl_low": s.chart_color_lat_dl_low,
         "chart_color_lat_dl_high": s.chart_color_lat_dl_high,
         "chart_color_lat_ul_low": s.chart_color_lat_ul_low,
         "chart_color_lat_ul_high": s.chart_color_lat_ul_high,
-        # Kolor Watchdog
         "chart_color_ping_watchdog": s.chart_color_ping_watchdog,
-        
         "latest_test_timestamp": l.timestamp if l else None,
         "app_language": s.app_language,
-        
-        # Zwracamy czas w odpowiedzi API
         "next_run_time": next_run
     }
 
@@ -89,27 +79,17 @@ async def set_set(s: SettingsModel, db: Session = Depends(get_db)):
     if s.chart_color_upload: rec.chart_color_upload = s.chart_color_upload
     if s.chart_color_ping: rec.chart_color_ping = s.chart_color_ping
     if s.chart_color_jitter: rec.chart_color_jitter = s.chart_color_jitter
-    
     if s.chart_color_lat_dl_low: rec.chart_color_lat_dl_low = s.chart_color_lat_dl_low
     if s.chart_color_lat_dl_high: rec.chart_color_lat_dl_high = s.chart_color_lat_dl_high
     if s.chart_color_lat_ul_low: rec.chart_color_lat_ul_low = s.chart_color_lat_ul_low
     if s.chart_color_lat_ul_high: rec.chart_color_lat_ul_high = s.chart_color_lat_ul_high
-    
     if s.chart_color_ping_watchdog: rec.chart_color_ping_watchdog = s.chart_color_ping_watchdog
-
     if s.app_language: rec.app_language = s.app_language
 
     db.commit()
-    
-    # Jeśli interwał się zmienił, scheduler zostanie zaktualizowany (i zresetowany "od teraz")
     if update_sched: update_scheduler(rec.schedule_hours)
-    
-    # Pobieramy nowy czas po aktualizacji
     next_run = get_next_run_time()
-    
     logging.info(get_log("settings_updated"))
-    
-    # Zwracamy nowy czas do frontendu
     return {"message": "Settings saved", "next_run_time": next_run}
 
 @router.get("/api/notifications/settings")
@@ -121,7 +101,9 @@ async def get_notif_settings(db: Session = Depends(get_db)):
         "provider": ns.provider,
         "webhook_url": ns.webhook_url,
         "ntfy_topic": ns.ntfy_topic,
-        "ntfy_server": ns.ntfy_server
+        "ntfy_server": ns.ntfy_server,
+        "pushover_user_key": ns.pushover_user_key,
+        "pushover_api_token": ns.pushover_api_token
     }
 
 @router.post("/api/notifications/settings")
@@ -133,6 +115,8 @@ async def save_notif_settings(s: NotificationSettingsModel, db: Session = Depend
     ns.webhook_url = s.webhook_url
     ns.ntfy_topic = s.ntfy_topic
     ns.ntfy_server = s.ntfy_server
+    ns.pushover_user_key = s.pushover_user_key
+    ns.pushover_api_token = s.pushover_api_token
     db.commit()
     return {"message": "Notification settings saved"}
 
@@ -154,6 +138,16 @@ async def test_notif(s: NotificationTestModel):
             url = f"{server}/{s.ntfy_topic}"
             headers = {"Title": title.encode('utf-8'), "Tags": "tada"}
             requests.post(url, data=msg.encode('utf-8'), headers=headers, timeout=5)
+        # NOWE: Obsługa Pushover (Test)
+        elif s.provider == "pushover":
+            if not s.pushover_user_key or not s.pushover_api_token: raise ValueError("Missing Pushover Credentials")
+            requests.post("https://api.pushover.net/1/messages.json", data={
+                "token": s.pushover_api_token,
+                "user": s.pushover_user_key,
+                "message": msg,
+                "title": title
+            }, timeout=5)
+            
         return {"message": "Sent"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

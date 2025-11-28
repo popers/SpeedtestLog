@@ -56,17 +56,20 @@ class AppSettings(Base):
     chart_color_lat_dl_high = Column(String(20), nullable=True)
     chart_color_lat_ul_low = Column(String(20), nullable=True)
     chart_color_lat_ul_high = Column(String(20), nullable=True)
-    # NOWE: Kolor Ping Watchdog
+    # Kolor Ping Watchdog
     chart_color_ping_watchdog = Column(String(20), nullable=True)
 
 class NotificationSettings(Base):
     __tablename__ = "notification_settings"
     id = Column(Integer, primary_key=True, index=True)
     enabled = Column(Boolean, default=False)
-    provider = Column(String(50), default="browser") # browser, webhook, ntfy
+    provider = Column(String(50), default="browser") # browser, webhook, ntfy, pushover
     webhook_url = Column(String(500), nullable=True)
     ntfy_topic = Column(String(255), nullable=True)
     ntfy_server = Column(String(255), default="https://ntfy.sh")
+    # NOWE: Pola dla Pushover
+    pushover_user_key = Column(String(50), nullable=True)
+    pushover_api_token = Column(String(50), nullable=True)
 
 class DriveBackupSettings(Base):
     __tablename__ = "drive_backup_settings"
@@ -82,7 +85,6 @@ class DriveBackupSettings(Base):
     last_run = Column(DATETIME, nullable=True)
     last_status = Column(String(50), nullable=True)
 
-# NOWE: Ustawienia OIDC
 class OIDCSettings(Base):
     __tablename__ = "oidc_settings"
     id = Column(Integer, primary_key=True, index=True)
@@ -90,4 +92,4 @@ class OIDCSettings(Base):
     display_name = Column(String(50), default="SSO Login")
     client_id = Column(String(255), nullable=True)
     client_secret = Column(String(255), nullable=True)
-    discovery_url = Column(String(500), nullable=True) # .well-known/openid-configuration
+    discovery_url = Column(String(500), nullable=True)

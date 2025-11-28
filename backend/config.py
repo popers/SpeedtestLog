@@ -57,10 +57,11 @@ def setup_logging():
     logging.getLogger("uvicorn.access").addHandler(file_handler)
 
 # --- Słownik Tłumaczeń Powiadomień ---
+# ZMIANA: Dodano {jitter} do szablonów powiadomień
 NOTIF_TRANS = {
     "pl": {
         "speedtest_title": "🚀 Nowy wynik Speedtest",
-        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms.",
+        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms, Jitter: {jitter} ms.",
         "watchdog_up_title": "🟢 Watchdog ONLINE",
         "watchdog_up_body": "Ping Watchdog: Cel {target} jest teraz ONLINE.",
         "watchdog_down_title": "🔴 Watchdog OFFLINE",
@@ -70,7 +71,7 @@ NOTIF_TRANS = {
     },
     "en": {
         "speedtest_title": "🚀 New Speedtest Result",
-        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms.",
+        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms, Jitter: {jitter} ms.",
         "watchdog_up_title": "🟢 Watchdog ONLINE",
         "watchdog_up_body": "Ping Watchdog: Target {target} is now ONLINE.",
         "watchdog_down_title": "🔴 Watchdog OFFLINE",

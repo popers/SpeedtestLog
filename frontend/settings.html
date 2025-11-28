@@ -14,25 +14,20 @@
     <style>
         .code-block { background: rgba(0,0,0,0.1); padding: 4px 8px; border-radius: 4px; font-family: monospace; word-break: break-all; user-select: all; font-size: 0.85rem; display: block; margin-top: 5px;}
         
-        /* Globalne ustawienie box-sizing dla inputów w ustawieniach, aby padding nie powiększał ich poza 100% */
         .settings-card input, .settings-card select {
             box-sizing: border-box;
         }
 
-        /* Ograniczenie szerokości pól na desktopie dla lepszej estetyki (domyślne pola) */
         @media (min-width: 993px) {
             .settings-card input:not([type="checkbox"]):not([type="radio"]),
             .settings-card select {
                 max-width: 400px;
                 width: 100%;
             }
-            /* Wyjątek dla Discovery URL - ma być szeroki i nie wystawać */
             .settings-card input.wide-input {
                 max-width: 100% !important;
                 width: 100%;
             }
-            
-            /* Wyjątek dla pól wewnątrz grida (Client ID/Secret) - mają wypełniać komórkę siatki */
             .responsive-grid .control-group input,
             .responsive-grid .password-toggle-wrapper,
             .responsive-grid .password-toggle-wrapper input {
@@ -40,7 +35,6 @@
             }
         }
 
-        /* Responsywny Grid dla Client ID/Secret - na mobile kolumna, na desktopie wiersz */
         .responsive-grid {
             display: flex;
             flex-direction: column;
@@ -55,7 +49,6 @@
             }
         }
 
-        /* Styl dla pola hasła z oczkiem */
         .password-toggle-wrapper {
             position: relative;
             width: 100%;
@@ -65,8 +58,8 @@
         
         .password-toggle-wrapper input {
             width: 100%;
-            padding-right: 40px; /* Miejsce na ikonkę */
-            height: 42px; /* Stała wysokość dla dopasowania */
+            padding-right: 40px; 
+            height: 42px; 
         }
         
         .toggle-icon {
@@ -78,7 +71,7 @@
             cursor: pointer;
             color: var(--text-color-secondary);
             user-select: none;
-            z-index: 5; /* Wyższy Z-index */
+            z-index: 5;
             font-size: 20px;
         }
         .toggle-icon:hover {
@@ -226,6 +219,7 @@
                                 <option value="browser" data-i18n-key="notifBrowser">Przeglądarkowe</option>
                                 <option value="webhook" data-i18n-key="notifWebhook">Webhook</option>
                                 <option value="ntfy" data-i18n-key="notifNtfy">Ntfy.sh</option>
+                                <option value="pushover" data-i18n-key="notifPushover">Pushover</option>
                             </select>
                         </div>
 
@@ -244,6 +238,21 @@
                                 <div class="control-group">
                                     <label data-i18n-key="notifTopic" style="margin-top: 1rem;">Ntfy Temat (Topic):</label>
                                     <input type="text" id="notifNtfyTopic" placeholder="moj_temat_speedtest">
+                                </div>
+                            </div>
+                            <div id="fieldPushover" style="display: none;">
+                                <div class="responsive-grid">
+                                    <div class="control-group">
+                                        <label data-i18n-key="notifPushoverUser" style="margin-top: 1rem;">User Key:</label>
+                                        <input type="text" id="notifPushoverUser">
+                                    </div>
+                                    <div class="control-group">
+                                        <label data-i18n-key="notifPushoverToken" style="margin-top: 1rem;">API Token:</label>
+                                        <div class="password-toggle-wrapper">
+                                            <input type="password" id="notifPushoverToken">
+                                            <span id="togglePushoverTokenBtn" class="material-symbols-rounded toggle-icon">visibility</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

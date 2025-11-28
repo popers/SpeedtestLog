@@ -42,7 +42,6 @@ def initialize_db(app_state, max_retries=10, delay=5):
                 
                 # --- Migracje SQL ---
                 
-                # Istniejące migracje...
                 try:
                     connection.execute(text("SELECT startup_test_enabled FROM app_settings LIMIT 1"))
                 except Exception:
@@ -84,7 +83,6 @@ def initialize_db(app_state, max_retries=10, delay=5):
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_ping_watchdog VARCHAR(20) DEFAULT NULL"))
                     connection.commit()
 
-                # NOWE: Migracja OIDC display_name (Fix dla błędu OperationalError)
                 try:
                     connection.execute(text("SELECT display_name FROM oidc_settings LIMIT 1"))
                 except Exception:
@@ -95,17 +93,27 @@ def initialize_db(app_state, max_retries=10, delay=5):
                     except Exception as e:
                         logging.warning(f"OIDC migration warning (display_name): {e}")
 
-                # NOWE: Migracja OIDC discovery_url (Fix dla błędu OperationalError z logów)
                 try:
                     connection.execute(text("SELECT discovery_url FROM oidc_settings LIMIT 1"))
                 except Exception:
                     logging.info("🔧 Migration: Adding discovery_url to oidc_settings...")
                     try:
-                        # Zwiększamy limit znaków do 500, bo URL-e discovery potrafią być długie
                         connection.execute(text("ALTER TABLE oidc_settings ADD COLUMN discovery_url VARCHAR(500) DEFAULT NULL"))
                         connection.commit()
                     except Exception as e:
                         logging.warning(f"OIDC migration warning (discovery_url): {e}")
+
+                # NOWE: Migracja dla Pushover
+                try:
+                    connection.execute(text("SELECT pushover_user_key FROM notification_settings LIMIT 1"))
+                except Exception:
+                    logging.info("🔧 Migration: Adding Pushover columns to notification_settings...")
+                    try:
+                        connection.execute(text("ALTER TABLE notification_settings ADD COLUMN pushover_user_key VARCHAR(50) DEFAULT NULL"))
+                        connection.execute(text("ALTER TABLE notification_settings ADD COLUMN pushover_api_token VARCHAR(50) DEFAULT NULL"))
+                        connection.commit()
+                    except Exception as e:
+                        logging.warning(f"Pushover migration warning: {e}")
 
                 try:
                     with SessionLocal() as session:
@@ -115,8 +123,6 @@ def initialize_db(app_state, max_retries=10, delay=5):
                             session.commit()
                             logging.info(get_log("db_mig_notify"))
                         
-                        # Inicjalizacja OIDC Settings (ID=1)
-                        # Teraz bezpieczne, bo migracje powyżej naprawiły brakujące kolumny
                         try:
                             oidc = session.query(models.OIDCSettings).filter(models.OIDCSettings.id == 1).first()
                             if not oidc:

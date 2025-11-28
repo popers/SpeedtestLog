@@ -13,12 +13,11 @@ from models import AppSettings, SpeedtestResult, NotificationSettings
 import requests
 
 # Blokady wątków
-test_lock = threading.Lock()      # Blokada samego testu speedtest (żeby nie szły dwa naraz)
-scheduler_lock = threading.Lock() # Blokada dla operacji na bibliotece schedule
+test_lock = threading.Lock()
+scheduler_lock = threading.Lock()
 
 schedule_job = None
 
-# Helper do ładowania ustawień powiadomień (lokalnie, aby uniknąć cykli)
 def load_notification_settings(db):
     settings = db.query(NotificationSettings).filter(NotificationSettings.id == 1).first()
     if not settings:
@@ -46,6 +45,16 @@ def send_system_notification(title: str, message: str, type: str = "info"):
                 headers = {"Title": title.encode('utf-8'), "Tags": "white_check_mark"}
                 requests.post(url, data=message.encode('utf-8'), headers=headers, timeout=5)
                 logging.info(get_log("notify_sent", "Ntfy"))
+                
+            elif ns.provider == "pushover" and ns.pushover_user_key and ns.pushover_api_token:
+                requests.post("https://api.pushover.net/1/messages.json", data={
+                    "token": ns.pushover_api_token,
+                    "user": ns.pushover_user_key,
+                    "message": message,
+                    "title": title
+                }, timeout=5)
+                logging.info(get_log("notify_sent", "Pushover"))
+
         except Exception as e:
             logging.error(f"Notification send error: {e}")
     finally:
@@ -60,17 +69,15 @@ def get_closest_servers():
         except Exception as e: logging.error(get_log("servers_err", e))
 
 def run_speed_test_and_save(server_id=None, forced_lang=None):
-    # Jeśli test już trwa, nie uruchamiaj kolejnego
     if not test_lock.acquire(blocking=False): return None
     
     db_session = database.SessionLocal()
-    schedule_hours_to_reset = None # Zmienna pomocnicza do resetu harmonogramu
+    schedule_hours_to_reset = None
 
     try:
         s = db_session.query(AppSettings).filter(AppSettings.id == 1).first()
         app_lang = forced_lang if forced_lang else (s.app_language or "pl")
         
-        # Pobieramy aktualny interwał, aby wiedzieć czy zresetować licznik po teście
         if s.schedule_hours and s.schedule_hours > 0:
             schedule_hours_to_reset = s.schedule_hours
 
@@ -103,10 +110,11 @@ def run_speed_test_and_save(server_id=None, forced_lang=None):
         down_mbps = round(data.get("download", {}).get("bandwidth", 0) * 8 / 1_000_000, 2)
         up_mbps = round(data.get("upload", {}).get("bandwidth", 0) * 8 / 1_000_000, 2)
         ping_ms = data.get("ping", {}).get("latency", 0)
+        jitter_ms = data.get("ping", {}).get("jitter", 0)
         
         res = SpeedtestResult(
             id=str(uuid.uuid4()), timestamp=datetime.now(),
-            ping=ping_ms, jitter=data.get("ping", {}).get("jitter", 0),
+            ping=ping_ms, jitter=jitter_ms,
             download=down_mbps,
             upload=up_mbps,
             server_id=data.get("server", {}).get("id"), server_name=data.get("server", {}).get("name"),
@@ -123,7 +131,8 @@ def run_speed_test_and_save(server_id=None, forced_lang=None):
         logging.info(get_log("test_result", res.download))
         
         trans = NOTIF_TRANS.get(app_lang, NOTIF_TRANS["pl"])
-        msg = trans["speedtest_body"].format(dl=down_mbps, ul=up_mbps, ping=ping_ms)
+        # ZMIANA: Przekazanie parametru jitter do szablonu
+        msg = trans["speedtest_body"].format(dl=down_mbps, ul=up_mbps, ping=ping_ms, jitter=jitter_ms)
         title = trans["speedtest_title"]
         send_system_notification(title, msg, "speedtest")
         
@@ -135,13 +144,11 @@ def run_speed_test_and_save(server_id=None, forced_lang=None):
         db_session.close()
         test_lock.release()
         
-        # Synchronizacja harmonogramu po teście
         if schedule_hours_to_reset:
             update_scheduler(schedule_hours_to_reset)
 
 def run_scheduled_test(job_tag=None):
     if job_tag == 'startup-test':
-        # Użycie blokady przy modyfikacji harmonogramu
         with scheduler_lock:
             schedule.clear('startup-test')
             
@@ -164,10 +171,8 @@ def init_scheduler():
     global schedule_job
     hours = s.schedule_hours
     
-    # Użycie blokady przy inicjalizacji
     with scheduler_lock:
         if hours and hours > 0:
-            # ZMIANA: Dodano .tag('hourly-test'), aby można było znaleźć to zadanie w settings.py
             schedule_job = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test').tag('hourly-test')
         
         if s.startup_test_enabled:
@@ -178,7 +183,6 @@ def init_scheduler():
 
 def update_scheduler(hours):
     global schedule_job
-    # Użycie blokady przy aktualizacji
     with scheduler_lock:
         if schedule_job:
             try:
@@ -186,10 +190,8 @@ def update_scheduler(hours):
             except: pass
             schedule_job = None
         
-        # Usuwamy stare zadanie 'hourly-test' dla pewności
         schedule.clear('hourly-test')
         
         if hours > 0:
-            # ZMIANA: Tutaj również dodano .tag('hourly-test')
             schedule_job = schedule.every(hours).hours.do(run_speed_test_and_save_threaded, job_tag='hourly-test').tag('hourly-test')
             logging.info(f"Scheduler reset: Next run in {hours} hours.")
