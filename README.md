@@ -111,7 +111,7 @@ services:
       - MARIADB_USER=${DB_USERNAME}
       - MARIADB_PASSWORD=${DB_PASSWORD}
       - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
-      - TZ=Europe/Warsaw
+      - TZ=Europe/Amsterdam
     volumes:
       # Persist database data
       - speedtest-db-data:/var/lib/mysql
