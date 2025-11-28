@@ -159,7 +159,7 @@ AUTH_ENABLED=true
 APP_USERNAME=admin
 APP_PASSWORD=admin
 
-# Default Language (en/pl)
+# Default Backend Language (en/pl)
 APP_LANG=en
 
 # Timezone (Important for correct scheduling)
