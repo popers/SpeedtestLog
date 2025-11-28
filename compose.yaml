@@ -1,8 +1,8 @@
 services:
   backend:
     build:
-      context: . # ZMIANA: Buduj z głównego folderu
-      dockerfile: ./backend/Dockerfile # ZMIANA: Wskaż ścieżkę do Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: speedtest-backend
     ports:
       - 8000:8000
@@ -18,15 +18,22 @@ services:
       - SESSION_SECRET=${SESSION_SECRET}
       - APP_LANG=${APP_LANG}
       - OOKLA_EULA_GDPR=true
-      - TZ=Europe/Amsterdam
+      - TZ=Europe/Warsaw
     volumes:
       - ./backend/data:/app/data
     depends_on:
       db:
         condition: service_healthy
+    # --- NOWE: Healthcheck dla Backendu ---
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/auth-status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
+
   db:
-    # (reszta pliku 'db' bez zmian)
     image: mariadb:10.11
     container_name: speedtest-mariadb
     environment:
@@ -37,6 +44,7 @@ services:
     volumes:
       - speedtest-db-data:/var/lib/mysql
       - ./backend/data/logs:/var/log/mysql
+    # Healthcheck bazy danych (był już wcześniej, jest poprawny)
     healthcheck:
       test:
         - CMD
@@ -54,7 +62,6 @@ services:
     entrypoint: |
       sh -c "
         echo 'Przygotowywanie uprawnien logow...'
-        # Ustawiamy pełne prawa do folderu logów, aby user mysql mógł pisać
         mkdir -p /var/log/mysql
         chmod 777 /var/log/mysql
         touch /var/log/mysql/slow-query.log
@@ -67,6 +74,7 @@ services:
       - --slow_query_log_file=/var/log/mysql/slow-query.log
       - --long_query_time=2
       - --innodb-use-native-aio=0
+
 volumes:
   speedtest-db-data: null
 networks: {}
