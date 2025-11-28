@@ -174,7 +174,8 @@ export const translations = {
         'notificationsDesc': 'Otrzymuj powiadomienia o zakończonym teście lub zmianie statusu Ping Watchdog.',
         'notifEnable': 'Włącz powiadomienia',
         'notifProvider': 'Rodzaj powiadomienia:',
-        'notifBrowser': 'Przeglądarkowe (Wymaga otwartego dashboardu)',
+        'notifBrowser': 'Przeglądarkowe', // ZMIANA
+        'notifBrowserHint': 'Wymaga otwartej karty z dashboardem w przeglądarce.', // NOWE
         'notifWebhook': 'Webhook (POST JSON)',
         'notifNtfy': 'Ntfy.sh',
         'notifPushover': 'Pushover',
@@ -410,7 +411,8 @@ export const translations = {
         'notificationsDesc': 'Receive notifications about finished tests or Ping Watchdog status changes.',
         'notifEnable': 'Enable Notifications',
         'notifProvider': 'Notification Type:',
-        'notifBrowser': 'Browser (Dashboard must be open)',
+        'notifBrowser': 'Browser', // ZMIANA
+        'notifBrowserHint': 'Requires dashboard tab open in browser.', // NOWE
         'notifWebhook': 'Webhook (POST JSON)',
         'notifNtfy': 'Ntfy.sh',
         'notifPushover': 'Pushover',

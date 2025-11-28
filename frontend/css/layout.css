@@ -44,6 +44,15 @@ html, body {
     height: 100%; 
 }
 
+/* NOWE: Styl dla linku logo, aby zachować układ */
+.logo-link {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    text-decoration: none;
+    cursor: pointer;
+}
+
 .logo-img { 
     /* ZMIANA: Logo na pełną wysokość paska z zachowaniem proporcji i marginesu */
     height: 100%; 

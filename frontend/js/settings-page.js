@@ -127,6 +127,10 @@ export async function loadNotificationSettingsToForm() {
             document.getElementById('fieldNtfy').style.display = val === 'ntfy' ? 'block' : 'none';
             document.getElementById('fieldPushover').style.display = val === 'pushover' ? 'block' : 'none';
             
+            // NOWE: Pokaż/ukryj hint dla przeglądarki
+            const browserHint = document.getElementById('notifBrowserHint');
+            if (browserHint) browserHint.style.display = val === 'browser' ? 'block' : 'none';
+            
             if (val === 'browser') registerBtn.style.display = 'flex';
             else registerBtn.style.display = 'none';
         };

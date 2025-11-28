@@ -237,10 +237,10 @@ export function renderPagination(totalItems) {
     // Generowanie przycisków
     paginationNav.innerHTML = '';
     
-    // Przycisk Wstecz (<)
+    // Przycisk Wstecz (<) - ZMIANA: Użycie ikony
     const btnPrev = document.createElement('button');
     btnPrev.className = 'page-btn';
-    btnPrev.textContent = '‹';
+    btnPrev.innerHTML = '<span class="material-symbols-rounded">chevron_left</span>';
     btnPrev.disabled = state.currentPage === 1;
     btnPrev.onclick = () => changePage(state.currentPage - 1);
     paginationNav.appendChild(btnPrev);
@@ -283,10 +283,10 @@ export function renderPagination(totalItems) {
         paginationNav.appendChild(btn);
     });
 
-    // Przycisk Dalej (>)
+    // Przycisk Dalej (>) - ZMIANA: Użycie ikony
     const btnNext = document.createElement('button');
     btnNext.className = 'page-btn';
-    btnNext.textContent = '›';
+    btnNext.innerHTML = '<span class="material-symbols-rounded">chevron_right</span>';
     btnNext.disabled = state.currentPage === totalPages;
     btnNext.onclick = () => changePage(state.currentPage + 1);
     paginationNav.appendChild(btnNext);
