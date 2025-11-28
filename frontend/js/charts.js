@@ -9,7 +9,7 @@ export function renderCharts(results) {
     const uploadCtx = document.getElementById('uploadChart').getContext('2d');
     const pingCtx = document.getElementById('pingChart').getContext('2d');
     const jitterCtx = document.getElementById('jitterChart').getContext('2d');
-    // NOWE: Pobranie kontekstu dla wykresu opóźnień
+    // Pobranie kontekstu dla wykresu opóźnień
     const latencyCanvas = document.getElementById('latencyChart');
     const latencyCtx = latencyCanvas ? latencyCanvas.getContext('2d') : null;
 
@@ -68,7 +68,7 @@ export function renderCharts(results) {
     createAreaChart(pingCtx, pingChart, (chart) => { pingChart = chart; }, labels, pingData, chartResults, lang.chartLabelPing, lang.chartUnitMs, cPi, gridColor, labelColor);
     createAreaChart(jitterCtx, jitterChart, (chart) => { jitterChart = chart; }, labels, jitterData, chartResults, lang.chartLabelJitter, lang.chartUnitMs, cJi, gridColor, labelColor);
 
-    // NOWE: Tworzenie wykresu złożonego dla Latency
+    // Tworzenie wykresu złożonego dla Latency
     if (latencyCtx) {
         createMultiLineChart(
             latencyCtx,
@@ -89,7 +89,7 @@ export function renderCharts(results) {
     }
 }
 
-// NOWE: Funkcja do tworzenia wykresu wieloliniowego
+// Funkcja do tworzenia wykresu wieloliniowego
 function createMultiLineChart(ctx, chartInstance, setChartInstance, labels, datasetsInfo, serverData, unit, gridColor, labelColor) {
     if (chartInstance) chartInstance.destroy(); 
     
@@ -125,7 +125,7 @@ function createMultiLineChart(ctx, chartInstance, setChartInstance, labels, data
             animation: { duration: 0 }, 
             layout: { padding: { top: 10, left: 0, right: 0, bottom: 0 } },
             interaction: { 
-                mode: 'index', // Pokazuje tooltip dla wszystkich punktów w danym czasie
+                mode: 'index', 
                 axis: 'x',
                 intersect: false,
             },
@@ -133,11 +133,16 @@ function createMultiLineChart(ctx, chartInstance, setChartInstance, labels, data
                 y: { 
                     type: 'linear', 
                     position: 'left', 
-                    beginAtZero: true, // Latency lepiej widzieć od zera
+                    beginAtZero: true,
                     ticks: { 
                         color: labelColor,
                         font: { size: 11 },
-                        maxTicksLimit: 6
+                        maxTicksLimit: 6,
+                        // ZMIANA: Dodano formatter również tutaj dla spójności
+                        callback: function(value) {
+                            if (value >= 1000) return (value / 1000).toFixed(1) + 'k';
+                            return Math.round(value * 100) / 100;
+                        }
                     }, 
                     grid: { 
                         color: gridColor,
@@ -203,12 +208,11 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
     ctx.canvas.removeAttribute('width');
     ctx.canvas.removeAttribute('height');
     
-    // ZMIANA: Tworzenie gradientu dla tła wykresu (efekt speedtest-tracker)
-    // Gradient idzie od góry (większe krycie) do dołu (prawie przezroczysty)
-    const gradient = ctx.createLinearGradient(0, 0, 0, 350); // 350px to orientacyjna wysokość
-    gradient.addColorStop(0, hexToRgba(color, 0.4));  // Góra: 40% krycia
-    gradient.addColorStop(0.5, hexToRgba(color, 0.1)); // Środek: 10% krycia
-    gradient.addColorStop(1, hexToRgba(color, 0.0));   // Dół: 0% krycia
+    // Tworzenie gradientu dla tła wykresu
+    const gradient = ctx.createLinearGradient(0, 0, 0, 350); 
+    gradient.addColorStop(0, hexToRgba(color, 0.4));  
+    gradient.addColorStop(0.5, hexToRgba(color, 0.1)); 
+    gradient.addColorStop(1, hexToRgba(color, 0.0));   
 
     const newChart = new Chart(ctx, {
         type: 'line', 
@@ -219,23 +223,17 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                 data: data,
                 borderColor: color,
                 borderWidth: 2,
-                backgroundColor: gradient, // Użycie gradientu zamiast jednolitego koloru
+                backgroundColor: gradient, 
                 fill: 'start',
-                
-                // ZMIANA: Wrócono do domyślnej interpolacji, ale ze zmniejszonym tension (0.35).
-                // 0.4 potrafi robić pętle przy dużych spadkach. 0.35 jest bezpieczniejsze a wciąż gładkie.
                 tension: 0.35, 
                 cubicInterpolationMode: 'default',
-                
                 borderJoinStyle: 'round',
                 borderCapStyle: 'round',
-                
                 pointRadius: 0, 
                 pointHoverRadius: 6,
                 pointBackgroundColor: color,
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                
                 spanGaps: true
             }]
         },
@@ -244,10 +242,9 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
             maintainAspectRatio: false, 
             animation: { duration: 0 }, 
             layout: {
-                padding: { top: 10, left: 0, right: 0, bottom: 0 } // Lekki odstęp od góry, żeby nie ucinało tooltipów/punktów
+                padding: { top: 10, left: 0, right: 0, bottom: 0 } 
             },
             interaction: { 
-                // ZMIANA: 'nearest' z osią 'x' jest bardziej intuicyjne dla wykresów czasowych
                 mode: 'nearest', 
                 axis: 'x',
                 intersect: false,
@@ -256,8 +253,6 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                 y: { 
                     type: 'linear', 
                     position: 'left', 
-                    // ZMIANA: beginAtZero: false sprawia, że oś Y dopasowuje się do danych (efekt zoom)
-                    // Zamiast od 0 do 1000, pokaże np. 500 do 1000
                     beginAtZero: false,
                     title: { display: false }, 
                     ticks: { 
@@ -267,7 +262,10 @@ function createAreaChart(ctx, chartInstance, setChartInstance, labels, data, ser
                         callback: function(value) {
                             // Ładne formatowanie dużych liczb
                             if (value >= 1000) return (value / 1000).toFixed(1) + 'k';
-                            return value;
+                            
+                            // ZMIANA: Zaokrąglanie do 2 miejsc po przecinku
+                            // Rozwiązuje problem "1.70000000000002" na osi Y przy małych wartościach
+                            return Math.round(value * 100) / 100;
                         }
                     }, 
                     grid: { 

@@ -13,7 +13,77 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
         .code-block { background: rgba(0,0,0,0.1); padding: 4px 8px; border-radius: 4px; font-family: monospace; word-break: break-all; user-select: all; font-size: 0.85rem; display: block; margin-top: 5px;}
-        .help-text { font-size: 0.85rem; color: var(--text-color-secondary); margin-top: 5px; }
+        
+        /* Globalne ustawienie box-sizing dla inputów w ustawieniach, aby padding nie powiększał ich poza 100% */
+        .settings-card input, .settings-card select {
+            box-sizing: border-box;
+        }
+
+        /* Ograniczenie szerokości pól na desktopie dla lepszej estetyki (domyślne pola) */
+        @media (min-width: 993px) {
+            .settings-card input:not([type="checkbox"]):not([type="radio"]),
+            .settings-card select {
+                max-width: 400px;
+                width: 100%;
+            }
+            /* Wyjątek dla Discovery URL - ma być szeroki i nie wystawać */
+            .settings-card input.wide-input {
+                max-width: 100% !important;
+                width: 100%;
+            }
+            
+            /* Wyjątek dla pól wewnątrz grida (Client ID/Secret) - mają wypełniać komórkę siatki */
+            .responsive-grid .control-group input,
+            .responsive-grid .password-toggle-wrapper,
+            .responsive-grid .password-toggle-wrapper input {
+                max-width: 100% !important;
+            }
+        }
+
+        /* Responsywny Grid dla Client ID/Secret - na mobile kolumna, na desktopie wiersz */
+        .responsive-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 1rem;
+        }
+        @media (min-width: 768px) {
+            .responsive-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                align-items: start;
+            }
+        }
+
+        /* Styl dla pola hasła z oczkiem */
+        .password-toggle-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex; 
+            align-items: center;
+        }
+        
+        .password-toggle-wrapper input {
+            width: 100%;
+            padding-right: 40px; /* Miejsce na ikonkę */
+            height: 42px; /* Stała wysokość dla dopasowania */
+        }
+        
+        .toggle-icon {
+            position: absolute;
+            right: 10px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            color: var(--text-color-secondary);
+            user-select: none;
+            z-index: 5; /* Wyższy Z-index */
+            font-size: 20px;
+        }
+        .toggle-icon:hover {
+            color: var(--primary-color);
+        }
     </style>
 </head>
 <body>
@@ -66,7 +136,7 @@
             </nav>
             <div class="sidebar-footer">
                 <button id="logoutBtn" class="logout-btn"><span class="material-symbols-rounded icon">logout</span> <span data-i18n-key="logout">Wyloguj</span></button>
-                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v1.9</small></div>
+                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v1.0</small></div>
             </div>
         </aside>
 
@@ -76,21 +146,21 @@
                     <h2 data-i18n-key="navSettings">Ustawienia</h2>
                     
                     <div class="settings-card" style="margin-bottom: 2rem;">
-                        <h3 data-i18n-key="ispSettingsTitle">Weryfikacja Umowy (ISP)</h3>
+                        <h3 data-i18n-key="ispSettingsTitle">Deklarowana prędkość internetu</h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="ispDesc">Wprowadź prędkości z umowy, aby monitorować jakość usług dostawcy (wskaźnik procentowy na Dashboardzie).</p>
                         <div class="control-group">
                             <label data-i18n-key="ispDownload">Deklarowany Download (Mbps):</label>
                             <input type="number" id="declaredDownloadInput" min="0" placeholder="np. 600">
                         </div>
                         <div class="control-group">
-                            <label data-i18n-key="ispUpload">Deklarowany Upload (Mbps):</label>
+                            <label data-i18n-key="ispUpload" style="margin-top: 1rem;">Deklarowany Upload (Mbps):</label>
                             <input type="number" id="declaredUploadInput" min="0" placeholder="np. 100">
                         </div>
                     </div>
 
-                    <!-- NOWE: OIDC Settings Card -->
-                    <div class="settings-card" style="margin-bottom: 2rem; border-left: 4px solid #673ab7;">
-                        <h3 style="color: #673ab7;" data-i18n-key="oidcTitle">Logowanie OIDC (SSO)</h3>
+                    <!-- Sekcja OIDC -->
+                    <div class="settings-card" style="margin-bottom: 2rem;">
+                        <h3 data-i18n-key="oidcTitle">Logowanie OIDC (SSO)</h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="oidcDesc">Skonfiguruj logowanie przez OpenID Connect (np. Authentik, Keycloak, Google, Authelia).</p>
                         
                         <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
@@ -103,18 +173,20 @@
                         
                         <div class="control-group">
                             <label data-i18n-key="oidcDiscovery">Discovery URL (.well-known):</label>
-                            <input type="text" id="oidcDiscoveryUrl" placeholder="https://auth.example.com/.well-known/openid-configuration">
-                            <div class="help-text" data-i18n-key="oidcHelp">Adres URL metadanych providera. Musi być dostępny z kontenera backendu.</div>
+                            <input type="text" id="oidcDiscoveryUrl" class="wide-input" placeholder="https://auth.example.com/.well-known/openid-configuration">
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="responsive-grid">
                             <div class="control-group">
-                                <label data-i18n-key="lblClientId">Client ID:</label>
+                                <label data-i18n-key="lblClientId" style="margin-top: 1rem;">Client ID:</label>
                                 <input type="text" id="oidcClientId">
                             </div>
                             <div class="control-group">
-                                <label data-i18n-key="lblClientSecret">Client Secret:</label>
-                                <input type="password" id="oidcClientSecret">
+                                <label data-i18n-key="lblClientSecret" style="margin-top: 1rem;">Client Secret:</label>
+                                <div class="password-toggle-wrapper">
+                                    <input type="password" id="oidcClientSecret">
+                                    <span id="toggleSecretBtn" class="material-symbols-rounded toggle-icon">visibility</span>
+                                </div>
                             </div>
                         </div>
 
@@ -166,11 +238,11 @@
                             </div>
                             <div id="fieldNtfy" style="display: none;">
                                 <div class="control-group">
-                                    <label data-i18n-key="notifServer">Ntfy Serwer:</label>
+                                    <label data-i18n-key="notifServer" style="margin-top: 1rem;">Ntfy Serwer:</label>
                                     <input type="text" id="notifNtfyServer" value="https://ntfy.sh">
                                 </div>
                                 <div class="control-group">
-                                    <label data-i18n-key="notifTopic">Ntfy Temat (Topic):</label>
+                                    <label data-i18n-key="notifTopic" style="margin-top: 1rem;">Ntfy Temat (Topic):</label>
                                     <input type="text" id="notifNtfyTopic" placeholder="moj_temat_speedtest">
                                 </div>
                             </div>
@@ -213,7 +285,10 @@
                     <div class="settings-card">
                         <h3>Ping Watchdog</h3>
                         <div class="control-group"><label data-i18n-key="wdTarget">Cel (IP/Host):</label><input type="text" id="pingTargetInput" placeholder="8.8.8.8"></div>
-                        <div class="control-group"><label data-i18n-key="wdInterval">Interwał (sekundy):</label><input type="number" id="pingIntervalInput" min="5" value="30"></div>
+                        <div class="control-group">
+                            <label data-i18n-key="wdInterval" style="margin-top: 1rem;">Interwał (sekundy):</label>
+                            <input type="number" id="pingIntervalInput" min="5" value="30">
+                        </div>
                     </div>
 
                     <button id="saveSettingsBtn" class="action-btn" style="margin-top: 1.5rem; width: 100%; justify-content: center; background-color: var(--primary-color);">

@@ -90,7 +90,7 @@ export async function loadSettingsToForm() {
 
             if(oidcEnabled) oidcEnabled.checked = oidc.enabled;
             if(oidcClientId) oidcClientId.value = oidc.client_id || '';
-            if(oidcClientSecret) oidcClientSecret.value = oidc.client_secret || ''; // Hasło może być puste w odpowiedzi dla bezp.
+            if(oidcClientSecret) oidcClientSecret.value = oidc.client_secret || ''; 
             if(oidcDiscovery) oidcDiscovery.value = oidc.discovery_url || '';
             
             if(oidcRedirect) oidcRedirect.textContent = window.location.origin + '/api/auth/oidc/callback';
@@ -231,6 +231,21 @@ export async function saveSettingsFromPage() {
 export function initSettingsListeners() {
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     if(saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromPage);
+
+    // NOWE: Listener dla ikonki oka (OIDC Secret)
+    const toggleSecretBtn = document.getElementById('toggleSecretBtn');
+    const secretInput = document.getElementById('oidcClientSecret');
+    if (toggleSecretBtn && secretInput) {
+        toggleSecretBtn.addEventListener('click', () => {
+            if (secretInput.type === 'password') {
+                secretInput.type = 'text';
+                toggleSecretBtn.textContent = 'visibility_off'; // Zmień ikonę na przekreślone oko
+            } else {
+                secretInput.type = 'password';
+                toggleSecretBtn.textContent = 'visibility'; // Zmień ikonę na zwykłe oko
+            }
+        });
+    }
 
     const testNotifBtn = document.getElementById('notifTestBtn');
     if(testNotifBtn) {

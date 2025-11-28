@@ -121,6 +121,20 @@ export async function loadBackupPage() {
         const gdSaveBtn = document.getElementById('gdSaveBtn');
         const gdRunBtn = document.getElementById('gdRunBtn');
 
+        // NOWE: Logika ikonki oka
+        const toggleSecretBtn = document.getElementById('toggleSecretBtn');
+        if (toggleSecretBtn && gdClientSecret) {
+            toggleSecretBtn.addEventListener('click', () => {
+                if (gdClientSecret.type === 'password') {
+                    gdClientSecret.type = 'text';
+                    toggleSecretBtn.textContent = 'visibility_off';
+                } else {
+                    gdClientSecret.type = 'password';
+                    toggleSecretBtn.textContent = 'visibility';
+                }
+            });
+        }
+
         const lastRunVal = document.getElementById('lastRunVal');
         state.backupRawStatus = s.last_status;
 

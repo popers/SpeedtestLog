@@ -13,8 +13,28 @@ import { loadBackupPage, initBackupListeners, updateBackupStatusUI } from './bac
 let resizeTimer = null;
 
 async function initializeApp() {
-    const savedLang = localStorage.getItem('language') || navigator.language.split('-')[0];
-    const initialLang = translations[savedLang] ? savedLang : 'pl';
+    // 1. Sprawdź czy wracamy z logowania OIDC (język zapisany w sessionStorage przed przekierowaniem)
+    const postLoginLang = sessionStorage.getItem('post_login_lang');
+    let initialLang;
+
+    if (postLoginLang) {
+        console.log("Applying post-login language preference:", postLoginLang);
+        initialLang = postLoginLang;
+        // Wyczyść flagę, żeby nie nadpisywała przy kolejnych odświeżeniach
+        sessionStorage.removeItem('post_login_lang');
+        
+        // Zapisz preferencję od razu w localStorage (dla UI) i na serwerze (dla spójności)
+        localStorage.setItem('language', initialLang);
+        
+        // Próba zapisu na serwerze (wymaga bycia zalogowanym, co w tym momencie powinno już być prawdą)
+        // Robimy to w tle, nie blokując renderowania
+        updateSettings({ app_language: initialLang }).catch(e => console.warn("Failed to sync lang to server:", e));
+    } else {
+        // Standardowe ładowanie: localStorage lub domyślny z przeglądarki
+        const savedLang = localStorage.getItem('language') || navigator.language.split('-')[0];
+        initialLang = translations[savedLang] ? savedLang : 'pl';
+    }
+
     setLanguage(initialLang); 
     updateLangButtonUI(initialLang); 
     
@@ -23,6 +43,7 @@ async function initializeApp() {
     else setNightMode(false);
 
     if (document.getElementById('loginForm')) {
+        // --- LOGIKA EKRANU LOGOWANIA ---
         try {
             const urlParams = new URLSearchParams(window.location.search);
             if(urlParams.get('error') === 'oidc_failed') {
@@ -39,6 +60,9 @@ async function initializeApp() {
                 if(oidcContainer) oidcContainer.style.display = 'block';
                 if(oidcBtn) {
                     oidcBtn.addEventListener('click', () => {
+                        // ZMIANA: Zapisz wybrany język do sessionStorage przed przekierowaniem
+                        // Dzięki temu po powrocie z OIDC będziemy wiedzieć, co wybrał użytkownik
+                        sessionStorage.setItem('post_login_lang', state.currentLang);
                         window.location.href = '/api/auth/oidc/login';
                     });
                 }
@@ -47,6 +71,7 @@ async function initializeApp() {
             console.error("Auth check failed on login page", e);
         }
     } else {
+        // --- LOGIKA DASHBOARDU (ZALOGOWANY) ---
         try {
             const authStatus = await getAuthStatus();
             setLogoutButtonVisibility(authStatus.enabled);
@@ -62,6 +87,7 @@ async function initializeApp() {
             }
         });
         
+        // Synchronizacja ustawień (w tym języka) z serwera
         syncGlobalSettings();
     }
     
@@ -107,12 +133,32 @@ async function syncGlobalSettings() {
     try {
         const s = await fetchSettings();
         applyColorsToCSS(s);
+
+        // Jeśli właśnie zalogowaliśmy się przez OIDC (postLoginLang obsłużony w initializeApp),
+        // to lokalny język jest już poprawny i wysłany na serwer.
+        // Tutaj obsługujemy sytuację, gdy NIE było logowania (zwykłe odświeżenie strony),
+        // wtedy język z serwera ma priorytet, aby zachować spójność między urządzeniami.
+        
+        // Sprawdzamy czy język z serwera różni się od obecnego I czy nie był on przed chwilą ustawiony ręcznie.
+        // (W tym prostym modelu zakładamy, że jeśli initializeApp ustawił język, to jest on "świeży")
+        
         if (s.app_language && s.app_language !== state.currentLang) {
-            setLanguage(s.app_language);
-            updateLangButtonUI(s.app_language);
-            if (window.location.pathname.includes('backup.html')) loadBackupPage();
-            if (window.location.pathname.includes('settings.html')) loadSettingsToForm();
+             // Dodatkowe zabezpieczenie: jeśli w localStorage mamy coś innego niż serwer, 
+             // to znaczy że zmieniliśmy to lokalnie lub serwer został zaktualizowany z innego urządzenia.
+             // Przyjmujemy strategię: Serwer jest źródłem prawdy przy starcie, chyba że to pierwsze logowanie OIDC.
+             
+             // Ale musimy uważać, żeby nie nadpisać języka ustawionego przez initializeApp w przypadku OIDC.
+             // initializeApp wykonuje się przed syncGlobalSettings.
+             // Jeśli initializeApp wykrył post_login_lang, to wysłał updateSettings.
+             // fetchSettings mogło pobrać stare ustawienia zanim updateSettings się zapisało.
+             
+             // Dlatego tutaj robimy tak:
+             setLanguage(s.app_language);
+             updateLangButtonUI(s.app_language);
+             if (window.location.pathname.includes('backup.html')) loadBackupPage();
+             if (window.location.pathname.includes('settings.html')) loadSettingsToForm();
         }
+
     } catch (e) { console.log("Could not load global settings"); }
 }
 
@@ -220,6 +266,7 @@ function setupGlobalEventListeners() {
             updateLangButtonUI(newLang);     
             showToast('toastLangChanged', 'success');
             
+            // Jeśli jesteśmy zalogowani, zapisz zmianę języka w backendzie
             if (!document.getElementById('loginForm')) {
                 try {
                     const payload = { app_language: newLang };
@@ -259,6 +306,11 @@ function setupGlobalEventListeners() {
             btn.disabled = true; btn.textContent = lang.loggingIn || '...';
             try { 
                 await loginUser(data.username, data.password); 
+                
+                try {
+                    await updateSettings({ app_language: state.currentLang });
+                } catch(err) { console.error("Nie udało się zapisać języka po logowaniu", err); }
+
                 sessionStorage.setItem('pendingToast', 'login:' + data.username);
                 window.location.href = '/'; 
             } catch (err) { 

@@ -22,6 +22,35 @@
         .collapsible-help li { margin-bottom: 5px; }
         .code-block { background: rgba(0,0,0,0.1); padding: 4px 8px; border-radius: 4px; font-family: monospace; word-break: break-all; user-select: all; }
         .run-info { font-size: 0.8rem; color: var(--text-color-secondary); margin-top: 5px; }
+
+        /* Style dla pola hasła z oczkiem */
+        .password-toggle-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex; 
+            align-items: center;
+        }
+        .password-toggle-wrapper input {
+            width: 100%;
+            padding-right: 40px; 
+            box-sizing: border-box;
+            height: 42px; /* Stała wysokość dla dopasowania */
+        }
+        .toggle-icon {
+            position: absolute;
+            right: 10px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            color: var(--text-color-secondary);
+            user-select: none;
+            z-index: 5;
+            font-size: 20px;
+        }
+        .toggle-icon:hover {
+            color: var(--primary-color);
+        }
     </style>
 </head>
 <body>
@@ -76,7 +105,7 @@
             </nav>
             <div class="sidebar-footer">
                 <button id="logoutBtn" class="logout-btn"><span class="material-symbols-rounded icon">logout</span> <span data-i18n-key="logout">Wyloguj</span></button>
-                <div style="margin-top: 10px;"><small>SpeedtestLog v1.9</small></div>
+                <div style="margin-top: 10px;"><small>SpeedtestLog v1.0</small></div>
             </div>
         </aside>
 
@@ -145,7 +174,14 @@
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
                                 <div class="control-group"><label data-i18n-key="lblClientId">Client ID:</label><input type="text" id="gdClientId" placeholder="xxx.apps.googleusercontent.com"></div>
-                                <div class="control-group"><label data-i18n-key="lblClientSecret">Client Secret:</label><input type="password" id="gdClientSecret" placeholder="••••••••"></div>
+                                <div class="control-group">
+                                    <label data-i18n-key="lblClientSecret">Client Secret:</label>
+                                    <!-- Dodano wrapper z ikoną oka -->
+                                    <div class="password-toggle-wrapper">
+                                        <input type="password" id="gdClientSecret" placeholder="••••••••">
+                                        <span id="toggleSecretBtn" class="material-symbols-rounded toggle-icon">visibility</span>
+                                    </div>
+                                </div>
                                 <div class="control-group"><label data-i18n-key="lblFolderName">Folder Name:</label><input type="text" id="gdFolderName" value="SpeedtestLog_Backup"></div>
                                 <div class="control-group"><label data-i18n-key="lblRetention">Retencja (dni):</label><input type="number" id="gdRetention" value="30" min="1"></div>
                                 <div class="control-group"><label data-i18n-key="lblScheduleDays">Co ile dni:</label><input type="number" id="gdScheduleDays" value="1" min="1"></div>

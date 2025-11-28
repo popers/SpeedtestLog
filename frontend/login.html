@@ -31,7 +31,12 @@
             background-color: var(--bg-color);
             border-color: var(--text-color-secondary);
         }
-        .oidc-icon { font-size: 20px; }
+        /* Styl dla obrazka */
+        .oidc-icon-img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body class="login-page">
@@ -70,12 +75,13 @@
                 <button type="submit" id="loginBtn" style="width: 100%; margin-top: 1rem;" data-i18n-key="loginBtn">Zaloguj</button>
             </form>
             
-            <!-- NOWE: Sekcja OIDC (domyślnie ukryta) -->
+            <!-- Sekcja OIDC -->
             <div id="oidcContainer" style="display: none;">
                 <div class="oidc-separator"><span data-i18n-key="oidcOr">LUB</span></div>
                 <button id="oidcLoginBtn" class="oidc-btn">
-                    <span class="material-symbols-rounded oidc-icon">login</span>
-                    <span id="oidcBtnText" data-i18n-key="oidcBtn">Zaloguj przez SSO</span>
+                    <!-- ZMIANA: Użycie obrazka openid.png zamiast SVG -->
+                    <img src="openid.png" alt="OpenID" class="oidc-icon-img">
+                    <span id="oidcBtnText" data-i18n-key="oidcBtn">OIDC</span>
                 </button>
             </div>
 

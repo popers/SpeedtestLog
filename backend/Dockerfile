@@ -34,6 +34,8 @@ COPY frontend/settings.html .
 COPY frontend/manifest.json .
 COPY frontend/logo.png .
 COPY frontend/speedtest.png .
+# ZMIANA: Dodano kopiowanie pliku openid.png
+COPY frontend/openid.png . 
 COPY frontend/favicon.ico .
 
 # Make port 8000 available

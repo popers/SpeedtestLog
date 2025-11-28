@@ -141,7 +141,8 @@ export const translations = {
         'pageOf': 'z',
         'prevPage': 'Poprzednia',
         'nextPage': 'Następna',
-        'ispSettingsTitle': 'Weryfikacja Umowy (ISP)',
+        // ZMIANA: Aktualizacja tekstu klucza
+        'ispSettingsTitle': 'Deklarowana prędkość internetu',
         'ispDesc': 'Wprowadź prędkości z umowy, aby monitorować jakość usług dostawcy (wskaźnik procentowy na Dashboardzie).',
         'ispDownload': 'Deklarowany Download (Mbps):',
         'ispUpload': 'Deklarowany Upload (Mbps):',
@@ -222,14 +223,14 @@ export const translations = {
         'statusAuthError': 'Błąd autoryzacji',
         'statusUnknown': 'Nieznany',
 
-        // NOWE: OIDC Translations (PL)
+        // OIDC Translations (PL)
         'oidcTitle': 'Logowanie OIDC (SSO)',
         'oidcDesc': 'Skonfiguruj logowanie przez OpenID Connect (np. Authentik, Keycloak, Google, Authelia).',
         'oidcEnable': 'Włącz logowanie OIDC',
         'oidcDiscovery': 'Discovery URL (.well-known):',
         'oidcHelp': 'Adres URL metadanych providera. Musi być dostępny z kontenera backendu.',
         'oidcRedirect': 'Redirect URI (Callback) do wpisania u dostawcy:',
-        'oidcBtn': 'Zaloguj przez SSO',
+        'oidcBtn': 'OIDC',
         'oidcOr': 'LUB'
     },
     'en': {
@@ -374,7 +375,8 @@ export const translations = {
         'pageOf': 'of',
         'prevPage': 'Previous',
         'nextPage': 'Next',
-        'ispSettingsTitle': 'ISP Contract Verification',
+        // ZMIANA: Aktualizacja angielskiego tłumaczenia
+        'ispSettingsTitle': 'Declared Internet Speed',
         'ispDesc': 'Enter contract speeds to monitor provider quality (percentage indicator on Dashboard).',
         'ispDownload': 'Declared Download (Mbps):',
         'ispUpload': 'Declared Upload (Mbps):',
@@ -455,14 +457,14 @@ export const translations = {
         'statusAuthError': 'Auth Error',
         'statusUnknown': 'Unknown',
 
-        // NOWE: OIDC Translations (EN)
+        // OIDC Translations (EN)
         'oidcTitle': 'OIDC Login (SSO)',
         'oidcDesc': 'Configure login via OpenID Connect (e.g. Authentik, Keycloak, Google, Authelia).',
         'oidcEnable': 'Enable OIDC Login',
         'oidcDiscovery': 'Discovery URL (.well-known):',
         'oidcHelp': 'Provider metadata URL. Must be accessible from the backend container.',
         'oidcRedirect': 'Redirect URI (Callback) to register with provider:',
-        'oidcBtn': 'Login via SSO',
+        'oidcBtn': 'OIDC',
         'oidcOr': 'OR'
     }
 };
