@@ -207,4 +207,3 @@ Backup
 
 Settings
 <img width="2560" height="2529" alt="settings" src="https://github.com/user-attachments/assets/2b87d6fd-f3c1-425d-8e02-c5530eacb232" />
-
