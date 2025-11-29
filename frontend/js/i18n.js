@@ -174,8 +174,8 @@ export const translations = {
         'notificationsDesc': 'Otrzymuj powiadomienia o zakończonym teście lub zmianie statusu Ping Watchdog.',
         'notifEnable': 'Włącz powiadomienia',
         'notifProvider': 'Rodzaj powiadomienia:',
-        'notifBrowser': 'Przeglądarkowe', // ZMIANA
-        'notifBrowserHint': 'Wymaga otwartej karty z dashboardem w przeglądarce.', // NOWE
+        'notifBrowser': 'Przeglądarkowe',
+        'notifBrowserHint': 'Wymaga otwartej karty z dashboardem w przeglądarce.',
         'notifWebhook': 'Webhook (POST JSON)',
         'notifNtfy': 'Ntfy.sh',
         'notifPushover': 'Pushover',
@@ -192,7 +192,7 @@ export const translations = {
         'toastBrowserDenied': 'Brak uprawnień do powiadomień.',
 
         // Google Drive
-        'gDriveTitle': 'Google Drive Backup',
+        'gDriveTitle': 'Google Drive',
         'gDriveDesc': 'Automatycznie wysyłaj kopie zapasowe do folderu na Google Drive.',
         'lblClientId': 'Client ID:',
         'lblClientSecret': 'Client Secret:',
@@ -411,8 +411,8 @@ export const translations = {
         'notificationsDesc': 'Receive notifications about finished tests or Ping Watchdog status changes.',
         'notifEnable': 'Enable Notifications',
         'notifProvider': 'Notification Type:',
-        'notifBrowser': 'Browser', // ZMIANA
-        'notifBrowserHint': 'Requires dashboard tab open in browser.', // NOWE
+        'notifBrowser': 'Browser', 
+        'notifBrowserHint': 'Requires dashboard tab open in browser.',
         'notifWebhook': 'Webhook (POST JSON)',
         'notifNtfy': 'Ntfy.sh',
         'notifPushover': 'Pushover',
@@ -429,7 +429,7 @@ export const translations = {
         'toastBrowserDenied': 'Notification permission denied.',
 
         // Google Drive
-        'gDriveTitle': 'Google Drive Backup',
+        'gDriveTitle': 'Google Drive',
         'gDriveDesc': 'Automatically upload backups to a specific folder on Google Drive.',
         'lblClientId': 'Client ID:',
         'lblClientSecret': 'Client Secret:',

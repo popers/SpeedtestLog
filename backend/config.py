@@ -61,7 +61,7 @@ def setup_logging():
 NOTIF_TRANS = {
     "pl": {
         "speedtest_title": "🚀 Nowy wynik Speedtest",
-        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms, Jitter: {jitter} ms.",
+        "speedtest_body": "Pobieranie: {dl} Mbps, Wysyłanie: {ul} Mbps, Ping: {ping} ms, Jitter: {jitter} ms.",
         "watchdog_up_title": "🟢 Watchdog ONLINE",
         "watchdog_up_body": "Ping Watchdog: Cel {target} jest teraz ONLINE.",
         "watchdog_down_title": "🔴 Watchdog OFFLINE",

@@ -95,13 +95,11 @@
 
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <!-- ZMIANA: Usunięto przycisk zamykania X -->
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="index.html#dashboard" class="nav-link"><span class="material-symbols-rounded icon">dashboard</span> <span data-i18n-key="navDashboard">Panel Główny</span></a></li>
                     <li><a href="index.html#charts" class="nav-link"><span class="material-symbols-rounded icon">analytics</span> <span data-i18n-key="historyCharts">Wykresy Historii</span></a></li>
                     <li><a href="index.html#history" class="nav-link"><span class="material-symbols-rounded icon">history</span> <span data-i18n-key="historyTable">Pomiary</span></a></li>
-                    <!-- ZMIANA: Usunięto <li class="nav-spacer"></li> -->
                     <li><a href="backup.html" class="nav-link active"><span class="material-symbols-rounded icon">save</span> <span data-i18n-key="navBackup">Kopia Zapasowa</span></a></li>
                     <li><a href="settings.html" class="nav-link"><span class="material-symbols-rounded icon">settings</span> <span data-i18n-key="navSettings">Ustawienia</span></a></li>
                 </ul>
@@ -120,9 +118,11 @@
                     
                     <div class="backup-grid">
                         <div class="backup-card">
-                            <div class="backup-icon"><span class="material-symbols-rounded" style="font-size: inherit;">cloud_download</span></div>
                             <div class="backup-content">
-                                <h3 data-i18n-key="backupDownloadTitle">Pobierz Kopię</h3>
+                                <h3>
+                                    <span class="material-symbols-rounded" style="color: var(--primary-color); vertical-align: bottom; margin-right: 10px; font-size: 1.3em;">cloud_download</span>
+                                    <span data-i18n-key="backupDownloadTitle">Pobierz Kopię</span>
+                                </h3>
                                 <p data-i18n-key="backupDownloadText">Pobierz plik SQL zawierający całą historię pomiarów oraz ustawienia.</p>
                                 <button id="downloadBackupBtn" class="action-btn" style="background-color: var(--primary-color); border-color: var(--primary-color);">
                                     <span class="material-symbols-rounded" style="font-size: 20px;">download</span>
@@ -132,9 +132,11 @@
                         </div>
 
                         <div class="backup-card" style="border-color: var(--danger-color);">
-                            <div class="backup-icon"><span class="material-symbols-rounded" style="font-size: inherit;">cloud_upload</span></div>
                             <div class="backup-content">
-                                <h3 data-i18n-key="backupRestoreTitle">Przywróć Kopię</h3>
+                                <h3>
+                                    <span class="material-symbols-rounded" style="color: var(--danger-color); vertical-align: bottom; margin-right: 10px; font-size: 1.3em;">cloud_upload</span>
+                                    <span data-i18n-key="backupRestoreTitle">Przywróć Kopię</span>
+                                </h3>
                                 <p data-i18n-key="backupRestoreText" style="color: var(--danger-text); font-weight: bold;">UWAGA: Przywrócenie kopii nadpisze wszystkie obecne dane!</p>
                                 
                                 <form id="restoreForm">
@@ -157,9 +159,11 @@
                     </div>
 
                     <div class="backup-card" style="margin-top: 2rem; border-color: #34a853;">
-                        <div class="backup-icon"><span class="material-symbols-rounded" style="font-size: inherit; color: #34a853;">add_to_drive</span></div>
                         <div class="backup-content">
-                            <h3 data-i18n-key="gDriveTitle">Google Drive Backup</h3>
+                            <h3>
+                                <span class="material-symbols-rounded" style="color: #34a853; vertical-align: bottom; margin-right: 10px; font-size: 1.3em;">add_to_drive</span>
+                                <span data-i18n-key="gDriveTitle">Google Drive</span>
+                            </h3>
                             <p data-i18n-key="gDriveDesc" style="margin-bottom: 1rem;">Automatycznie wysyłaj kopie zapasowe do folderu na Google Drive.</p>
                             <div id="gDriveStatus" class="gdrive-status disconnected">
                                 <span class="material-symbols-rounded">link_off</span>
@@ -179,7 +183,6 @@
                                 <div class="control-group"><label data-i18n-key="lblClientId">Client ID:</label><input type="text" id="gdClientId" placeholder="xxx.apps.googleusercontent.com"></div>
                                 <div class="control-group">
                                     <label data-i18n-key="lblClientSecret">Client Secret:</label>
-                                    <!-- Dodano wrapper z ikoną oka -->
                                     <div class="password-toggle-wrapper">
                                         <input type="password" id="gdClientSecret" placeholder="••••••••">
                                         <span id="toggleSecretBtn" class="material-symbols-rounded toggle-icon">visibility</span>

@@ -18,6 +18,14 @@
             box-sizing: border-box;
         }
 
+        /* Nadpisanie stylów nagłówków kart, aby pasowały do backup.html */
+        .settings-card h3 {
+            color: var(--text-color); /* Tekst neutralny, kolor tylko w ikonie */
+            text-transform: none;     /* Normalna wielkość liter */
+            letter-spacing: normal;
+            font-weight: 500;
+        }
+
         @media (min-width: 993px) {
             .settings-card input:not([type="checkbox"]):not([type="radio"]),
             .settings-card select {
@@ -142,7 +150,10 @@
                     <h2 data-i18n-key="navSettings">Ustawienia</h2>
                     
                     <div class="settings-card" style="margin-bottom: 2rem;">
-                        <h3 data-i18n-key="ispSettingsTitle">Deklarowana prędkość internetu</h3>
+                        <h3>
+                            <span class="material-symbols-rounded icon" style="color: var(--primary-color); vertical-align: bottom; margin-right: 8px; font-size: 1.3em;">speed</span> 
+                            <span data-i18n-key="ispSettingsTitle">Deklarowana prędkość internetu</span>
+                        </h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="ispDesc">Wprowadź prędkości z umowy, aby monitorować jakość usług dostawcy (wskaźnik procentowy na Dashboardzie).</p>
                         <div class="control-group">
                             <label data-i18n-key="ispDownload">Deklarowany Download (Mbps):</label>
@@ -156,7 +167,10 @@
 
                     <!-- Sekcja OIDC -->
                     <div class="settings-card" style="margin-bottom: 2rem;">
-                        <h3 data-i18n-key="oidcTitle">Logowanie OIDC (SSO)</h3>
+                        <h3>
+                            <span class="material-symbols-rounded icon" style="color: #9c27b0; vertical-align: bottom; margin-right: 8px; font-size: 1.3em;">fingerprint</span> 
+                            <span data-i18n-key="oidcTitle">Logowanie OIDC (SSO)</span>
+                        </h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="oidcDesc">Skonfiguruj logowanie przez OpenID Connect (np. Authentik, Keycloak, Google, Authelia).</p>
                         
                         <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
@@ -193,7 +207,10 @@
                     </div>
 
                     <div class="settings-card" style="margin-bottom: 2rem;">
-                        <h3 data-i18n-key="startupTestTitle">Automatyczny test przy starcie</h3>
+                        <h3>
+                            <span class="material-symbols-rounded icon" style="color: var(--success-color); vertical-align: bottom; margin-right: 8px; font-size: 1.3em;">rocket_launch</span> 
+                            <span data-i18n-key="startupTestTitle">Automatyczny test przy starcie</span>
+                        </h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="startupTestDesc">Jeśli włączone, test prędkości zostanie wykonany automatycznie 1 minutę po uruchomieniu aplikacji.</p>
                         <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
                             <label for="startupTestInput" style="margin: 0; cursor: pointer; font-weight: 600; color: var(--text-color);" data-i18n-key="startupTestLabel">Uruchom test po starcie kontenera</label>
@@ -205,7 +222,10 @@
                     </div>
 
                     <div class="settings-card" style="margin-bottom: 2rem;">
-                        <h3 data-i18n-key="notificationsTitle">Powiadomienia</h3>
+                        <h3>
+                            <span class="material-symbols-rounded icon" style="color: #ff9800; vertical-align: bottom; margin-right: 8px; font-size: 1.3em;">notifications</span> 
+                            <span data-i18n-key="notificationsTitle">Powiadomienia</span>
+                        </h3>
                         <p style="font-size: 0.9rem; color: var(--text-color-secondary); margin-bottom: 1rem;" data-i18n-key="notificationsDesc">Otrzymuj powiadomienia o zakończonym teście lub zmianie statusu Ping Watchdog.</p>
                         
                         <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
@@ -273,7 +293,10 @@
                     </div>
 
                     <div class="settings-card" style="margin-bottom: 2rem;">
-                        <h3 data-i18n-key="chartColorsTitle">Kolory Wykresów</h3>
+                        <h3>
+                            <span class="material-symbols-rounded icon" style="color: #e91e63; vertical-align: bottom; margin-right: 8px; font-size: 1.3em;">palette</span> 
+                            <span data-i18n-key="chartColorsTitle">Kolory Wykresów</span>
+                        </h3>
                         <div style="display: flex; flex-direction: column; gap: 1rem;">
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
                                 <div class="control-group"><label data-i18n-key="chartColorDownload">Pobieranie</label><input type="color" id="colorDownloadInput" value="#4fc3f7" style="width: 100%; height: 48px; padding: 4px;"></div>
@@ -295,7 +318,10 @@
                     </div>
 
                     <div class="settings-card">
-                        <h3>Ping Watchdog</h3>
+                        <h3>
+                            <span class="material-symbols-rounded icon" style="color: #00bcd4; vertical-align: bottom; margin-right: 8px; font-size: 1.3em;">router</span> 
+                            Ping Watchdog
+                        </h3>
                         <div class="control-group"><label data-i18n-key="wdTarget">Cel (IP/Host):</label><input type="text" id="pingTargetInput" placeholder="8.8.8.8"></div>
                         <div class="control-group">
                             <label data-i18n-key="wdInterval" style="margin-top: 1rem;">Interwał (sekundy):</label>
