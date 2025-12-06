@@ -29,3 +29,5 @@ Thumbs.db
 
 # Jupyter Notebooks (częste w projektach data science)
 .ipynb_checkpoints
+
+.dockerignore
