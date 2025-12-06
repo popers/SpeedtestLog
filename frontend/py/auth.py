@@ -2,22 +2,26 @@ import logging
 import secrets
 import httpx
 import traceback
-import jwt # PyJWT
+import jwt
 from jwt.algorithms import RSAAlgorithm
 import json
 from fastapi import APIRouter, Response, HTTPException, Request, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from config import AUTH_ENABLED, APP_USERNAME, APP_PASSWORD, SESSION_COOKIE_NAME, SESSION_SECRET
-from schemas import LoginModel, OIDCSettingsModel
-from database import get_db
-from models import OIDCSettings
-from dependencies import verify_session
+
+# ZMIANA: Importy relatywne
+from .config import AUTH_ENABLED, APP_USERNAME, APP_PASSWORD, SESSION_COOKIE_NAME, SESSION_SECRET
+from .schemas import LoginModel, OIDCSettingsModel
+from .database import get_db
+from .models import OIDCSettings
+from .dependencies import verify_session
 
 router = APIRouter()
-
-# Używamy nowej nazwy ciasteczka, aby uniknąć konfliktów ze starymi sesjami
 COOKIE_NAME = f"{SESSION_COOKIE_NAME}_v2"
+
+# ... reszta pliku bez zmian (importy są najważniejsze) ...
+# Pamiętaj o podmianie reszty plików jeśli zawierają 'import config' itp.
+# Na przykład 'get_oidc_config', 'login', 'logout' itd. pozostają bez zmian w logice.
 
 async def get_oidc_config(discovery_url: str):
     async with httpx.AsyncClient(verify=False) as client:
@@ -35,7 +39,7 @@ async def login(creds: LoginModel, response: Response):
             key=COOKIE_NAME, 
             value=SESSION_SECRET, 
             httponly=True, 
-            secure=False, # HTTP only (local network)
+            secure=False, 
             samesite='lax',
             path='/',
             max_age=2592000 
@@ -113,7 +117,6 @@ async def oidc_login(request: Request, db: Session = Depends(get_db)):
         )
         
         resp = RedirectResponse(url=auth_url)
-        # Cookie state ważne dla weryfikacji powrotu
         resp.set_cookie("oidc_state", state, max_age=300, path='/', httponly=True, secure=False, samesite='lax')
         return resp
         
@@ -142,7 +145,6 @@ async def oidc_callback(request: Request, code: str, state: str, db: Session = D
             base_url = base_url.replace("http://", "https://")
         redirect_uri = f"{base_url}/api/auth/oidc/callback"
 
-        # Wymiana CODE na TOKEN
         async with httpx.AsyncClient(verify=False) as client:
             token_resp = await client.post(token_endpoint, data={
                 "grant_type": "authorization_code",
@@ -157,18 +159,13 @@ async def oidc_callback(request: Request, code: str, state: str, db: Session = D
         id_token = tokens.get("id_token")
         if not id_token: raise Exception("No id_token in response")
 
-        # --- DIAGNOSTYKA ALGORYTMU ---
         header = jwt.get_unverified_header(id_token)
         alg = header.get("alg")
-        logging.info(f"ℹ️ OIDC Token Algorithm: {alg}")
-
-        # Wykrycie szyfrowania (JWE)
+        
         if alg and alg.startswith("RSA-OAEP"):
             logging.error("❌ OIDC Error: Authentik is sending an ENCRYPTED token (JWE).")
-            logging.error("👉 ACTION REQUIRED: In Authentik Provider settings, set 'ID Token Encryption Key' to empty/none.")
             return RedirectResponse(url="/login.html?error=oidc_encrypted_token")
 
-        # Pobranie kluczy publicznych (JWKS)
         async with httpx.AsyncClient(verify=False) as client:
             jwks_resp = await client.get(jwks_uri)
             jwks_data = jwks_resp.json()
@@ -184,11 +181,10 @@ async def oidc_callback(request: Request, code: str, state: str, db: Session = D
             logging.error(f"Public key not found for kid: {kid}")
             raise Exception("Invalid JWKS key")
 
-        # Weryfikacja podpisu
         payload = jwt.decode(
             id_token,
             public_key,
-            algorithms=[alg], # Używamy algorytmu z nagłówka (zazwyczaj RS256)
+            algorithms=[alg], 
             audience=settings.client_id,
             options={"verify_at_hash": False}
         )

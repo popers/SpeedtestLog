@@ -4,9 +4,9 @@ import time
 import re
 import requests
 from datetime import datetime, timedelta
-from config import get_log, NOTIF_TRANS
-import database 
-from models import PingLog, AppSettings, NotificationSettings
+from .config import get_log, NOTIF_TRANS
+from . import database 
+from .models import PingLog, AppSettings, NotificationSettings
 
 latest_ping_status = {"online": None, "latency": 0, "loss": 0, "target": "init", "updated": None}
 
@@ -24,9 +24,7 @@ def send_watchdog_notification(title, message, type_str):
             url = f"{server}/{ns.ntfy_topic}"
             headers = {"Title": title.encode('utf-8'), "Tags": "warning" if "down" in type_str else "white_check_mark"}
             requests.post(url, data=message.encode('utf-8'), headers=headers, timeout=5)
-        # NOWE: Obsługa Pushover
         elif ns.provider == "pushover" and ns.pushover_user_key and ns.pushover_api_token:
-            # Dla offline można ustawić wyższy priorytet, ale na razie standardowo
             priority = 1 if "down" in type_str else 0
             requests.post("https://api.pushover.net/1/messages.json", data={
                 "token": ns.pushover_api_token,

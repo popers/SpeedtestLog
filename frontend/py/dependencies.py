@@ -1,5 +1,5 @@
 from fastapi import Request, HTTPException
-from config import AUTH_ENABLED, SESSION_COOKIE_NAME, SESSION_SECRET
+from .config import AUTH_ENABLED, SESSION_COOKIE_NAME, SESSION_SECRET
 
 # Używamy tej samej nazwy co w auth.py
 COOKIE_NAME = f"{SESSION_COOKIE_NAME}_v2"

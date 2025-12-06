@@ -2,10 +2,10 @@ services:
   backend:
     build:
       context: .
-      dockerfile: ./backend/Dockerfile
+      dockerfile: ./Dockerfile
     container_name: speedtest-backend
     ports:
-      - 8000:8000
+      - "8000:8000"
     environment:
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
@@ -20,13 +20,18 @@ services:
       - OOKLA_EULA_GDPR=true
       - TZ=Europe/Amsterdam
     volumes:
-      - ./backend/data:/app/data
+      # ZMIANA: Zamiast ./backend/data używamy ./data w głównym katalogu projektu
+      # Ponieważ folder 'backend' fizycznie znika ze struktury.
+      - ./data:/app/data
     depends_on:
       db:
         condition: service_healthy
-    # --- NOWE: Healthcheck dla Backendu ---
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/auth-status"]
+      test:
+        - CMD
+        - curl
+        - --fail
+        - http://localhost:8000/api/auth-status
       interval: 30s
       timeout: 10s
       retries: 3
@@ -43,8 +48,8 @@ services:
       - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
     volumes:
       - speedtest-db-data:/var/lib/mysql
-      - ./backend/data/logs:/var/log/mysql
-    # Healthcheck bazy danych (był już wcześniej, jest poprawny)
+      # Logi bazy danych również przenosimy do ./data/db_logs dla porządku
+      - ./data/db_logs:/var/log/mysql
     healthcheck:
       test:
         - CMD

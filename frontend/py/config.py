@@ -7,6 +7,7 @@ from logging.handlers import RotatingFileHandler
 LOG_DIR = '/app/data/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'app.log')
+# SERVERS_FILE pozostaje relatywny do /app, gdzie zostanie uruchomiony python
 SERVERS_FILE = 'data/servers.json'
 
 # Pobranie języka aplikacji z ENV (domyślnie angielski)
@@ -30,12 +31,11 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 # --- Konfiguracja Logowania ---
 def setup_logging():
     # Przechwytuj ostrzeżenia (warnings) do systemu logowania
-    # To zapobiega ich dublowaniu na stderr i w logach
     logging.captureWarnings(True)
     
     log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     
-    # Używamy sys.stderr dla logów konsolowych (standard w kontenerach Docker)
+    # Używamy sys.stderr dla logów konsolowych
     stream_handler = logging.StreamHandler(sys.stderr)
     stream_handler.setFormatter(log_formatter)
     stream_handler.setLevel(logging.INFO)
@@ -48,7 +48,7 @@ def setup_logging():
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     
-    # Czyścimy istniejące handlery root (np. te domyślne), aby uniknąć duplikatów
+    # Czyścimy istniejące handlery root
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
         
@@ -56,13 +56,9 @@ def setup_logging():
     root_logger.addHandler(file_handler)
     
     # 2. Przejęcie kontroli nad loggerami Uvicorn
-    # Dzięki temu logi serwera będą miały Twój format daty i trafią też do pliku
     for logger_name in ["uvicorn", "uvicorn.access", "uvicorn.error"]:
         logger = logging.getLogger(logger_name)
-        # Usuwamy domyślne handlery uvicorna (to one powodują podwójne wypisywanie)
         logger.handlers.clear()
-        # Wyłączamy propagację do root, bo podpinamy handlery bezpośrednio tutaj.
-        # Gdyby propagacja była True, log trafiłby do handlera uvicorn ORAZ handlera root -> duplikat.
         logger.propagate = False
         logger.addHandler(stream_handler)
         logger.addHandler(file_handler)

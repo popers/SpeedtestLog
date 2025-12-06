@@ -7,9 +7,9 @@ import time
 import schedule
 import uuid
 from datetime import datetime
-from config import get_log, NOTIF_TRANS, SERVERS_FILE
-import database 
-from models import AppSettings, SpeedtestResult, NotificationSettings
+from .config import get_log, NOTIF_TRANS, SERVERS_FILE
+from . import database 
+from .models import AppSettings, SpeedtestResult, NotificationSettings
 import requests
 
 # Blokady wątków
@@ -112,7 +112,6 @@ def run_speed_test_and_save(server_id=None, forced_lang=None):
         ping_ms = data.get("ping", {}).get("latency", 0)
         jitter_ms = data.get("ping", {}).get("jitter", 0)
         server_name = data.get("server", {}).get("name", "Unknown")
-        # ZMIANA: Pobranie lokalizacji serwera
         server_location = data.get("server", {}).get("location", "")
         
         res = SpeedtestResult(
@@ -134,7 +133,6 @@ def run_speed_test_and_save(server_id=None, forced_lang=None):
         logging.info(get_log("test_result", res.download))
         
         trans = NOTIF_TRANS.get(app_lang, NOTIF_TRANS["pl"])
-        # ZMIANA: Przekazanie nazwy serwera oraz lokalizacji do powiadomienia
         msg = trans["speedtest_body"].format(
             dl=down_mbps, 
             ul=up_mbps, 

@@ -10,9 +10,10 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from google.auth.transport.requests import Request as GoogleRequest
 
-from config import get_log, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
-import database # ZMIANA: Import modułu
-from models import DriveBackupSettings
+# ZMIANA: Importy relatywne
+from .config import get_log, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+from . import database 
+from .models import DriveBackupSettings
 
 backup_job = None
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -25,7 +26,6 @@ def get_drive_service(settings):
         creds = Credentials.from_authorized_user_info(token_data, SCOPES)
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(GoogleRequest())
-            # ZMIANA: Użycie database.SessionLocal()
             db = database.SessionLocal()
             s = db.query(DriveBackupSettings).filter(DriveBackupSettings.id == 1).first()
             s.token_json = creds.to_json()
@@ -49,7 +49,6 @@ def get_or_create_folder(service, folder_name):
 
 def perform_backup_task():
     logging.info(get_log("backup_start"))
-    # ZMIANA: Użycie database.SessionLocal()
     db = database.SessionLocal()
     try:
         settings = db.query(DriveBackupSettings).filter(DriveBackupSettings.id == 1).first()
@@ -116,7 +115,6 @@ def setup_backup_schedule(settings=None):
         backup_job = None
 
     if not settings:
-        # ZMIANA: Użycie database.SessionLocal()
         db = database.SessionLocal()
         settings = db.query(DriveBackupSettings).filter(DriveBackupSettings.id == 1).first()
         db.close()

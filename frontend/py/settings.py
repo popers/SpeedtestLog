@@ -4,12 +4,12 @@ import logging
 import schedule
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
-from models import AppSettings, NotificationSettings, SpeedtestResult
-from schemas import SettingsModel, NotificationSettingsModel, NotificationTestModel
-from dependencies import verify_session
-from config import get_log, NOTIF_TRANS, SERVERS_FILE
-from speedtest import update_scheduler, scheduler_lock
+from .database import get_db
+from .models import AppSettings, NotificationSettings, SpeedtestResult
+from .schemas import SettingsModel, NotificationSettingsModel, NotificationTestModel
+from .dependencies import verify_session
+from .config import get_log, NOTIF_TRANS, SERVERS_FILE
+from .speedtest import update_scheduler, scheduler_lock
 import requests
 from datetime import datetime
 
@@ -138,7 +138,6 @@ async def test_notif(s: NotificationTestModel):
             url = f"{server}/{s.ntfy_topic}"
             headers = {"Title": title.encode('utf-8'), "Tags": "tada"}
             requests.post(url, data=msg.encode('utf-8'), headers=headers, timeout=5)
-        # NOWE: Obsługa Pushover (Test)
         elif s.provider == "pushover":
             if not s.pushover_user_key or not s.pushover_api_token: raise ValueError("Missing Pushover Credentials")
             requests.post("https://api.pushover.net/1/messages.json", data={

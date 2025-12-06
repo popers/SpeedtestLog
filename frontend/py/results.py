@@ -3,10 +3,10 @@ import io
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
-from database import get_db
-from models import SpeedtestResult
-from schemas import DeleteModel
-from dependencies import verify_session
+from .database import get_db
+from .models import SpeedtestResult
+from .schemas import DeleteModel
+from .dependencies import verify_session
 
 router = APIRouter(dependencies=[Depends(verify_session)])
 

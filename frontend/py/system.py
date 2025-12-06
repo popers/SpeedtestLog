@@ -3,22 +3,22 @@ import shutil
 import uuid
 import threading
 import logging
-import subprocess  # <-- Dodano: wymagane dla mysqldump/mysql
-from datetime import datetime # <-- Dodano: wymagane dla nazw plików
+import subprocess 
+from datetime import datetime 
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Request
 from fastapi.responses import Response, HTMLResponse
 from sqlalchemy.orm import Session
 from google_auth_oauthlib.flow import Flow
 
-from database import get_db
-from models import DriveBackupSettings, PingLog
-from schemas import BackupSettingsModel, SettingsModel
-from dependencies import verify_session, get_redirect_uri
-from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, get_log
-from backup import perform_backup_task, setup_backup_schedule, SCOPES
-from speedtest import run_speed_test_and_save, test_lock
-from watchdog import latest_ping_status
+from .database import get_db
+from .models import DriveBackupSettings, PingLog
+from .schemas import BackupSettingsModel, SettingsModel
+from .dependencies import verify_session, get_redirect_uri
+from .config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, get_log
+from .backup import perform_backup_task, setup_backup_schedule, SCOPES
+from .speedtest import run_speed_test_and_save, test_lock
+from .watchdog import latest_ping_status
 
 router = APIRouter(dependencies=[Depends(verify_session)])
 
@@ -41,7 +41,7 @@ async def trig_test(s: SettingsModel):
 async def backup_db():
     env = os.environ.copy(); env["MYSQL_PWD"] = DB_PASSWORD
     cmd = ["mysqldump", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, "--no-tablespaces", DB_NAME]
-    # subprocess jest już zaimportowany, błąd zniknie
+    
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     stdout, stderr = proc.communicate()
     if proc.returncode != 0: raise HTTPException(500)
@@ -57,7 +57,6 @@ async def restore_db(file: UploadFile = File(...)):
     env = os.environ.copy(); env["MYSQL_PWD"] = DB_PASSWORD
     cmd = ["mysql", "-h", DB_HOST, "-P", str(DB_PORT), "-u", DB_USER, DB_NAME]
     with open(temp, "r") as f:
-        # subprocess jest już zaimportowany
         proc = subprocess.Popen(cmd, stdin=f, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         stdout, stderr = proc.communicate()
     os.remove(temp)

@@ -9,18 +9,18 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-# Nasze moduły
-from config import setup_logging, AUTH_ENABLED, SESSION_COOKIE_NAME, SESSION_SECRET
-from database import initialize_db
-from speedtest import get_closest_servers, init_scheduler, scheduler_lock
-from backup import setup_backup_schedule
-from watchdog import run_ping_watchdog
+# ZMIANA: Importy relatywne (z kropką na początku)
+from .config import setup_logging, AUTH_ENABLED, SESSION_COOKIE_NAME, SESSION_SECRET
+from .database import initialize_db
+from .speedtest import get_closest_servers, init_scheduler, scheduler_lock
+from .backup import setup_backup_schedule
+from .watchdog import run_ping_watchdog
 
-# Routery
-import auth
-import results
-import settings
-import system
+# ZMIANA: Importy routerów z obecnego pakietu
+from . import auth
+from . import results
+from . import settings
+from . import system
 
 setup_logging()
 
@@ -66,6 +66,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Pliki statyczne są w głównym katalogu kontenera (/app)
 app.mount("/css", StaticFiles(directory="css"), name="css")
 app.mount("/js", StaticFiles(directory="js"), name="js")
 
@@ -90,19 +91,16 @@ def prevent_caching(response):
 
 @app.get("/")
 async def read_root(request: Request):
-    # Jeśli użytkownik wejdzie na /, a nie jest zalogowany -> przekieruj na /login
     if not is_authenticated(request):
         return RedirectResponse("/login")
-    
+    # Ścieżka relatywna do WORKDIR /app
     response = FileResponse('index.html')
     return prevent_caching(response)
 
 @app.get("/login")
 async def read_login(request: Request):
-    # Jeśli użytkownik jest zalogowany i wchodzi na /login -> przekieruj na /
     if is_authenticated(request):
         return RedirectResponse("/")
-        
     response = FileResponse('login.html')
     return prevent_caching(response)
 
@@ -124,18 +122,12 @@ async def read_backup(request: Request):
 
 @app.get("/{filename}")
 async def read_static(filename: str, request: Request):
-    # Lista dozwolonych plików w głównym katalogu
     allowed_assets = ["manifest.json", "favicon.ico", "logo.png", "speedtest.png", "openid.png"]
     
-    # Obsługa legacy dla .html (gdyby ktoś wpisał ręcznie index.html)
-    if filename == "index.html":
-        return RedirectResponse("/")
-    if filename == "login.html":
-        return RedirectResponse("/login")
-    if filename == "settings.html":
-        return RedirectResponse("/settings")
-    if filename == "backup.html":
-        return RedirectResponse("/backup")
+    if filename == "index.html": return RedirectResponse("/")
+    if filename == "login.html": return RedirectResponse("/login")
+    if filename == "settings.html": return RedirectResponse("/settings")
+    if filename == "backup.html": return RedirectResponse("/backup")
 
     if filename in allowed_assets and os.path.exists(f"/app/{filename}"):
         return FileResponse(f"/app/{filename}")

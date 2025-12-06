@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Boolean
 from sqlalchemy.dialects.mysql import DATETIME, MEDIUMTEXT
-from database import Base
+from .database import Base
 
 # --- Modele SQLAlchemy (Tylko struktura bazy danych) ---
 
@@ -45,19 +45,15 @@ class AppSettings(Base):
     declared_download = Column(Integer, default=0)
     declared_upload = Column(Integer, default=0)
     startup_test_enabled = Column(Boolean, default=True)
-    # ZMIANA: Domyślny język ustawiony na 'en'
     app_language = Column(String(5), default="en")
-    # Kolory podstawowe
     chart_color_download = Column(String(20), nullable=True)
     chart_color_upload = Column(String(20), nullable=True)
     chart_color_ping = Column(String(20), nullable=True)
     chart_color_jitter = Column(String(20), nullable=True)
-    # Kolory Latency
     chart_color_lat_dl_low = Column(String(20), nullable=True)
     chart_color_lat_dl_high = Column(String(20), nullable=True)
     chart_color_lat_ul_low = Column(String(20), nullable=True)
     chart_color_lat_ul_high = Column(String(20), nullable=True)
-    # Kolor Ping Watchdog
     chart_color_ping_watchdog = Column(String(20), nullable=True)
 
 class NotificationSettings(Base):
@@ -68,7 +64,6 @@ class NotificationSettings(Base):
     webhook_url = Column(String(500), nullable=True)
     ntfy_topic = Column(String(255), nullable=True)
     ntfy_server = Column(String(255), default="https://ntfy.sh")
-    # NOWE: Pola dla Pushover
     pushover_user_key = Column(String(50), nullable=True)
     pushover_api_token = Column(String(50), nullable=True)
 
