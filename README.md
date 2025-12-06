@@ -1,4 +1,4 @@
-# SpeedtestLog
+# SpeedtestLog ![version](https://img.shields.io/badge/v0.1-blue)
 
 SpeedtestLog is a self-hosted application designed to track your internet connection performance over time. It automatically runs speed tests using the official Ookla CLI, logs the results to a database, visualizes them on interactive charts, and monitors your connection stability via a continuous Ping Watchdog.
 
@@ -17,6 +17,24 @@ SpeedtestLog is a self-hosted application designed to track your internet connec
 * **Secure Access:** Features built-in password authentication and supports OpenID Connect (OIDC) for Single Sign-On integration.
 
 * **Responsive Design:** Offers a modern, mobile-friendly user interface with customizable dark and light themes.
+
+#### SCREENSHOTS:
+
+**Dashboard**
+
+<img alt="dashboard" src="https://github.com/user-attachments/assets/c32f2bcf-fc01-4eaa-86a8-401ad742f41d" />
+
+**Backup**
+
+<img alt="backup" src="https://github.com/user-attachments/assets/089671d1-2b9d-4c05-bf4d-d29f28c508ee" />
+
+**Settings**
+
+<img alt="settings" src="https://github.com/user-attachments/assets/69ece726-79a5-48bb-964b-3637e4314aec" />
+
+**Watchdog**
+
+<img alt="watchdog" src="https://github.com/user-attachments/assets/5fa19b06-f8e8-4147-973a-2d630dc69ddc" />
 
 #### 🚀 Installation (Docker)
 
@@ -104,20 +122,3 @@ docker compose up -d
 
 Your SpeedtestLog dashboard will be accessible at: http://your-server-ip:8000
 
-#### SCREENSHOTS:
-
-**Dashboard**
-
-<img alt="dashboard" src="https://github.com/user-attachments/assets/c32f2bcf-fc01-4eaa-86a8-401ad742f41d" />
-
-**Backup**
-
-<img alt="backup" src="https://github.com/user-attachments/assets/089671d1-2b9d-4c05-bf4d-d29f28c508ee" />
-
-**Settings**
-
-<img alt="settings" src="https://github.com/user-attachments/assets/69ece726-79a5-48bb-964b-3637e4314aec" />
-
-**Watchdog**
-
-<img alt="watchdog" src="https://github.com/user-attachments/assets/5fa19b06-f8e8-4147-973a-2d630dc69ddc" />
