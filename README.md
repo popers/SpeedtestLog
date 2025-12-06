@@ -1,77 +1,31 @@
-SpeedtestLog 🚀
+# SpeedtestLog
 
-SpeedtestLog is a robust, self-hosted application designed to track your internet connection performance over time. Built with FastAPI (Python) and a vanilla JS/HTML/CSS frontend, it runs seamlessly in Docker.
+SpeedtestLog is a self-hosted application designed to track your internet connection performance over time. It automatically runs speed tests using the official Ookla CLI, logs the results to a database, visualizes them on interactive charts, and monitors your connection stability via a continuous Ping Watchdog.
 
-It automatically runs speed tests using the official Ookla CLI, logs the results to a database, visualizes them on interactive charts, and monitors your connection stability via a continuous Ping Watchdog.
+### Features List:
 
-Note: This project is designed to be lightweight and privacy-focused. You own your data.
+* **Automated Speedtests:** Schedules periodic tests using the official Ookla CLI to log download, upload, ping, and jitter metrics.
 
-✨ Key Features
+* **Interactive Visualization:** Displays performance trends and detailed history on dynamic charts and searchable tables.
 
-📊 Monitoring & Analytics
+* **Connectivity Watchdog:** Continuously monitors connection status to detect downtime and packet loss in real-time.
 
-Automated Speedtests: Schedule tests to run every 1, 3, 6, 12, or 24 hours.
+* **Smart Notifications:** Sends alerts via Webhook, Ntfy.sh, Pushover, or browser push notifications when tests complete or status changes.
 
-Interactive Charts: Visualize Download, Upload, Ping, Jitter, and Loaded Latency trends over time (24h, 7 days, 30 days, or All-time).
+* **Backup & Restore:** Supports easy local database exports and automated cloud backups to Google Drive.
 
-Detailed History: Browse a paginated table of every test result with precise timestamps and server details.
+* **Secure Access:** Features built-in password authentication and supports OpenID Connect (OIDC) for Single Sign-On integration.
 
-ISP Comparison: Define your declared ISP speeds to see percentage performance metrics at a glance.
+* **Responsive Design:** Offers a modern, mobile-friendly user interface with customizable dark and light themes.
 
-🐶 Connectivity Watchdog
+#### 🚀 Installation (Docker)
 
-Ping Watchdog: Continuously monitors connection stability by pinging a target (e.g., 8.8.8.8).
-
-Live Status: Real-time Online/Offline indicator in the UI.
-
-Packet Loss Tracking: Logs latency and packet loss history to help diagnose intermittent connection issues.
-
-🔔 Notifications
-
-Multiple Providers: Get notified via Browser Push, Webhooks, Ntfy.sh, or Pushover.
-
-Smart Alerts: Receive alerts on completed speed tests or when the Watchdog detects a connection drop/restore.
-
-🛡️ Security & Management
-
-Authentication: Secure login system with session management.
-
-OIDC Support: Optional Single Sign-On (SSO) integration (e.g., Keycloak, Authentik, Google).
-
-Backup & Restore:
-
-One-click local SQL database export/import.
-
-Google Drive Integration: Automatically upload backups to your Google Drive on a schedule.
-
-🎨 UI & UX
-
-Responsive Design: Fully optimized for desktop and mobile devices.
-
-Dark/Light Mode: Toggle themes based on preference.
-
-Multi-language: Supports English and Polish.
-
-🚀 Installation (Docker)
-
-The recommended way to run SpeedtestLog is using Docker Compose.
-
-1. Create a project directory
-
-Create a folder on your server and navigate into it:
-
-mkdir speedtestlog
-cd speedtestlog
-
-
-2. Create compose.yaml
-
-Create a file named compose.yaml with the following content. This configuration pulls latest version from Docker Hub.
+**Docker compose:**
 ```
 services:
-  backend:
+  speedtestlog:
     image: popers/speedtestlog:latest
-    container_name: speedtest-backend
+    container_name: speedtestlog-app
     ports:
       - "8000:8000"
     environment:
@@ -85,9 +39,7 @@ services:
       - APP_PASSWORD=${APP_PASSWORD}
       - SESSION_SECRET=${SESSION_SECRET}
       - APP_LANG=${APP_LANG}
-      # Required to accept Ookla's license
       - OOKLA_EULA_GDPR=true
-      # Set your timezone for correct scheduling
       - TZ=Europe/Amsterdam
     volumes:
       # Persist application logs
@@ -105,7 +57,7 @@ services:
 
   db:
     image: mariadb:10.11
-    container_name: speedtest-mariadb
+    container_name: speedtestlog-mariadb
     environment:
       - MARIADB_DATABASE=${DB_DATABASE}
       - MARIADB_USER=${DB_USERNAME}
@@ -113,9 +65,7 @@ services:
       - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - TZ=Europe/Amsterdam
     volumes:
-      # Persist database data
       - speedtest-db-data:/var/lib/mysql
-      # Database logs
       - ./data_db_logs:/var/log/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
@@ -127,77 +77,34 @@ services:
       - --slow_query_log=1
       - --long_query_time=2
       - --innodb-use-native-aio=0
-
 volumes:
   speedtest-db-data:
 ```
 
-3. Create .env file
-
-Create a .env file in the same directory to store your configuration secrets.
-
-⚠️ Security Warning: Please change the default passwords and secrets before deploying!
+**.env**
 ```
-# --- Database Configuration ---
 DB_CONNECTION=mysql
 DB_HOST=db
 DB_PORT=3306
-DB_DATABASE=speedtest
-DB_USERNAME=speedtest
-# Change these passwords!
+DB_DATABASE=speedtestlog
+DB_USERNAME=speedtestlog
 DB_PASSWORD=strong_db_password
 DB_ROOT_PASSWORD=strong_root_password
-
-# --- App Configuration ---
-# Session Secret (Random string for security cookies)
 SESSION_SECRET=change_me_to_something_random_and_long
-
-# Enable Login? (true/false)
 AUTH_ENABLED=true
-
-# Dashboard Login Credentials
 APP_USERNAME=admin
 APP_PASSWORD=admin
-
-# Default Backend Language (en/pl)
 APP_LANG=en
-
-# Timezone (Important for correct scheduling)
-TZ=Europe/Amsterdam
 ```
 
-4. Run the application
-
-Start the containers in detached mode:
-
+**Start the containers:**
+```
 docker compose up -d
-
+```
 
 Your SpeedtestLog dashboard will be accessible at: http://your-server-ip:8000
 
-⚙️ Configuration Notes
-
-Google Drive Backup: To enable cloud backups, go to the Backup tab in the UI. You will need to provide a Google Cloud Client ID and Secret (authorized for the Drive API) and authorize the application.
-
-OIDC (SSO): Can be configured in the Settings tab. Ensure your Identity Provider sends the email or sub claim.
-
-Startup Test: By default, the application runs a speed test 1 minute after the container starts to verify functionality. This can be disabled in Settings.
-
-🛠️ Built With
-
-Backend: Python 3.11, FastAPI, SQLAlchemy, APScheduler
-
-Frontend: HTML5, CSS3 (Variables), Vanilla JavaScript
-
-Database: MariaDB
-
-Speedtest Engine: Official Ookla Speedtest CLI
-
-📄 License
-
-This project is open-source. Feel free to fork and contribute!
-
-**SCREENSHOTS:**
+#### SCREENSHOTS:
 
 **Dashboard**
 
