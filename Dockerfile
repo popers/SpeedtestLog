@@ -8,27 +8,34 @@ ENV PYTHONUNBUFFERED=1
 # 3. Katalog roboczy
 WORKDIR /app
 
-# 4. Instalacja narzędzi systemowych (curl do healthcheck)
+# 4. Instalacja narzędzi systemowych (curl do healthcheck, iputils-ping do watchdog)
+# Dodajemy iputils-ping, ponieważ Twoja aplikacja używa polecenia 'ping' w watchdog.py
+# Dodajemy default-mysql-client, ponieważ backup.py używa 'mysqldump' i 'mysql'
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    iputils-ping \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # 5. Instalacja zależności (Cache)
-# Kopiujemy requirements.txt z podkatalogu backend
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Kopiowanie kodu aplikacji (Backend)
+# 6. Instalacja Speedtest CLI (oficjalna binarka Ookla)
+# Jest wymagana przez backend/speedtest.py.
+# Pobieramy, rozpakowujemy i usuwamy zbędne pliki.
+RUN curl -s https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-x86_64.tgz | tar xz -C /usr/local/bin speedtest
+
+# 7. Kopiowanie kodu aplikacji (Backend)
 # Kopiujemy zawartość folderu backend bezpośrednio do /app
-# Dzięki temu main.py będzie w /app/main.py
 COPY backend/ .
 
-# 7. Kopiowanie kodu aplikacji (Frontend)
-# Kopiujemy folder frontend do katalogu /app/frontend
-# Dzięki temu struktura w kontenerze będzie idealna dla StaticFiles
-COPY frontend/ ./frontend
+# 8. Kopiowanie kodu aplikacji (Frontend)
+# ZMIANA: Kopiujemy zawartość frontend BEZPOŚREDNIO do /app, a nie do /app/frontend.
+# Dzięki temu foldery 'css' i 'js' oraz 'index.html' są w tym samym katalogu co main.py
+COPY frontend/ .
 
-# 8. Konfiguracja portu i start
+# 9. Konfiguracja portu i start
 EXPOSE 8000
 
 # Uruchamiamy aplikację
