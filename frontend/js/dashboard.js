@@ -7,7 +7,7 @@ import { updateStatsCards, updateTable, showDetailsModal } from './ui.js';
 
 let countdownInterval = null;
 let pollingInterval = null;
-let scheduleCheckInProgress = false; // NOWE: Flaga blokująca wielokrotne zapytania
+let scheduleCheckInProgress = false; 
 
 export async function loadDashboardData() {
     try {
@@ -16,7 +16,6 @@ export async function loadDashboardData() {
         
         state.allResults = await fetchResults();
 
-        // Zapisujemy czas następnego testu zwrócony przez backend
         if (settingsData.next_run_time) {
             state.nextExplicitRunTime = settingsData.next_run_time;
         }
@@ -139,7 +138,10 @@ export async function handleManualTest() {
     const btn = document.getElementById('triggerTestBtn');
     const serverSelect = document.getElementById('serverSelect');
     const serverId = serverSelect.value === 'null' ? null : parseInt(serverSelect.value);
-    btn.disabled = true; btn.classList.add('is-loading'); 
+    
+    // ZMIANA: Blokada przycisku
+    btn.disabled = true; 
+    btn.classList.add('is-loading'); 
     showToast('toastTestInProgress', 'info');
     
     const prevTimestamp = state.allResults[0]?.timestamp;
@@ -173,15 +175,20 @@ export async function handleManualTest() {
                 }
                 
                 renderData();
-                btn.disabled = false; btn.classList.remove('is-loading');
+                // ZMIANA: Odblokowanie przycisku po sukcesie
+                btn.disabled = false; 
+                btn.classList.remove('is-loading');
             } else if (attempts > 25) {
                 clearInterval(pollingInterval); 
                 showToast('toastTestTimeout', 'error');
-                btn.disabled = false; btn.classList.remove('is-loading');
+                // ZMIANA: Odblokowanie przycisku po timeoutcie
+                btn.disabled = false; 
+                btn.classList.remove('is-loading');
             }
         }, 3000);
     } catch (e) { 
         showToast('toastTestError', 'error'); 
+        // ZMIANA: Odblokowanie przycisku po błędzie
         btn.disabled = false; 
         btn.classList.remove('is-loading'); 
     }
@@ -309,7 +316,6 @@ function startNextRunCountdown() {
 
     countdownEl.style.display = 'block';
     
-    // ZMIANA: Funkcja asynchroniczna, aby móc pytać API
     const updateTimer = async () => {
         try {
             const lang = translations[state.currentLang];
@@ -334,14 +340,10 @@ function startNextRunCountdown() {
             if (diff <= 0) {
                 countdownEl.textContent = `${prefix} 00:00:00`;
                 
-                // NOWE: Jeśli czas minął (test powinien był ruszyć), a my nadal stoimy na 0,
-                // sprawdzamy backend czy harmonogram się zmienił (np. zresetował po błędzie).
-                // Robimy to po 5 sekundach opóźnienia (diff < -5000), aby dać czas na wykonanie testu.
                 if (diff < -5000 && !scheduleCheckInProgress) {
                     scheduleCheckInProgress = true;
                     try {
                         const s = await fetchSettings();
-                        // Jeśli backend podaje nową datę (inną niż mamy), aktualizujemy stan
                         if (s.next_run_time && s.next_run_time !== state.nextExplicitRunTime) {
                             console.log("Sync: Harmonogram zmieniony w tle, aktualizacja licznika.");
                             state.nextExplicitRunTime = s.next_run_time;
@@ -350,9 +352,7 @@ function startNextRunCountdown() {
                             if(nextRunEl) nextRunEl.textContent = getNextRunTimeText();
                         }
                     } catch(e) {
-                        // Cichy błąd, spróbujemy w następnej pętli
                     } finally {
-                        // Backoff na 10 sekund, żeby nie spamować API
                         setTimeout(() => { scheduleCheckInProgress = false; }, 10000);
                     }
                 }

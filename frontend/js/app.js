@@ -21,6 +21,30 @@ function cleanUrl() {
     }
 }
 
+// Funkcja aktualizująca tytuł strony (<title>)
+function updatePageTitle() {
+    const lang = translations[state.currentLang];
+    const path = window.location.pathname;
+    
+    let pageName = "";
+    
+    if (path.includes('/settings')) {
+        pageName = lang.navSettings;
+    } else if (path.includes('/backup')) {
+        pageName = lang.navBackup;
+    } else if (path.includes('/login') || document.getElementById('loginForm')) {
+        pageName = lang.loginTitle;
+    } else {
+        // Dashboard / Strona główna
+        document.title = "SpeedtestLog";
+        return;
+    }
+    
+    if (pageName) {
+        document.title = `${pageName} - SpeedtestLog`;
+    }
+}
+
 async function initializeApp() {
     cleanUrl();
 
@@ -41,6 +65,7 @@ async function initializeApp() {
 
     setLanguage(initialLang); 
     updateLangButtonUI(initialLang); 
+    updatePageTitle(); 
     
     const savedTheme = localStorage.getItem('theme');
     if (!savedTheme || savedTheme === 'dark') setNightMode(true); 
@@ -144,6 +169,7 @@ async function syncGlobalSettings() {
         if (s.app_language && s.app_language !== state.currentLang) {
              setLanguage(s.app_language);
              updateLangButtonUI(s.app_language);
+             updatePageTitle(); 
              if (window.location.pathname.includes('backup')) loadBackupPage();
              if (window.location.pathname.includes('settings')) loadSettingsToForm();
         }
@@ -184,26 +210,21 @@ async function handleDashboardNavigation() {
     if (window.location.pathname.includes('settings')) return;
     if (window.location.pathname.includes('backup')) return;
 
-    // ZMIANA: Pobieranie sekcji z parametru URL ?section=...
     const urlParams = new URLSearchParams(window.location.search);
     const section = urlParams.get('section') || 'dashboard';
 
     await loadDashboardData();
     
-    // Aktualizacja aktywnego linku w menu
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
-        // Sprawdzamy czy href linku zawiera szukaną sekcję
         const href = link.getAttribute('href');
         if (href && href.includes(`section=${section}`)) {
             link.classList.add('active');
         } else if (section === 'dashboard' && (href === '/' || href === '/?section=dashboard')) {
-            // Fallback dla dashboardu
             link.classList.add('active');
         }
     });
 
-    // Przewijanie do sekcji
     if (section && section !== 'dashboard') {
         setTimeout(() => {
             const targetElement = document.getElementById(section);
@@ -241,12 +262,10 @@ function setupGlobalEventListeners() {
     });
     if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 
-    // Obsługa kliknięć w menu (SPA behavior dla Dashboardu)
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
         link.addEventListener('click', (e) => {
             const href = link.getAttribute('href');
             
-            // Jeśli to link wewnętrzny dashboardu (z parametrem ?section) i jesteśmy na dashboardzie
             if (href.includes('?section=') && !window.location.pathname.includes('settings') && !window.location.pathname.includes('backup') && !window.location.pathname.includes('login')) {
                 e.preventDefault();
                 const url = new URL(href, window.location.origin);
@@ -254,7 +273,6 @@ function setupGlobalEventListeners() {
                 handleDashboardNavigation();
                 if (window.innerWidth <= 992) closeSidebar();
             } else {
-                // Dla innych stron (Settings/Backup) pozwól na normalną nawigację
                 if (window.innerWidth <= 992) closeSidebar();
             }
         });
@@ -276,7 +294,8 @@ function setupGlobalEventListeners() {
         li.addEventListener('click', async () => {
             const newLang = li.dataset.lang;
             setLanguage(newLang);            
-            updateLangButtonUI(newLang);     
+            updateLangButtonUI(newLang);
+            updatePageTitle(); 
             showToast('toastLangChanged', 'success');
             
             if (!document.getElementById('loginForm')) {

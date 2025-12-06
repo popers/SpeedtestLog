@@ -111,14 +111,17 @@ def run_speed_test_and_save(server_id=None, forced_lang=None):
         up_mbps = round(data.get("upload", {}).get("bandwidth", 0) * 8 / 1_000_000, 2)
         ping_ms = data.get("ping", {}).get("latency", 0)
         jitter_ms = data.get("ping", {}).get("jitter", 0)
+        server_name = data.get("server", {}).get("name", "Unknown")
+        # ZMIANA: Pobranie lokalizacji serwera
+        server_location = data.get("server", {}).get("location", "")
         
         res = SpeedtestResult(
             id=str(uuid.uuid4()), timestamp=datetime.now(),
             ping=ping_ms, jitter=jitter_ms,
             download=down_mbps,
             upload=up_mbps,
-            server_id=data.get("server", {}).get("id"), server_name=data.get("server", {}).get("name"),
-            server_location=data.get("server", {}).get("location"), result_url=data.get("result", {}).get("url"),
+            server_id=data.get("server", {}).get("id"), server_name=server_name,
+            server_location=server_location, result_url=data.get("result", {}).get("url"),
             isp=data.get("isp"), client_ip=data.get("interface", {}).get("externalIp"),
             ping_low=data.get("ping", {}).get("low"),
             download_latency_low=data.get("download", {}).get("latency", {}).get("low"),
@@ -131,8 +134,15 @@ def run_speed_test_and_save(server_id=None, forced_lang=None):
         logging.info(get_log("test_result", res.download))
         
         trans = NOTIF_TRANS.get(app_lang, NOTIF_TRANS["pl"])
-        # ZMIANA: Przekazanie parametru jitter do szablonu
-        msg = trans["speedtest_body"].format(dl=down_mbps, ul=up_mbps, ping=ping_ms, jitter=jitter_ms)
+        # ZMIANA: Przekazanie nazwy serwera oraz lokalizacji do powiadomienia
+        msg = trans["speedtest_body"].format(
+            dl=down_mbps, 
+            ul=up_mbps, 
+            ping=ping_ms, 
+            jitter=jitter_ms,
+            server=server_name,
+            location=server_location
+        )
         title = trans["speedtest_title"]
         send_system_notification(title, msg, "speedtest")
         

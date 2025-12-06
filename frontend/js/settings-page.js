@@ -89,7 +89,8 @@ export async function loadSettingsToForm() {
             if(oidcClientSecret) oidcClientSecret.value = oidc.client_secret || ''; 
             if(oidcDiscovery) oidcDiscovery.value = oidc.discovery_url || '';
             
-            if(oidcRedirect) oidcRedirect.textContent = window.location.origin + '/api/auth/oidc/callback';
+            // ZMIANA: Ustawiamy wartość w input, a nie textContent w span
+            if(oidcRedirect) oidcRedirect.value = window.location.origin + '/api/auth/oidc/callback';
         }
 
     } catch (e) {
@@ -127,7 +128,6 @@ export async function loadNotificationSettingsToForm() {
             document.getElementById('fieldNtfy').style.display = val === 'ntfy' ? 'block' : 'none';
             document.getElementById('fieldPushover').style.display = val === 'pushover' ? 'block' : 'none';
             
-            // NOWE: Pokaż/ukryj hint dla przeglądarki
             const browserHint = document.getElementById('notifBrowserHint');
             if (browserHint) browserHint.style.display = val === 'browser' ? 'block' : 'none';
             
@@ -266,6 +266,25 @@ export function initSettingsListeners() {
                 pushInput.type = 'password';
                 togglePushBtn.textContent = 'visibility'; 
             }
+        });
+    }
+
+    // NOWE: Obsługa kopiowania Redirect URI
+    const copyBtn = document.getElementById('copyRedirectBtn');
+    const redirectInput = document.getElementById('oidcRedirectUri');
+    if (copyBtn && redirectInput) {
+        copyBtn.addEventListener('click', () => {
+            // Zaznacz tekst
+            redirectInput.select();
+            redirectInput.setSelectionRange(0, 99999); // Dla urządzeń mobilnych
+            
+            // Kopiuj do schowka
+            navigator.clipboard.writeText(redirectInput.value).then(() => {
+                showToast('toastCopied', 'success');
+            }).catch(err => {
+                console.error("Copy failed", err);
+                showToast('toastSettingsError', 'error');
+            });
         });
     }
 

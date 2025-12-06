@@ -18,14 +18,14 @@
             box-sizing: border-box;
         }
 
-        /* Nadpisanie stylów nagłówków kart, aby pasowały do backup.html */
         .settings-card h3 {
-            color: var(--text-color); /* Tekst neutralny, kolor tylko w ikonie */
-            text-transform: none;     /* Normalna wielkość liter */
+            color: var(--text-color);
+            text-transform: none;
             letter-spacing: normal;
             font-weight: 500;
         }
 
+        /* Responsive Grid i Inputy */
         @media (min-width: 993px) {
             .settings-card input:not([type="checkbox"]):not([type="radio"]),
             .settings-card select {
@@ -36,6 +36,13 @@
                 max-width: 100% !important;
                 width: 100%;
             }
+            
+            /* ZMIANA: Dodano ograniczenie szerokości dla wrappera, aby pasował do inputa */
+            .settings-card .password-toggle-wrapper {
+                max-width: 400px;
+                width: 100%;
+            }
+            
             .responsive-grid .control-group input,
             .responsive-grid .password-toggle-wrapper,
             .responsive-grid .password-toggle-wrapper input {
@@ -57,30 +64,36 @@
             }
         }
 
+        /* POPRAWIONE STYLE WRAPPERA - Ikona wewnątrz pola */
         .password-toggle-wrapper {
             position: relative;
             width: 100%;
-            display: flex; 
-            align-items: center;
+            display: block; /* Zmiana z flex na block, by lepiej kontrolować szerokość */
         }
         
         .password-toggle-wrapper input {
-            width: 100%;
-            padding-right: 40px; 
+            width: 100% !important; /* Wymuszamy pełną szerokość kontenera */
+            padding-right: 45px !important; /* Miejsce na ikonę */
+            box-sizing: border-box !important;
             height: 42px; 
+            display: block;
         }
         
         .toggle-icon {
             position: absolute;
-            right: 10px;
-            height: 100%;
-            display: flex;
-            align-items: center;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
             cursor: pointer;
             color: var(--text-color-secondary);
             user-select: none;
             z-index: 5;
             font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
         }
         .toggle-icon:hover {
             color: var(--primary-color);
@@ -139,7 +152,7 @@
             </nav>
             <div class="sidebar-footer">
                 <button id="logoutBtn" class="logout-btn"><span class="material-symbols-rounded icon">logout</span> <span data-i18n-key="logout">Wyloguj</span></button>
-                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v1.0</small></div>
+                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v0.1</small></div>
             </div>
         </aside>
 
@@ -200,8 +213,11 @@
                         </div>
 
                         <div style="margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 10px;">
-                            <label style="font-size: 0.85rem;" data-i18n-key="oidcRedirect">Redirect URI (Callback) do wpisania u dostawcy:</label>
-                            <span id="oidcRedirectUri" class="code-block">.../api/auth/oidc/callback</span>
+                            <label style="font-size: 0.85rem; margin-bottom: 0.5rem; display: block;" data-i18n-key="oidcRedirect">Redirect URI (Callback) do wpisania u dostawcy:</label>
+                            <div class="password-toggle-wrapper">
+                                <input type="text" id="oidcRedirectUri" readonly style="font-family: monospace; font-size: 0.9rem; cursor: default; color: var(--text-color-secondary); background-color: var(--bg-color);">
+                                <span id="copyRedirectBtn" class="material-symbols-rounded toggle-icon" title="Kopiuj">content_copy</span>
+                            </div>
                         </div>
                     </div>
 

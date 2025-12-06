@@ -578,6 +578,61 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
     .table-header h2 {
         max-width: calc(100% - 140px);
     }
+
+    /* NOWE: Optymalizacja tabeli dla mobile (Kompaktowa) */
+    .table-wrapper {
+        /* Rozszerz tabelę poza standardowy padding kontenera (negatywne marginesy) */
+        margin-left: -1rem; 
+        margin-right: -1rem;
+        width: calc(100% + 2rem);
+        border-radius: 0; /* Brak zaokrągleń na krawędziach */
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Zmniejszenie paddingów i czcionek w komórkach */
+    th, td {
+        padding: 8px 4px;
+        font-size: 0.75rem; /* ~12px */
+    }
+
+    /* Specyficzne dla nagłówków */
+    th {
+        font-size: 0.7rem;
+        white-space: nowrap; /* Trzymaj nagłówki w jednej linii jeśli to możliwe */
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    /* Pierwsza kolumna (checkbox) - odsuń trochę od krawędzi ekranu */
+    th:first-child, td:first-child {
+        padding-left: 0.75rem; /* Zmniejszono z 1rem dla oszczędności miejsca */
+        padding-right: 0;
+        width: 26px; /* Lekko zwężone */
+    }
+
+    /* Skalowanie checkboxów dla lepszego wyglądu na mobile */
+    input[type="checkbox"] {
+        transform: scale(0.8); /* Zmniejszenie do 80% */
+        margin: 0;
+        vertical-align: middle;
+        position: relative;
+        top: 1px;
+    }
+
+    /* Ostatnia kolumna (link) - odsuń od prawej */
+    td:last-child {
+        padding-right: 1rem;
+        text-align: center;
+    }
+
+    /* Ikona linku mniejsza */
+    .result-link-icon .material-symbols-rounded {
+        font-size: 18px;
+    }
 }
 
 /* Settings Card */

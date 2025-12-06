@@ -63,13 +63,14 @@ def initialize_db(app_state, max_retries=10, delay=5):
                     connection.execute(text("SELECT app_language FROM app_settings LIMIT 1"))
                 except Exception:
                     logging.info(get_log("db_mig_lang"))
-                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN app_language VARCHAR(5) DEFAULT 'pl'"))
+                    # ZMIANA: Domyślny język w migracji ustawiony na 'en'
+                    connection.execute(text("ALTER TABLE app_settings ADD COLUMN app_language VARCHAR(5) DEFAULT 'en'"))
                     connection.commit()
 
                 try:
                     connection.execute(text("SELECT chart_color_lat_dl_low FROM app_settings LIMIT 1"))
                 except Exception:
-                    logging.info("🔧 Migration: Adding latency chart color columns...")
+                    logging.info("肌 Migration: Adding latency chart color columns...")
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_dl_low VARCHAR(20) DEFAULT NULL"))
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_dl_high VARCHAR(20) DEFAULT NULL"))
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_lat_ul_low VARCHAR(20) DEFAULT NULL"))
@@ -79,14 +80,14 @@ def initialize_db(app_state, max_retries=10, delay=5):
                 try:
                     connection.execute(text("SELECT chart_color_ping_watchdog FROM app_settings LIMIT 1"))
                 except Exception:
-                    logging.info("🔧 Migration: Adding chart_color_ping_watchdog column...")
+                    logging.info("肌 Migration: Adding chart_color_ping_watchdog column...")
                     connection.execute(text("ALTER TABLE app_settings ADD COLUMN chart_color_ping_watchdog VARCHAR(20) DEFAULT NULL"))
                     connection.commit()
 
                 try:
                     connection.execute(text("SELECT display_name FROM oidc_settings LIMIT 1"))
                 except Exception:
-                    logging.info("🔧 Migration: Adding display_name to oidc_settings...")
+                    logging.info("肌 Migration: Adding display_name to oidc_settings...")
                     try:
                         connection.execute(text("ALTER TABLE oidc_settings ADD COLUMN display_name VARCHAR(50) DEFAULT 'SSO Login'"))
                         connection.commit()
@@ -96,7 +97,7 @@ def initialize_db(app_state, max_retries=10, delay=5):
                 try:
                     connection.execute(text("SELECT discovery_url FROM oidc_settings LIMIT 1"))
                 except Exception:
-                    logging.info("🔧 Migration: Adding discovery_url to oidc_settings...")
+                    logging.info("肌 Migration: Adding discovery_url to oidc_settings...")
                     try:
                         connection.execute(text("ALTER TABLE oidc_settings ADD COLUMN discovery_url VARCHAR(500) DEFAULT NULL"))
                         connection.commit()
@@ -107,7 +108,7 @@ def initialize_db(app_state, max_retries=10, delay=5):
                 try:
                     connection.execute(text("SELECT pushover_user_key FROM notification_settings LIMIT 1"))
                 except Exception:
-                    logging.info("🔧 Migration: Adding Pushover columns to notification_settings...")
+                    logging.info("肌 Migration: Adding Pushover columns to notification_settings...")
                     try:
                         connection.execute(text("ALTER TABLE notification_settings ADD COLUMN pushover_user_key VARCHAR(50) DEFAULT NULL"))
                         connection.execute(text("ALTER TABLE notification_settings ADD COLUMN pushover_api_token VARCHAR(50) DEFAULT NULL"))
@@ -128,7 +129,7 @@ def initialize_db(app_state, max_retries=10, delay=5):
                             if not oidc:
                                 session.add(models.OIDCSettings(id=1, enabled=False, display_name="Zaloguj przez SSO"))
                                 session.commit()
-                                logging.info("🔧 Migration: Initializing OIDC settings record...")
+                                logging.info("肌 Migration: Initializing OIDC settings record...")
                         except Exception as e:
                              logging.warning(f"OIDC record init warning: {e}")
 

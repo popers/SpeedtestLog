@@ -9,8 +9,8 @@ os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'app.log')
 SERVERS_FILE = 'data/servers.json'
 
-# Pobranie języka aplikacji z ENV (domyślnie polski)
-APP_LANG = os.getenv("APP_LANG", "pl").lower()
+# Pobranie języka aplikacji z ENV (domyślnie angielski) - ZMIANA na "en"
+APP_LANG = os.getenv("APP_LANG", "en").lower()
 
 DB_USER = os.getenv("DB_USERNAME")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
@@ -57,11 +57,11 @@ def setup_logging():
     logging.getLogger("uvicorn.access").addHandler(file_handler)
 
 # --- Słownik Tłumaczeń Powiadomień ---
-# ZMIANA: Dodano {jitter} do szablonów powiadomień
+# ZMIANA: Dodano {server} i {location} do szablonów powiadomień
 NOTIF_TRANS = {
     "pl": {
-        "speedtest_title": "🚀 Nowy wynik Speedtest",
-        "speedtest_body": "Pobieranie: {dl} Mbps, Wysyłanie: {ul} Mbps, Ping: {ping} ms, Jitter: {jitter} ms.",
+        "speedtest_title": "🚀 Nowy wynik SpeedtestLog",
+        "speedtest_body": "Pobieranie: {dl} Mbps, Wysyłanie: {ul} Mbps, Ping: {ping} ms, Jitter: {jitter} ms.\nSerwer: {server} ({location})",
         "watchdog_up_title": "🟢 Watchdog ONLINE",
         "watchdog_up_body": "Ping Watchdog: Cel {target} jest teraz ONLINE.",
         "watchdog_down_title": "🔴 Watchdog OFFLINE",
@@ -70,8 +70,8 @@ NOTIF_TRANS = {
         "test_body": "To jest testowe powiadomienie ze SpeedtestLog. 🚀"
     },
     "en": {
-        "speedtest_title": "🚀 New Speedtest Result",
-        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms, Jitter: {jitter} ms.",
+        "speedtest_title": "🚀 New SpeedtestLog Result",
+        "speedtest_body": "Download: {dl} Mbps, Upload: {ul} Mbps, Ping: {ping} ms, Jitter: {jitter} ms.\nServer: {server} ({location})",
         "watchdog_up_title": "🟢 Watchdog ONLINE",
         "watchdog_up_body": "Ping Watchdog: Target {target} is now ONLINE.",
         "watchdog_down_title": "🔴 Watchdog OFFLINE",

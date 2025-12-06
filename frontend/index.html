@@ -9,6 +9,14 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="manifest" href="manifest.json">
+    <style>
+        /* ZMIANA: Styl dla zablokowanego przycisku */
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body>
     <div class="app-wrapper">
@@ -62,7 +70,7 @@
             </nav>
             <div class="sidebar-footer">
                 <button id="logoutBtn" class="logout-btn"><span class="material-symbols-rounded icon">logout</span> <span data-i18n-key="logout">Wyloguj</span></button>
-                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v1.0</small></div>
+                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v0.1</small></div>
             </div>
         </aside>
 

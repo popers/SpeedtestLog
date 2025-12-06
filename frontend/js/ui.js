@@ -6,7 +6,6 @@ import { parseISOLocally, convertValue, getUnitLabel } from './utils.js';
 
 export function updateLangButtonUI(lang) {
     const currentLangText = document.getElementById('currentLangText');
-    // ZMIANA: Usunięto logikę podmieniania flagi (img src), teraz tylko tekst
     if (currentLangText) {
         if (lang === 'pl') {
             currentLangText.textContent = 'PL';
@@ -104,7 +103,6 @@ function updateSingleStatCard(compareEl, latestVal, prevVal, positiveTrend) {
     let trendClass = 'neutral';
     
     if (Math.abs(percent) < 0.01) {
-        // ZMIANA: Usunięto inline style font-size, teraz steruje tym CSS
         compareEl.innerHTML = `<span class="material-symbols-rounded">remove</span> ${lang.statsNoChange}`;
     } else {
         let isGoodChange = false;
@@ -113,21 +111,16 @@ function updateSingleStatCard(compareEl, latestVal, prevVal, positiveTrend) {
         
         const prefix = isGoodChange ? lang.statsFaster : lang.statsSlower;
         
-        // ZMIANA: Ikony strzałek z Material Symbols
-        // Logika odwrócenia strzałek dla Pingu/Jittera (positiveTrend === 'negative')
         let iconName;
         
         if (positiveTrend === 'negative') {
-            // Dla Ping/Jitter: wzrost wartości (>0) to strzałka w dół, spadek (<0) to w górę
             iconName = (percent > 0) ? 'arrow_downward' : 'arrow_upward';
         } else {
-            // Standardowo: wzrost (>0) to w górę, spadek (<0) to w dół
             iconName = (percent > 0) ? 'arrow_upward' : 'arrow_downward';
         }
         
         trendClass = isGoodChange ? 'positive' : 'negative';
         
-        // ZMIANA: Usunięto inline style font-size, aby CSS (components.css) zarządzał wielkością
         compareEl.innerHTML = `
             <span class="material-symbols-rounded">${iconName}</span>
             <span>${Math.abs(percent).toFixed(2)}% ${prefix}</span>
@@ -150,7 +143,6 @@ export function showDetailsModal(resultId) {
     const uploadValue = convertValue(result.upload, state.currentUnit).toFixed(2);
     const unitLabel = getUnitLabel(state.currentUnit);
 
-    // Helper do formatowania danych latency (które mogą być null)
     const formatLatency = (low, high) => {
         if (low === null && high === null) return lang.detailsNoData;
         const lowVal = low !== null ? `${low.toFixed(2)} ms` : '-';
@@ -158,8 +150,6 @@ export function showDetailsModal(resultId) {
         return `Min: ${lowVal} / Max: ${highVal}`;
     };
 
-    // Dane z Ookla (wcześniej jako "Utrata Pakietów" w kontekście PING Watchdog)
-    // Zostają zamienione na metryki opóźnień Ookla (ping_low, download/upload latency high/low)
     const content = `
         <p style="text-align: center;"><strong>${lang.detailsTime}</strong> ${timestamp}</p>
         <hr style="border-color: var(--border-color); margin: 10px 0;">
@@ -192,7 +182,7 @@ export function showDetailsModal(resultId) {
             ${result.client_ip ? `<p style="margin: 5px 0;"><strong>${lang.detailsClient}</strong> ${result.client_ip}</p>` : ''}
             ${result.isp ? `<p style="margin: 5px 0;"><strong>${lang.detailsISP}</strong> ${result.isp}</p>` : ''}
         </div>
-        ${result.result_url ? `<p style="margin: 10px 0;"><strong>${lang.detailsURL}</strong> <a href="${result.result_url}" target="_blank" style="color: var(--primary-color);">Otwórz pełny wynik</a></p>` : ''}
+        ${result.result_url ? `<p style="margin: 10px 0;"><strong>${lang.detailsURL}</strong> <a href="${result.result_url}" target="_blank" style="color: var(--primary-color);">${lang.detailsResultLinkText || 'Otwórz pełny wynik'}</a></p>` : ''}
     `;
 
     document.querySelector('#detailsModal h3').textContent = lang.detailsTitle;
@@ -234,10 +224,8 @@ export function renderPagination(totalItems) {
     if (state.currentPage > totalPages) state.currentPage = totalPages;
     if (state.currentPage < 1) state.currentPage = 1;
 
-    // Generowanie przycisków
     paginationNav.innerHTML = '';
     
-    // Przycisk Wstecz (<) - ZMIANA: Użycie ikony
     const btnPrev = document.createElement('button');
     btnPrev.className = 'page-btn';
     btnPrev.innerHTML = '<span class="material-symbols-rounded">chevron_left</span>';
@@ -245,7 +233,6 @@ export function renderPagination(totalItems) {
     btnPrev.onclick = () => changePage(state.currentPage - 1);
     paginationNav.appendChild(btnPrev);
 
-    // Algorytm wyświetlania numerów (1 ... 4 5 6 ... 10)
     let delta = 1; 
     let range = [];
     let rangeWithDots = [];
@@ -283,7 +270,6 @@ export function renderPagination(totalItems) {
         paginationNav.appendChild(btn);
     });
 
-    // Przycisk Dalej (>) - ZMIANA: Użycie ikony
     const btnNext = document.createElement('button');
     btnNext.className = 'page-btn';
     btnNext.innerHTML = '<span class="material-symbols-rounded">chevron_right</span>';
@@ -294,7 +280,7 @@ export function renderPagination(totalItems) {
 
 function changePage(newPage) {
     state.currentPage = newPage;
-    updateTable(state.allResults); // Note: this will reuse filtered/sorted list from state in renderData
+    updateTable(state.currentFilteredResults || state.allResults);
 }
 
 // --- Table ---
@@ -325,25 +311,21 @@ export function updateTable(results) {
         const row = document.createElement('tr');
         const timestamp = parseISOLocally(res.timestamp); 
         
-        // ZMIANA: Użycie Material Symbols zamiast emoji '🔗'
         const resultLinkHtml = res.result_url ? 
             `<a href="${res.result_url}" target="_blank" class="result-link-icon" title="Speedtest.net">
                 <span class="material-symbols-rounded">open_in_new</span>
              </a>` : '';
         
-        // Ping Color
         let pingClass = '';
         if (res.ping < 20) pingClass = 'text-success';
         else if (res.ping < 100) pingClass = 'text-warning';
         else pingClass = 'text-danger';
 
-        // Jitter Color
         let jitterClass = '';
         if (res.jitter < 10) jitterClass = 'text-success';
         else if (res.jitter < 30) jitterClass = 'text-warning';
         else jitterClass = 'text-danger';
 
-        // Download Color
         let downloadClass = '';
         if (declaredDl > 0) {
             const pct = (res.download / declaredDl) * 100;
@@ -352,7 +334,6 @@ export function updateTable(results) {
             else downloadClass = 'text-danger';
         }
 
-        // Upload Color
         let uploadClass = '';
         if (declaredUl > 0) {
             const pct = (res.upload / declaredUl) * 100;
@@ -394,12 +375,9 @@ export function updateTable(results) {
         const key = th.dataset.i18nKey;
         if(key && lang[key]) {
             let text = lang[key];
-            
-            // ZMIANA: Dodanie wskaźnika sortowania 
             if (th.dataset.sort === state.currentSort.column) {
                 text += state.currentSort.direction === 'asc' ? ' ▲' : ' ▼';
             }
-            
             th.textContent = text;
         }
     });
