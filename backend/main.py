@@ -6,7 +6,7 @@ import uvicorn
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 # Nasze moduły
@@ -74,46 +74,73 @@ app.include_router(results.router)
 app.include_router(settings.router)
 app.include_router(system.router)
 
-@app.get("/")
-async def read_root(request: Request):
-    if not AUTH_ENABLED or request.cookies.get(COOKIE_NAME) == SESSION_SECRET: 
-        response = FileResponse('index.html')
-    else:
-        response = FileResponse('login.html')
-    
-    # ZMIANA: Wyłączamy cache przeglądarki dla głównego widoku
+# --- Pomocnicza funkcja sprawdzania Auth ---
+def is_authenticated(request: Request):
+    if not AUTH_ENABLED:
+        return True
+    return request.cookies.get(COOKIE_NAME) == SESSION_SECRET
+
+def prevent_caching(response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
 
+# --- Routing Stron (Clean URLs) ---
+
+@app.get("/")
+async def read_root(request: Request):
+    # Jeśli użytkownik wejdzie na /, a nie jest zalogowany -> przekieruj na /login
+    if not is_authenticated(request):
+        return RedirectResponse("/login")
+    
+    response = FileResponse('index.html')
+    return prevent_caching(response)
+
+@app.get("/login")
+async def read_login(request: Request):
+    # Jeśli użytkownik jest zalogowany i wchodzi na /login -> przekieruj na /
+    if is_authenticated(request):
+        return RedirectResponse("/")
+        
+    response = FileResponse('login.html')
+    return prevent_caching(response)
+
+@app.get("/settings")
+async def read_settings(request: Request):
+    if not is_authenticated(request):
+        return RedirectResponse("/login")
+    response = FileResponse('settings.html')
+    return prevent_caching(response)
+
+@app.get("/backup")
+async def read_backup(request: Request):
+    if not is_authenticated(request):
+        return RedirectResponse("/login")
+    response = FileResponse('backup.html')
+    return prevent_caching(response)
+
+# --- Obsługa plików statycznych (legacy & assets) ---
+
 @app.get("/{filename}")
 async def read_static(filename: str, request: Request):
-    allowed = ["index.html", "login.html", "backup.html", "settings.html", "manifest.json", "favicon.ico", "logo.png", "speedtest.png"]
-    if filename not in allowed:
-        if os.path.exists(f"/app/{filename}"): return FileResponse(f"/app/{filename}")
-        raise HTTPException(404)
+    # Lista dozwolonych plików w głównym katalogu
+    allowed_assets = ["manifest.json", "favicon.ico", "logo.png", "speedtest.png", "openid.png"]
     
-    response = None
-    
-    # Sprawdzamy auth dla plików HTML
-    if AUTH_ENABLED and request.cookies.get(COOKIE_NAME) != SESSION_SECRET and filename in ["index.html", "backup.html", "settings.html"]:
-        # Nieautoryzowany: zwracamy login.html
-        response = FileResponse('login.html')
-    elif os.path.exists(f"/app/{filename}"):
-        # Autoryzowany lub plik publiczny
-        response = FileResponse(f"/app/{filename}")
-    else:
-        raise HTTPException(404)
+    # Obsługa legacy dla .html (gdyby ktoś wpisał ręcznie index.html)
+    if filename == "index.html":
+        return RedirectResponse("/")
+    if filename == "login.html":
+        return RedirectResponse("/login")
+    if filename == "settings.html":
+        return RedirectResponse("/settings")
+    if filename == "backup.html":
+        return RedirectResponse("/backup")
 
-    # ZMIANA: Wyłączamy cache dla wszystkich plików HTML
-    # Dzięki temu przeglądarka zawsze zapyta serwer o aktualną wersję (zalogowany/niezalogowany)
-    if filename.endswith(".html"):
-        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-        
-    return response
+    if filename in allowed_assets and os.path.exists(f"/app/{filename}"):
+        return FileResponse(f"/app/{filename}")
+    
+    raise HTTPException(404)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

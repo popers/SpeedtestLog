@@ -12,25 +12,29 @@ import { loadBackupPage, initBackupListeners, updateBackupStatusUI } from './bac
 
 let resizeTimer = null;
 
+// Funkcja czyszcząca URL z index.html i innych artefaktów
+function cleanUrl() {
+    const path = window.location.pathname;
+    if (path.endsWith('index.html')) {
+        const newPath = path.substring(0, path.length - 'index.html'.length);
+        window.history.replaceState({}, document.title, newPath + window.location.search);
+    }
+}
+
 async function initializeApp() {
-    // 1. Sprawdź czy wracamy z logowania OIDC (język zapisany w sessionStorage przed przekierowaniem)
+    cleanUrl();
+
+    // 1. Sprawdź czy wracamy z logowania OIDC
     const postLoginLang = sessionStorage.getItem('post_login_lang');
     let initialLang;
 
     if (postLoginLang) {
         console.log("Applying post-login language preference:", postLoginLang);
         initialLang = postLoginLang;
-        // Wyczyść flagę, żeby nie nadpisywała przy kolejnych odświeżeniach
         sessionStorage.removeItem('post_login_lang');
-        
-        // Zapisz preferencję od razu w localStorage (dla UI) i na serwerze (dla spójności)
         localStorage.setItem('language', initialLang);
-        
-        // Próba zapisu na serwerze (wymaga bycia zalogowanym, co w tym momencie powinno już być prawdą)
-        // Robimy to w tle, nie blokując renderowania
         updateSettings({ app_language: initialLang }).catch(e => console.warn("Failed to sync lang to server:", e));
     } else {
-        // Standardowe ładowanie: localStorage lub domyślny z przeglądarki
         const savedLang = localStorage.getItem('language') || navigator.language.split('-')[0];
         initialLang = translations[savedLang] ? savedLang : 'pl';
     }
@@ -42,7 +46,14 @@ async function initializeApp() {
     if (!savedTheme || savedTheme === 'dark') setNightMode(true); 
     else setNightMode(false);
 
-    if (document.getElementById('loginForm')) {
+    // Wykrywanie strony na podstawie ścieżki (bez rozszerzenia .html)
+    const path = window.location.pathname;
+    const isLoginPage = path.includes('/login') || document.getElementById('loginForm');
+    const isSettingsPage = path.includes('/settings');
+    const isBackupPage = path.includes('/backup');
+    const isDashboard = !isLoginPage && !isSettingsPage && !isBackupPage;
+
+    if (isLoginPage) {
         // --- LOGIKA EKRANU LOGOWANIA ---
         try {
             const urlParams = new URLSearchParams(window.location.search);
@@ -60,8 +71,6 @@ async function initializeApp() {
                 if(oidcContainer) oidcContainer.style.display = 'block';
                 if(oidcBtn) {
                     oidcBtn.addEventListener('click', () => {
-                        // ZMIANA: Zapisz wybrany język do sessionStorage przed przekierowaniem
-                        // Dzięki temu po powrocie z OIDC będziemy wiedzieć, co wybrał użytkownik
                         sessionStorage.setItem('post_login_lang', state.currentLang);
                         window.location.href = '/api/auth/oidc/login';
                     });
@@ -82,12 +91,11 @@ async function initializeApp() {
         
         startWatchdogPolling();
         window.addEventListener('speedtest-data-updated', () => {
-            if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+            if (isDashboard) {
                 loadDashboardData();
             }
         });
         
-        // Synchronizacja ustawień (w tym języka) z serwera
         syncGlobalSettings();
     }
     
@@ -113,19 +121,18 @@ async function initializeApp() {
     
     setupGlobalEventListeners();
     
-    const page = window.location.pathname.split("/").pop();
-    
-    if (page === 'settings.html') {
+    if (isSettingsPage) {
         loadSettingsToForm();
         loadNotificationSettingsToForm();
         initSettingsListeners();
-    } else if (page === 'backup.html') {
+    } else if (isBackupPage) {
         loadBackupPage();
         initBackupListeners();
-    } else if (page === 'index.html' || page === '' || page === '/') {
+    } else if (isDashboard) {
         await handleDashboardNavigation();
         initDashboardListeners();
-        window.addEventListener('hashchange', handleDashboardNavigation);
+        // Nasłuchuj zmian w historii (wstecz/dalej) dla parametrów URL
+        window.addEventListener('popstate', handleDashboardNavigation);
     }
 }
 
@@ -134,29 +141,11 @@ async function syncGlobalSettings() {
         const s = await fetchSettings();
         applyColorsToCSS(s);
 
-        // Jeśli właśnie zalogowaliśmy się przez OIDC (postLoginLang obsłużony w initializeApp),
-        // to lokalny język jest już poprawny i wysłany na serwer.
-        // Tutaj obsługujemy sytuację, gdy NIE było logowania (zwykłe odświeżenie strony),
-        // wtedy język z serwera ma priorytet, aby zachować spójność między urządzeniami.
-        
-        // Sprawdzamy czy język z serwera różni się od obecnego I czy nie był on przed chwilą ustawiony ręcznie.
-        // (W tym prostym modelu zakładamy, że jeśli initializeApp ustawił język, to jest on "świeży")
-        
         if (s.app_language && s.app_language !== state.currentLang) {
-             // Dodatkowe zabezpieczenie: jeśli w localStorage mamy coś innego niż serwer, 
-             // to znaczy że zmieniliśmy to lokalnie lub serwer został zaktualizowany z innego urządzenia.
-             // Przyjmujemy strategię: Serwer jest źródłem prawdy przy starcie, chyba że to pierwsze logowanie OIDC.
-             
-             // Ale musimy uważać, żeby nie nadpisać języka ustawionego przez initializeApp w przypadku OIDC.
-             // initializeApp wykonuje się przed syncGlobalSettings.
-             // Jeśli initializeApp wykrył post_login_lang, to wysłał updateSettings.
-             // fetchSettings mogło pobrać stare ustawienia zanim updateSettings się zapisało.
-             
-             // Dlatego tutaj robimy tak:
              setLanguage(s.app_language);
              updateLangButtonUI(s.app_language);
-             if (window.location.pathname.includes('backup.html')) loadBackupPage();
-             if (window.location.pathname.includes('settings.html')) loadSettingsToForm();
+             if (window.location.pathname.includes('backup')) loadBackupPage();
+             if (window.location.pathname.includes('settings')) loadSettingsToForm();
         }
 
     } catch (e) { console.log("Could not load global settings"); }
@@ -192,25 +181,36 @@ function applyColorsToCSS(settings) {
 
 async function handleDashboardNavigation() {
     if (document.getElementById('loginForm')) return;
-    if (window.location.pathname.includes('settings.html')) return;
-    if (window.location.pathname.includes('backup.html')) return;
+    if (window.location.pathname.includes('settings')) return;
+    if (window.location.pathname.includes('backup')) return;
 
-    const hash = window.location.hash || '#dashboard';
+    // ZMIANA: Pobieranie sekcji z parametru URL ?section=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const section = urlParams.get('section') || 'dashboard';
+
     await loadDashboardData();
     
-    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-    let activeLink = document.querySelector(`.nav-link[href="index.html${hash}"]`);
-    if(!activeLink && hash === '#dashboard') activeLink = document.querySelector(`.nav-link[href="index.html#dashboard"]`);
-    if(activeLink) activeLink.classList.add('active');
+    // Aktualizacja aktywnego linku w menu
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        // Sprawdzamy czy href linku zawiera szukaną sekcję
+        const href = link.getAttribute('href');
+        if (href && href.includes(`section=${section}`)) {
+            link.classList.add('active');
+        } else if (section === 'dashboard' && (href === '/' || href === '/?section=dashboard')) {
+            // Fallback dla dashboardu
+            link.classList.add('active');
+        }
+    });
 
-    if (hash && hash !== '#dashboard') {
+    // Przewijanie do sekcji
+    if (section && section !== 'dashboard') {
         setTimeout(() => {
-            const targetId = hash.substring(1);
-            const targetElement = document.getElementById(targetId);
+            const targetElement = document.getElementById(section);
             const scrollContainer = document.querySelector('.content-scroll');
             if (targetElement && scrollContainer) targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 150); 
-    } else if (hash === '#dashboard') {
+    } else {
         const scrollContainer = document.querySelector('.content-scroll');
         if(scrollContainer) scrollContainer.scrollTo({ top: 0, behavior: 'auto' });
     }
@@ -241,9 +241,22 @@ function setupGlobalEventListeners() {
     });
     if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 
+    // Obsługa kliknięć w menu (SPA behavior dla Dashboardu)
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
-        link.addEventListener('click', () => {
-            if (window.innerWidth <= 992) closeSidebar();
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            
+            // Jeśli to link wewnętrzny dashboardu (z parametrem ?section) i jesteśmy na dashboardzie
+            if (href.includes('?section=') && !window.location.pathname.includes('settings') && !window.location.pathname.includes('backup') && !window.location.pathname.includes('login')) {
+                e.preventDefault();
+                const url = new URL(href, window.location.origin);
+                window.history.pushState({}, '', url);
+                handleDashboardNavigation();
+                if (window.innerWidth <= 992) closeSidebar();
+            } else {
+                // Dla innych stron (Settings/Backup) pozwól na normalną nawigację
+                if (window.innerWidth <= 992) closeSidebar();
+            }
         });
     });
 
@@ -266,7 +279,6 @@ function setupGlobalEventListeners() {
             updateLangButtonUI(newLang);     
             showToast('toastLangChanged', 'success');
             
-            // Jeśli jesteśmy zalogowani, zapisz zmianę języka w backendzie
             if (!document.getElementById('loginForm')) {
                 try {
                     const payload = { app_language: newLang };
@@ -274,11 +286,11 @@ function setupGlobalEventListeners() {
                 } catch (e) { console.error("Błąd zapisu języka:", e); }
             }
             
-            if (window.location.pathname.includes('backup.html')) {
+            if (window.location.pathname.includes('backup')) {
                 updateBackupStatusUI();
                 loadBackupPage();
             }
-            if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+            if (window.location.pathname === '/' || (!window.location.pathname.includes('settings') && !window.location.pathname.includes('backup'))) {
                 if (state.allResults.length > 0) renderData();
                 const nextRun = document.getElementById('nextRunTime');
                 if(nextRun) nextRun.textContent = getNextRunTimeText();
@@ -303,20 +315,19 @@ function setupGlobalEventListeners() {
             const btn = document.getElementById('loginBtn');
             const data = Object.fromEntries(new FormData(e.target));
             const lang = translations[state.currentLang];
-            btn.disabled = true; btn.textContent = lang.loggingIn || '...';
+            btn.disabled = true; btn.textContent = lang.loggingIn || 'Logowanie...';
+            document.getElementById('loginError').style.display='none';
+            
             try { 
                 await loginUser(data.username, data.password); 
-                
-                try {
-                    await updateSettings({ app_language: state.currentLang });
-                } catch(err) { console.error("Nie udało się zapisać języka po logowaniu", err); }
-
+                updateSettings({ app_language: state.currentLang }).catch(err => console.error("Nie udało się zapisać języka po logowaniu", err));
                 sessionStorage.setItem('pendingToast', 'login:' + data.username);
                 window.location.href = '/'; 
             } catch (err) { 
                 btn.disabled = false; 
                 btn.textContent = lang.loginBtn || 'Zaloguj'; 
                 document.getElementById('loginError').style.display='block'; 
+                console.error("Błąd logowania:", err);
             }
         });
     }

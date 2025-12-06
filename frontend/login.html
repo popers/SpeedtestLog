@@ -9,6 +9,43 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="manifest" href="manifest.json">
     <style>
+        /* NOWA SEKCJA STYLÓW DLA STRONY LOGOWANIA */
+        .login-page {
+            /* Zapewnia, że treść jest wyśrodkowana w pionie i poziomie, a strona nie przewija się */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .login-controls {
+            /* Zapewnia, że jest na górze, ale jest oddzielony od głównej zawartości */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 1.5rem;
+            z-index: 1000;
+            height: var(--header-height);
+        }
+
+        .login-container {
+            /* Umożliwia scrollowanie tylko w obrębie kontenera logowania na małych ekranach, jeśli to konieczne */
+            max-width: 400px;
+            width: 90%; 
+            padding: 20px;
+            box-sizing: border-box;
+            /* ZMIANA: Dodano min-height, aby zapobiec znikaniu w pionie na niektórych mobile */
+            min-height: 250px; 
+            overflow-y: auto; /* Dopuszcza przewijanie w obrębie kontenera, jeśli jest za wysoki */
+        }
+        
         .oidc-separator {
             display: flex; align-items: center; margin: 1.5rem 0; color: var(--text-color-secondary); font-size: 0.85rem;
         }
@@ -37,10 +74,23 @@
             height: 24px;
             object-fit: contain;
         }
+        
+        /* Dostosowanie dla mobile */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 1.5rem;
+            }
+            .login-controls {
+                padding: 0 0.5rem;
+            }
+        }
     </style>
 </head>
 <body class="login-page">
     
+    <!-- ZMIANA: Usunięto klasę top-bar i jej zawartość left/right,
+                 zostały tylko wyśrodkowane w prawym górnym rogu ikony.
+                 Używamy "login-controls" zdefiniowanego w layout.css -->
     <div class="login-controls">
         <div class="lang-dropdown-wrapper">
             <button id="langBtn" class="lang-btn">
