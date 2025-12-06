@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # 5. Instalacja zależności (Cache)
 # Kopiujemy requirements.txt z podkatalogu backend
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 6. Kopiowanie kodu aplikacji (Backend)
