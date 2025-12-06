@@ -2,7 +2,7 @@
 
 SpeedtestLog is a self-hosted application designed to track your internet connection performance over time. It automatically runs speed tests using the official Ookla CLI, logs the results to a database, visualizes them on interactive charts, and monitors your connection stability via a continuous Ping Watchdog.
 
-### Features List:
+### Features:
 
 * **Automated Speedtests:** Schedules periodic tests using the official Ookla CLI to log download, upload, ping, and jitter metrics.
 
@@ -18,7 +18,7 @@ SpeedtestLog is a self-hosted application designed to track your internet connec
 
 * **Responsive Design:** Offers a modern, mobile-friendly user interface with customizable dark and light themes.
 
-#### SCREENSHOTS:
+### Screenshots:
 
 **Dashboard**
 
@@ -36,7 +36,7 @@ SpeedtestLog is a self-hosted application designed to track your internet connec
 
 <img alt="watchdog" src="https://github.com/user-attachments/assets/5fa19b06-f8e8-4147-973a-2d630dc69ddc" />
 
-#### 🚀 Installation (Docker)
+### 🚀 Installation (Docker)
 
 **Docker compose:**
 ```
