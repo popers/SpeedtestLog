@@ -28,7 +28,7 @@ RUN curl -s https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-x8
 
 # 7. Kopiowanie kodu aplikacji (Backend)
 # Kopiujemy zawartość folderu backend bezpośrednio do /app
-COPY backend/ .
+COPY backend/ ./py
 
 # 8. Kopiowanie kodu aplikacji (Frontend)
 # ZMIANA: Kopiujemy zawartość frontend BEZPOŚREDNIO do /app, a nie do /app/frontend.
