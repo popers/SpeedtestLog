@@ -197,13 +197,20 @@ Speedtest Engine: Official Ookla Speedtest CLI
 
 This project is open-source. Feel free to fork and contribute!
 
-SCREENSHOTS:
+**SCREENSHOTS:**
 
-Dashboard
-<img width="2560" height="4540" alt="dashboard" src="https://github.com/user-attachments/assets/eca6e596-2711-45c8-b759-c53abe96b7d1" />
+**Dashboard**
 
-Backup
-<img width="2560" height="1288" alt="backup" src="https://github.com/user-attachments/assets/8f79ab62-145f-463a-927e-c7aab43c57f4" />
+<img alt="dashboard" src="https://github.com/user-attachments/assets/c32f2bcf-fc01-4eaa-86a8-401ad742f41d" />
 
-Settings
-<img width="2560" height="2529" alt="settings" src="https://github.com/user-attachments/assets/2b87d6fd-f3c1-425d-8e02-c5530eacb232" />
+**Backup**
+
+<img alt="backup" src="https://github.com/user-attachments/assets/089671d1-2b9d-4c05-bf4d-d29f28c508ee" />
+
+**Settings**
+
+<img alt="settings" src="https://github.com/user-attachments/assets/69ece726-79a5-48bb-964b-3637e4314aec" />
+
+**Watchdog**
+
+<img alt="watchdog" src="https://github.com/user-attachments/assets/5fa19b06-f8e8-4147-973a-2d630dc69ddc" />
