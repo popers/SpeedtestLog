@@ -75,7 +75,7 @@ services:
 
   db:
     image: mariadb:10.11
-    container_name: speedtestlog-mariadb
+    container_name: speedtestlog-db
     environment:
       - MARIADB_DATABASE=${DB_DATABASE}
       - MARIADB_USER=${DB_USERNAME}
@@ -83,7 +83,7 @@ services:
       - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - TZ=Europe/Amsterdam
     volumes:
-      - speedtest-db-data:/var/lib/mysql
+      - db-data:/var/lib/mysql
       - ./data_db_logs:/var/log/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
@@ -96,7 +96,7 @@ services:
       - --long_query_time=2
       - --innodb-use-native-aio=0
 volumes:
-  speedtest-db-data:
+  db-data:
 ```
 
 **.env**
