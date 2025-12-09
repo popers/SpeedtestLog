@@ -195,6 +195,7 @@ function handleCheckboxChange() {
     const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
     const delBtn = document.getElementById('deleteSelectedBtn');
     const selectAll = document.getElementById('selectAllCheckbox');
+    const selectAllMobile = document.getElementById('selectAllMobile'); // NEW
     
     if (delBtn) {
         delBtn.style.display = checkedCount > 0 ? 'flex' : 'none';
@@ -204,7 +205,9 @@ function handleCheckboxChange() {
     
     if (selectAll) {
         const allCheckboxes = document.querySelectorAll('.row-checkbox');
-        selectAll.checked = allCheckboxes.length > 0 && checkedCount === allCheckboxes.length;
+        const allChecked = allCheckboxes.length > 0 && checkedCount === allCheckboxes.length;
+        selectAll.checked = allChecked;
+        if(selectAllMobile) selectAllMobile.checked = allChecked; // Sync mobile checkbox
     }
 }
 
@@ -298,8 +301,28 @@ export function updateTable(results) {
     resultsTableBody.innerHTML = '';
     const delBtn = document.getElementById('deleteSelectedBtn');
     const selectAll = document.getElementById('selectAllCheckbox');
+    const selectAllMobile = document.getElementById('selectAllMobile'); // NEW
+
     if (delBtn) delBtn.style.display = 'none';
     if (selectAll) selectAll.checked = false;
+    if (selectAllMobile) selectAllMobile.checked = false; // Reset mobile checkbox
+
+    // NEW: Handle mobile Select All click
+    if (selectAllMobile) {
+        selectAllMobile.onchange = (e) => {
+            const checked = e.target.checked;
+            // Sync desktop checkbox
+            if(selectAll) selectAll.checked = checked;
+            
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = checked;
+                const row = cb.closest('tr');
+                if(checked) row.classList.add('selected-card');
+                else row.classList.remove('selected-card');
+            });
+            handleCheckboxChange();
+        };
+    }
 
     const lang = translations[state.currentLang];
     const unitLabel = getUnitLabel(state.currentUnit);
@@ -309,8 +332,14 @@ export function updateTable(results) {
 
     paginatedResults.forEach(res => {
         const row = document.createElement('tr');
-        const timestamp = parseISOLocally(res.timestamp); 
         
+        // ZMIANA: Podział daty i czasu dla mobilnego widoku oraz dodanie lokalizacji
+        const dateObj = parseISOLocally(res.timestamp);
+        const dateStr = dateObj.toLocaleDateString(state.currentLang);
+        const timeStr = dateObj.toLocaleTimeString(state.currentLang, { hour: '2-digit', minute: '2-digit' });
+        
+        const locationStr = res.server_location ? ` (${res.server_location})` : '';
+
         const resultLinkHtml = res.result_url ? 
             `<a href="${res.result_url}" target="_blank" class="result-link-icon" title="Speedtest.net">
                 <span class="material-symbols-rounded">open_in_new</span>
@@ -342,14 +371,17 @@ export function updateTable(results) {
             else uploadClass = 'text-danger';
         }
 
+        // ZMIANA: HTML z podziałem na cell-date i cell-time oraz dodaną lokalizacją serwera
         row.innerHTML = `
             <td><input type="checkbox" class="row-checkbox" data-id="${res.id}"></td>
-            <td data-label="${lang.tableTime}">${timestamp.toLocaleString(state.currentLang)}</td>
+            <td data-label="${lang.tableTime}">
+                <span class="cell-date">${dateStr}</span> <span class="cell-time">${timeStr}</span>
+            </td>
             <td data-label="${lang.tableDownload}"><strong class="${downloadClass}">${convertValue(res.download, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
             <td data-label="${lang.tableUpload}"><strong class="${uploadClass}">${convertValue(res.upload, state.currentUnit).toFixed(2)}</strong> ${unitLabel}</td>
             <td data-label="${lang.tablePing}"><strong class="${pingClass}">${res.ping.toFixed(2)}</strong> ms</td>
             <td data-label="${lang.tableJitter}"><strong class="${jitterClass}">${res.jitter.toFixed(2)}</strong> ms</td>
-            <td data-label="${lang.tableServer}">(${res.server_id}) ${res.server_name} (${res.server_location})</td>
+            <td data-label="${lang.tableServer}">(${res.server_id}) ${res.server_name}${locationStr}</td>
             <td data-label="${lang.tableResultLink}" class="link-cell">${resultLinkHtml}</td>
         `;
         resultsTableBody.appendChild(row);
@@ -364,6 +396,9 @@ export function updateTable(results) {
         if (checkbox) {
             checkbox.addEventListener('change', (e) => {
                 e.stopPropagation();
+                if(e.target.checked) row.classList.add('selected-card');
+                else row.classList.remove('selected-card');
+                
                 handleCheckboxChange();
             });
         }

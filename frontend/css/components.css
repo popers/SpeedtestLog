@@ -185,15 +185,13 @@ button#gdRunBtn.is-loading .btn-dot-loader { opacity: 1; visibility: visible; }
 .controls-dashboard { 
     display: flex; 
     gap: 1.5rem; 
-    align-items: center; /* ZMIANA: Wyśrodkowanie w pionie zamiast flex-end */
+    align-items: center; 
     margin-bottom: 2rem; 
     flex-wrap: wrap; 
     background-color: var(--card-bg-color); 
     padding: 1.5rem; border-radius: var(--border-radius-base); 
     border: none; box-shadow: var(--shadow-low);
 }
-
-/* Usunięto specyficzną regułę dla .manual-test-group, bo rodzic teraz centruje wszystko */
 
 .control-group { display: flex; flex-direction: column; min-width: 150px; }
 .info-group { margin-left: auto; }
@@ -497,11 +495,9 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
 /* Watchdog Styles */
 .watchdog-wrapper { 
     position: relative; 
-    /* ZMIANA: Zmniejszenie marginesu z prawej strony */
     margin-right: 10px; 
     display: flex; 
     align-items: center; 
-    /* NOWA ZMIANA: Upewnienie się, że element nie zajmie zbyt dużo miejsca */
     flex-shrink: 0;
 }
 .watchdog-indicator { width: 14px; height: 14px; border-radius: 50%; background-color: #ccc; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7); }
@@ -577,61 +573,261 @@ body.light-mode .toast { background-color: #00374f !important; color: #ffffff !i
     }
     .table-header h2 {
         max-width: calc(100% - 140px);
+        font-size: 1.2rem;
     }
 
-    /* NOWE: Optymalizacja tabeli dla mobile (Kompaktowa) */
-    .table-wrapper {
-        /* Rozszerz tabelę poza standardowy padding kontenera (negatywne marginesy) */
-        margin-left: -1rem; 
-        margin-right: -1rem;
-        width: calc(100% + 2rem);
-        border-radius: 0; /* Brak zaokrągleń na krawędziach */
-        border-left: none;
-        border-right: none;
-        box-shadow: none;
-        border-top: 1px solid var(--border-color);
-        border-bottom: 1px solid var(--border-color);
+    /* --- MOBILE-FIRST TABLE DESIGN --- */
+    
+    /* Mobile Selection Bar */
+    .mobile-selection-bar {
+        display: block !important;
+        margin-bottom: 1.5rem; 
+        /* ZMIANA: Usunięto padding, aby checkbox zrównał się z tymi na kartach (które są absolute left:16px) */
+        padding: 0; 
     }
-
-    /* Zmniejszenie paddingów i czcionek w komórkach */
-    th, td {
-        padding: 8px 4px;
-        font-size: 0.75rem; /* ~12px */
+    .checkbox-label-mobile {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-color);
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
     }
-
-    /* Specyficzne dla nagłówków */
-    th {
-        font-size: 0.7rem;
-        white-space: nowrap; /* Trzymaj nagłówki w jednej linii jeśli to możliwe */
-        padding-top: 10px;
-        padding-bottom: 10px;
-    }
-
-    /* Pierwsza kolumna (checkbox) - odsuń trochę od krawędzi ekranu */
-    th:first-child, td:first-child {
-        padding-left: 0.75rem; /* Zmniejszono z 1rem dla oszczędności miejsca */
-        padding-right: 0;
-        width: 26px; /* Lekko zwężone */
-    }
-
-    /* Skalowanie checkboxów dla lepszego wyglądu na mobile */
-    input[type="checkbox"] {
-        transform: scale(0.8); /* Zmniejszenie do 80% */
+    /* ZMIANA: Skalowanie głównego checkboxa dla spójności */
+    .checkbox-label-mobile input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--primary-color);
+        transform: scale(0.7); /* Zmniejszenie do 70% jak w wierszach */
+        transform-origin: center;
         margin: 0;
-        vertical-align: middle;
-        position: relative;
-        top: 1px;
     }
 
-    /* Ostatnia kolumna (link) - odsuń od prawej */
-    td:last-child {
-        padding-right: 1rem;
-        text-align: center;
+    /* Container adjustments - CRITICAL RESETS */
+    .table-wrapper {
+        margin-left: 0; 
+        margin-right: 0;
+        width: 100%;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        overflow: visible;
+        display: block !important;
     }
 
-    /* Ikona linku mniejsza */
-    .result-link-icon .material-symbols-rounded {
-        font-size: 18px;
+    #resultsTable {
+        display: block !important; /* Force block to allow card layout */
+        width: 100% !important;
+    }
+
+    #resultsTable thead {
+        display: none !important; /* Force hide header on mobile */
+    }
+
+    #resultsTable tbody {
+        display: flex !important;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100% !important;
+    }
+
+    /* Card Style for Rows */
+    #resultsTable tr {
+        display: grid !important; /* Force grid layout */
+        /* Fixed: Grid Areas must match columns defined */
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto;
+        grid-template-areas: 
+            "date server"
+            "ping jitter"
+            "down up";
+        /* ZMIANA: Gap zwiększony do 16px, by pasował do paddingu */
+        gap: 18px;
+        background-color: var(--card-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        /* ZMIANA: Symetryczny padding dla idealnego wyśrodkowania metryk w poziomie */
+        /* 16px z każdej strony. Elementy absolutne będą się mieścić w rogach. */
+        padding: 18px; 
+        box-shadow: var(--shadow-low);
+        position: relative; /* For absolute checkbox & link */
+        /* Reset table-row behavior */
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    /* Selected state */
+    #resultsTable tr.selected-card {
+        border-color: var(--success-color);
+        background-color: rgba(40, 167, 69, 0.05); /* Slight green tint */
+    }
+
+    /* Cells general - FORCE BLOCK to avoid overlap */
+    #resultsTable td {
+        display: flex !important; /* Block flow stack elements vertically */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center; /* ZMIANA: Wyrównanie metryk do środka */
+        padding: 4px 0 !important;
+        border: none !important;
+        font-size: 0.85rem;
+        min-height: auto !important;
+        height: auto !important;
+    }
+
+    /* --- Labels handling with attr() for I18n --- */
+    
+    /* Metrics cells: Download (3), Upload (4), Ping (5), Jitter (6) */
+    #resultsTable td:nth-child(3)::before,
+    #resultsTable td:nth-child(4)::before,
+    #resultsTable td:nth-child(5)::before,
+    #resultsTable td:nth-child(6)::before {
+        content: attr(data-label);
+        display: block !important;
+        font-size: 0.65rem;
+        color: var(--text-color-secondary);
+        font-weight: 600;
+        margin-bottom: 2px !important; /* Space below label */
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        line-height: 1.2;
+    }
+
+    /* --- Specific Cell Placement --- */
+
+    /* Checkbox (Area: absolute top left) */
+    #resultsTable td:nth-child(1) {
+        position: absolute !important;
+        top: 16px; /* Align with new padding */
+        left: 16px; /* Align with new padding */
+        width: auto !important;
+        height: auto !important;
+        z-index: 10;
+        text-align: left;
+        padding: 0 !important;
+        display: block !important;
+    }
+    #resultsTable td:nth-child(1) input[type="checkbox"] {
+        transform: scale(0.7) !important;
+        transform-origin: center;
+        width: 20px; 
+        height: 20px;
+        margin: 0;
+    }
+
+    /* Date (Area: date) */
+    #resultsTable td:nth-child(2) {
+        grid-area: date;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex !important; /* Flex for icon alignment */
+        flex-direction: column !important; /* ZMIANA: Wymuszenie kolumny (godzina pod datą) */
+        justify-content: center;
+        align-items: flex-start !important; /* Wyrównanie do lewej */
+        white-space: nowrap;
+        margin-bottom: 4px;
+        /* ZMIANA: Zwiększone wcięcie (40px), aby tekst nie nachodził na checkbox */
+        padding-left: 40px !important; 
+        text-align: left;
+    }
+    #resultsTable td:nth-child(2)::before {
+        display: none !important; /* Hide generic label for Date */
+    }
+    
+    .cell-date {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-color);
+        line-height: 1.2;
+    }
+    
+    .cell-time {
+        font-size: 0.7rem; /* Smaller time font */
+        color: var(--text-color-secondary); /* Szary kolor */
+        font-weight: 400;
+        margin-top: 2px;
+        display: block; /* Ensure it breaks to new line */
+    }
+
+    /* Server (Area: server) - Icon & Name */
+    #resultsTable td:nth-child(7) {
+        grid-area: server;
+        text-align: right;
+        font-size: 0.75rem;
+        color: var(--text-color-secondary);
+        display: flex !important;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end; /* Wyrównanie do prawej krawędzi */
+        gap: 4px !important;
+        white-space: normal !important; 
+        word-break: break-word;
+        overflow: visible;
+        text-overflow: clip;
+        margin-bottom: 4px; 
+        align-self: center;
+    }
+    /* ZMIANA: Usunięcie ::before (ikona z lewej) */
+    #resultsTable td:nth-child(7)::before {
+        content: none !important;
+    }
+    /* ZMIANA: Dodanie ::after (ikona z prawej) */
+    #resultsTable td:nth-child(7)::after {
+        content: 'dns';
+        font-family: 'Material Symbols Rounded';
+        font-size: 16px;
+        margin-left: 6px; /* Odstęp od nazwy z lewej */
+        color: var(--text-color-secondary);
+        display: block !important;
+        text-transform: none;
+        font-weight: normal;
+        letter-spacing: 0;
+        flex-shrink: 0; /* Ikona się nie kurczy */
+    }
+
+    /* Ping (Area: ping) */
+    #resultsTable td:nth-child(5) {
+        grid-area: ping;
+    }
+    /* Jitter (Area: jitter) */
+    #resultsTable td:nth-child(6) {
+        grid-area: jitter;
+    }
+    /* Download (Area: down) */
+    #resultsTable td:nth-child(3) {
+        grid-area: down;
+    }
+    /* Upload (Area: up) */
+    #resultsTable td:nth-child(4) {
+        grid-area: up;
+    }
+
+    /* Strong tags (Values) */
+    #resultsTable td strong { 
+        font-size: 1.1rem; 
+        line-height: 1.2;
+        display: inline; /* Keep unit next to value if space permits */
+    }
+
+    /* Link (Area: absolute bottom right) */
+    #resultsTable td:nth-child(8) {
+        display: flex !important;
+        position: absolute !important;
+        /* ZMIANA: Pozycjonowanie w prawym dolnym rogu zgodnie z paddingiem */
+        bottom: 16px;
+        right: 16px;
+        width: auto !important;
+        height: auto !important;
+        padding: 0 !important;
+        z-index: 10;
+        align-items: center;
+        justify-content: center;
+    }
+    #resultsTable td:nth-child(8) .result-link-icon .material-symbols-rounded {
+        font-size: 20px;
+        color: var(--primary-color);
+        opacity: 0.8;
     }
 }
 

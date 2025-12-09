@@ -70,7 +70,7 @@
             </nav>
             <div class="sidebar-footer">
                 <button id="logoutBtn" class="logout-btn"><span class="material-symbols-rounded icon">logout</span> <span data-i18n-key="logout">Wyloguj</span></button>
-                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v0.1</small></div>
+                <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.6;"><small>SpeedtestLog v0.2</small></div>
             </div>
         </aside>
 
@@ -163,6 +163,15 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- NEW: Mobile specific select all wrapper -->
+                    <div class="mobile-selection-bar" style="display: none;">
+                        <label class="checkbox-label-mobile">
+                            <input type="checkbox" id="selectAllMobile">
+                            <span data-i18n-key="selectAllCards">Zaznacz wszystkie karty</span>
+                        </label>
+                    </div>
+
                     <div class="table-wrapper">
                         <table id="resultsTable">
                             <thead>

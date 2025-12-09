@@ -158,6 +158,7 @@ export const translations = {
         'toastStartupTestOn': 'Test startowy: Włączony',
         'toastStartupTestOff': 'Test startowy: Wyłączony',
         'toastCopied': 'Skopiowano do schowka!',
+        'selectAllCards': 'Zaznacz wszystkie karty',
         
         // Settings - Chart Colors
         'chartColorsTitle': 'Kolory Wykresów',
@@ -397,6 +398,7 @@ export const translations = {
         'toastStartupTestOn': 'Startup Test: Enabled',
         'toastStartupTestOff': 'Startup Test: Disabled',
         'toastCopied': 'Copied to clipboard!',
+        'selectAllCards': 'Select all cards',
         
         // Settings - Chart Colors
         'chartColorsTitle': 'Chart Colors',
