@@ -1,4 +1,4 @@
-# SpeedtestLog ![version](https://img.shields.io/badge/v0.1-blue)
+# SpeedtestLog ![version](https://img.shields.io/badge/v0.2-blue)
 
 SpeedtestLog is a self-hosted application designed to track your internet connection performance over time. It automatically runs speed tests using the official Ookla CLI, logs the results to a database, visualizes them on interactive charts, and monitors your connection stability via a continuous Ping Watchdog.
 
