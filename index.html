@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="google-site-verification" content="BXGy2oyWiwClEGB2DYx3nfLh86a1kh5unuRKqiImGe0" />
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>SpeedtestLog | SpeedtestLog is a self-hosted application designed to track your internet connection performance over time</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="SpeedtestLog" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="SpeedtestLog is a self-hosted application designed to track your internet connection performance over time" />
+<meta property="og:description" content="SpeedtestLog is a self-hosted application designed to track your internet connection performance over time" />
+<link rel="canonical" href="https://popers.github.io/SpeedtestLog/" />
+<meta property="og:url" content="https://popers.github.io/SpeedtestLog/" />
+<meta property="og:site_name" content="SpeedtestLog" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="SpeedtestLog" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","description":"SpeedtestLog is a self-hosted application designed to track your internet connection performance over time","headline":"SpeedtestLog","name":"SpeedtestLog","url":"https://popers.github.io/SpeedtestLog/"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/SpeedtestLog/assets/css/style.css?v=de726d8a3279067d1c364b2daecafe62729a1035">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/SpeedtestLog/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+
+      <h1 id="speedtestlog-">SpeedtestLog <img src="https://img.shields.io/badge/v0.2-blue" alt="version" /></h1>
+
+<p>SpeedtestLog is a self-hosted application designed to track your internet connection performance over time. It automatically runs speed tests using the official Ookla CLI, logs the results to a database, visualizes them on interactive charts, and monitors your connection stability via a continuous Ping Watchdog.</p>
+
+<h3 id="features">Features:</h3>
+
+<ul>
+  <li>
+    <p><strong>Automated Speedtests:</strong> Schedules periodic tests using the official Ookla CLI to log download, upload, ping, and jitter metrics.</p>
+  </li>
+  <li>
+    <p><strong>Interactive Visualization:</strong> Displays performance trends and detailed history on dynamic charts and searchable tables.</p>
+  </li>
+  <li>
+    <p><strong>Connectivity Watchdog:</strong> Continuously monitors connection status to detect downtime and packet loss in real-time.</p>
+  </li>
+  <li>
+    <p><strong>Smart Notifications:</strong> Sends alerts via Webhook, Ntfy.sh, Pushover, or browser push notifications when tests complete or status changes.</p>
+  </li>
+  <li>
+    <p><strong>Backup &amp; Restore:</strong> Supports easy local database exports and automated cloud backups to Google Drive.</p>
+  </li>
+  <li>
+    <p><strong>Secure Access:</strong> Features built-in password authentication and supports OpenID Connect (OIDC) for Single Sign-On integration.</p>
+  </li>
+  <li>
+    <p><strong>Responsive Design:</strong> Offers a modern, mobile-friendly user interface with customizable dark and light themes.</p>
+  </li>
+</ul>
+
+<h3 id="screenshots">Screenshots:</h3>
+
+<p><strong>Dashboard</strong></p>
+
+<p><img alt="dashboard" src="https://github.com/user-attachments/assets/c32f2bcf-fc01-4eaa-86a8-401ad742f41d" /></p>
+
+<p><strong>Backup</strong></p>
+
+<p><img alt="backup" src="https://github.com/user-attachments/assets/089671d1-2b9d-4c05-bf4d-d29f28c508ee" /></p>
+
+<p><strong>Settings</strong></p>
+
+<p><img alt="settings" src="https://github.com/user-attachments/assets/69ece726-79a5-48bb-964b-3637e4314aec" /></p>
+
+<p><strong>Watchdog</strong></p>
+
+<p><img alt="watchdog" src="https://github.com/user-attachments/assets/5fa19b06-f8e8-4147-973a-2d630dc69ddc" /></p>
+
+<h3 id="-installation-docker">🚀 Installation (Docker)</h3>
+
+<p><strong>Docker compose:</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>services:
+  speedtestlog:
+    image: popers/speedtestlog:latest
+    container_name: speedtestlog-app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - AUTH_ENABLED=${AUTH_ENABLED}
+      - APP_USERNAME=${APP_USERNAME}
+      - APP_PASSWORD=${APP_PASSWORD}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - APP_LANG=${APP_LANG}
+      - OOKLA_EULA_GDPR=true
+      - TZ=Europe/Amsterdam
+    volumes:
+      # Persist application logs
+      - ./data_app:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/auth-status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  db:
+    image: mariadb:10.11
+    container_name: speedtestlog-db
+    environment:
+      - MARIADB_DATABASE=${DB_DATABASE}
+      - MARIADB_USER=${DB_USERNAME}
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - TZ=Europe/Amsterdam
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./data_db_logs:/var/log/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command:
+      - --slow_query_log=1
+      - --long_query_time=2
+      - --innodb-use-native-aio=0
+volumes:
+  db-data:
+</code></pre></div></div>
+
+<p><strong>.env</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>DB_CONNECTION=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=speedtestlog
+DB_USERNAME=speedtestlog
+DB_PASSWORD=strong_db_password
+DB_ROOT_PASSWORD=strong_root_password
+SESSION_SECRET=change_me_to_something_random_and_long
+AUTH_ENABLED=true
+APP_USERNAME=admin
+APP_PASSWORD=admin
+APP_LANG=en
+</code></pre></div></div>
+
+<p><strong>Start the containers:</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker compose up -d
+</code></pre></div></div>
+
+<p>Your SpeedtestLog dashboard will be accessible at: http://your-server-ip:8000</p>
+
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/popers/SpeedtestLog/edit/main/README.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>
